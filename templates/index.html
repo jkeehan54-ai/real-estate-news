@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>부동산 뉴스 브리핑</title>
+
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="apple-touch-icon" href="/static/icon.png">
+</head>
+<body>
+<h1>부동산 뉴스 브리핑</h1>
+
+<form>
+<input name="q" value="{{query}}" placeholder="검색">
+<button>검색</button>
+</form>
+
+<h2>오늘의 핵심 브리핑</h2>
+<ul>
+{% for item in briefing %}
+<li>{{item}}</li>
+{% endfor %}
+</ul>
+
+<h2>TOP 이슈</h2>
+<ul>
+{% for article in top_articles %}
+<li>
+<a href="{{article.link}}" target="_blank">
+{{article.title}}
+</a>
+</li>
+{% endfor %}
+</ul>
+
+<h2>전체 뉴스</h2>
+
+{% for article in articles %}
+<div>
+<h3>
+<a href="{{article.link}}" target="_blank">
+{{article.title}}
+</a>
+</h3>
+<p>{{article.source}}</p>
+<p>{{article.summary}}</p>
+</div>
+<hr>
+{% endfor %}
+
+</body>
+</html>
