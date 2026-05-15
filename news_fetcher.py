@@ -1,18 +1,6 @@
 import feedparser
-import requests
 
 from bs4 import BeautifulSoup
-
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 "
-        "(Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 "
-        "(KHTML, like Gecko) "
-        "Chrome/124.0 Safari/537.36"
-    )
-}
 
 
 RSS_FEEDS = [
@@ -32,9 +20,6 @@ RSS_FEEDS = [
     ("이데일리",
      "https://www.edaily.co.kr/rss/rss_realestate.xml"),
 
-    ("조선비즈",
-     "https://biz.chosun.com/industry/company/rss/"),
-
     ("부산일보",
      "https://www.busan.com/rss/busan.xml"),
 
@@ -47,7 +32,6 @@ REAL_ESTATE_KEYWORDS = [
 
     "부동산",
     "아파트",
-    "아파트값",
     "재건축",
     "재개발",
     "청약",
@@ -60,21 +44,10 @@ REAL_ESTATE_KEYWORDS = [
     "오피스텔",
     "입주",
     "매매",
-    "분양가",
     "집값",
-    "부동산 정책",
-    "토지거래허가구역",
-    "임대",
     "공급",
-    "전매",
-    "주거",
-    "신도시",
-    "도시개발",
     "LH",
-    "직방",
-    "다방",
-    "KB부동산",
-    "아실",
+    "신도시",
 ]
 
 
@@ -87,22 +60,18 @@ EXCLUDE_KEYWORDS = [
     "사고",
     "폭행",
     "살인",
-    "경찰",
     "검찰",
+    "경찰",
     "화재",
     "고교생",
-    "버스정류소",
     "연예",
-    "아이돌",
-    "축구",
     "야구",
+    "축구",
     "농구",
     "주식",
     "코스피",
     "비트코인",
     "코인",
-    "반도체",
-    "자동차",
 ]
 
 
@@ -253,94 +222,34 @@ def fetch_rss_news():
 
             print(
                 source_name,
-                "RSS 오류:",
+                "오류:",
                 e
             )
 
     return articles
 
 
-def fetch_naver_real_estate():
+def fetch_google_news():
 
-    articles = []
+    keywords = [
 
-    try:
-
-        url = (
-            "https://news.google.com/rss/"
-            "search?q=네이버부동산+아파트+청약+재건축"
-        )
-
-        feed = feedparser.parse(
-            url
-        )
-
-        for entry in feed.entries[:20]:
-
-            title = clean_html(
-                entry.get("title", "")
-            )
-
-            summary = clean_html(
-                entry.get("summary", "")
-            )
-
-            link = entry.get(
-                "link",
-                ""
-            )
-
-            if not is_real_estate_news(
-                title,
-                summary
-            ):
-                continue
-
-            articles.append({
-
-                "title": title,
-
-                "summary": summary[:200],
-
-                "link": link,
-
-                "source": "네이버부동산",
-
-                "category": categorize_news(
-                    title
-                )
-            })
-
-    except Exception as e:
-
-        print(
-            "네이버부동산 오류:",
-            e
-        )
-
-    return articles
-
-
-def fetch_platform_news():
-
-    platform_keywords = [
-
-                 "직방",
-                 "다방",
-                 "KB부동산",
-                 "아실"
+        "네이버부동산",
+        "KB부동산",
+        "직방",
+        "다방",
+        "아실"
     ]
 
     articles = []
 
-    for keyword in platform_keywords:
+    for keyword in keywords:
 
         try:
 
             url = (
-                 "https://news.google.com/rss/search?q="
-                 + keyword
-                 + "+부동산"
+                "https://news.google.com/rss/search?q="
+                + keyword
+                + "+부동산"
             )
 
             feed = feedparser.parse(
@@ -396,25 +305,21 @@ def fetch_platform_news():
 
 def fetch_news():
 
-    all_articles = []
+    articles = []
 
-    all_articles.extend(
+    articles.extend(
         fetch_rss_news()
     )
 
-    all_articles.extend(
-        fetch_naver_real_estate()
+    articles.extend(
+        fetch_google_news()
     )
 
-    all_articles.extend(
-        fetch_platform_news()
+    articles = remove_duplicates(
+        articles
     )
 
-    all_articles = remove_duplicates(
-        all_articles
-    )
-
-    return all_articles
+    return articles
 
 
 def make_briefing(articles):
