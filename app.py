@@ -1,42 +1,136 @@
-from flask import Flask, render_template, request
-from news_fetcher import fetch_news, make_briefing
+from flask import Flask
+from flask import render_template
+from flask import request
+from flask import redirect
+from flask import url_for
+
+from news_fetcher import (
+    fetch_news,
+    make_briefing
+)
 
 app = Flask(__name__)
 
-@app.route('/')
+app.config[
+    "TEMPLATES_AUTO_RELOAD"
+] = True
+
+app.config[
+    "SEND_FILE_MAX_AGE_DEFAULT"
+] = 0
+
+
+@app.after_request
+def add_header(response):
+
+    response.headers[
+        "Cache-Control"
+    ] = (
+        "no-store, no-cache, "
+        "must-revalidate, max-age=0"
+    )
+
+    response.headers[
+        "Pragma"
+    ] = "no-cache"
+
+    response.headers[
+        "Expires"
+    ] = "0"
+
+    return response
+
+
+@app.route("/")
 def home():
 
-    query=request.args.get("q","")
+    query = request.args.get(
+        "q",
+        ""
+    )
 
-    articles=fetch_news()
+    category = request.args.get(
+        "category",
+        "전체"
+    )
+
+    refresh = request.args.get(
+        "refresh",
+        "0"
+    )
+
+    articles = fetch_news()
 
     if query:
-        articles=[
-            a for a in articles
+
+        articles = [
+
+            article
+
+            for article in articles
+
             if query.lower() in (
-                a["title"]+
-                a["summary"]
+
+                article["title"]
+                + article["summary"]
+
             ).lower()
         ]
 
-    top_articles=articles[:5]
+    if category != "전체":
 
-    briefing=make_briefing(
+        articles = [
+
+            article
+
+            for article in articles
+
+            if article["category"]
+            == category
+        ]
+
+    top_articles = articles[:5]
+
+    briefing = make_briefing(
         articles
     )
 
     return render_template(
+
         "index.html",
+
         articles=articles,
+
         top_articles=top_articles,
+
         briefing=briefing,
-        query=query
+
+        query=query,
+
+        category=category,
+
+        refresh=refresh
     )
 
-if __name__=="__main__":
+
+@app.route("/refresh")
+def refresh_news():
+
+    return redirect(
+        url_for(
+            "home",
+            refresh="1"
+        )
+    )
+
+
+if __name__ == "__main__":
 
     app.run(
+
         host="0.0.0.0",
-        port=8080,
+
+        port=5000,
+
         debug=True
     )
