@@ -1,6 +1,4 @@
 import os
-import threading
-import time
 
 from flask import Flask
 from flask import render_template
@@ -12,48 +10,6 @@ from news_fetcher import (
 )
 
 app = Flask(__name__)
-
-cached_articles = []
-cached_briefing = ""
-
-
-def update_news():
-
-    global cached_articles
-    global cached_briefing
-
-    while True:
-
-        try:
-
-            articles = fetch_news()
-
-            cached_articles = articles
-
-            cached_briefing = make_briefing(
-                articles
-            )
-
-            print(
-                "뉴스 업데이트 완료"
-            )
-
-        except Exception as e:
-
-            print(
-                "뉴스 업데이트 오류:",
-                e
-            )
-
-        time.sleep(300)
-
-
-thread = threading.Thread(
-    target=update_news,
-    daemon=True
-)
-
-thread.start()
 
 
 @app.route("/")
@@ -69,7 +25,7 @@ def home():
         "전체"
     )
 
-    articles = cached_articles
+    articles = fetch_news()
 
     if query:
 
@@ -99,6 +55,10 @@ def home():
             == category
         ]
 
+    briefing = make_briefing(
+        articles
+    )
+
     top_articles = articles[:5]
 
     return render_template(
@@ -109,7 +69,7 @@ def home():
 
         top_articles=top_articles,
 
-        briefing=cached_briefing,
+        briefing=briefing,
 
         query=query,
 
