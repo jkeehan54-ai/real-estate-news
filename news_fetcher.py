@@ -3,28 +3,59 @@ import feedparser
 from bs4 import BeautifulSoup
 
 
+# 핵심 RSS
 RSS_FEEDS = [
 
-    ("매일경제",
-     "https://www.mk.co.kr/rss/50300009/"),
+    (
+        "매일경제",
+        "https://www.mk.co.kr/rss/50300009/"
+    ),
 
-    ("한국경제",
-     "https://www.hankyung.com/feed/realestate"),
+    (
+        "한국경제",
+        "https://www.hankyung.com/feed/realestate"
+    ),
 
-    ("연합뉴스",
-     "https://www.yna.co.kr/rss/economy.xml"),
+    (
+        "서울경제",
+        "https://www.sedaily.com/rss/NewsReal.xml"
+    ),
 
-    ("서울경제",
-     "https://www.sedaily.com/rss/NewsReal.xml"),
+    (
+        "이데일리",
+        "https://www.edaily.co.kr/rss/rss_realestate.xml"
+    ),
 
-    ("이데일리",
-     "https://www.edaily.co.kr/rss/rss_realestate.xml"),
+    (
+        "조선비즈",
+        "https://biz.chosun.com/real_estate/rss.xml"
+    ),
 
-    ("부산일보",
-     "https://www.busan.com/rss/busan.xml"),
+    (
+        "연합뉴스",
+        "https://www.yna.co.kr/rss/economy.xml"
+    ),
 
-    ("국제신문",
-     "https://www.kookje.co.kr/rss/all.xml"),
+    (
+        "부산일보",
+        "https://www.busan.com/rss/busan.xml"
+    ),
+
+    (
+        "국제신문",
+        "https://www.kookje.co.kr/rss/all.xml"
+    ),
+]
+
+
+# 보조 검색 RSS
+GOOGLE_KEYWORDS = [
+
+    "네이버부동산",
+    "KB부동산",
+    "직방",
+    "다방",
+    "아실",
 ]
 
 
@@ -32,6 +63,7 @@ REAL_ESTATE_KEYWORDS = [
 
     "부동산",
     "아파트",
+    "아파트값",
     "재건축",
     "재개발",
     "청약",
@@ -46,8 +78,11 @@ REAL_ESTATE_KEYWORDS = [
     "매매",
     "집값",
     "공급",
-    "LH",
+    "토지거래허가구역",
+    "임대",
     "신도시",
+    "주거",
+    "LH",
 ]
 
 
@@ -62,16 +97,16 @@ EXCLUDE_KEYWORDS = [
     "살인",
     "검찰",
     "경찰",
-    "화재",
-    "고교생",
     "연예",
-    "야구",
     "축구",
+    "야구",
     "농구",
     "주식",
     "코스피",
     "비트코인",
     "코인",
+    "반도체",
+    "자동차",
 ]
 
 
@@ -93,7 +128,11 @@ def is_real_estate_news(
     summary
 ):
 
-    text = f"{title} {summary}"
+    text = (
+        title
+        + " "
+        + summary
+    )
 
     include = any(
 
@@ -137,8 +176,8 @@ def categorize_news(title):
 
     if (
         "정책" in title
-        or "국토부" in title
         or "정부" in title
+        or "국토부" in title
     ):
         return "정책"
 
@@ -180,14 +219,22 @@ def fetch_rss_news():
                 rss_url
             )
 
-            for entry in feed.entries:
+            entries = feed.entries[:12]
+
+            for entry in entries:
 
                 title = clean_html(
-                    entry.get("title", "")
+                    entry.get(
+                        "title",
+                        ""
+                    )
                 )
 
                 summary = clean_html(
-                    entry.get("summary", "")
+                    entry.get(
+                        "summary",
+                        ""
+                    )
                 )
 
                 link = entry.get(
@@ -201,21 +248,19 @@ def fetch_rss_news():
                 ):
                     continue
 
-                category = categorize_news(
-                    title
-                )
-
                 articles.append({
 
                     "title": title,
 
-                    "summary": summary[:200],
+                    "summary": summary[:180],
 
                     "link": link,
 
                     "source": source_name,
 
-                    "category": category
+                    "category": categorize_news(
+                        title
+                    )
                 })
 
         except Exception as e:
@@ -231,18 +276,9 @@ def fetch_rss_news():
 
 def fetch_google_news():
 
-    keywords = [
-
-        "네이버부동산",
-        "KB부동산",
-        "직방",
-        "다방",
-        "아실"
-    ]
-
     articles = []
 
-    for keyword in keywords:
+    for keyword in GOOGLE_KEYWORDS:
 
         try:
 
@@ -256,14 +292,22 @@ def fetch_google_news():
                 url
             )
 
-            for entry in feed.entries[:10]:
+            entries = feed.entries[:5]
+
+            for entry in entries:
 
                 title = clean_html(
-                    entry.get("title", "")
+                    entry.get(
+                        "title",
+                        ""
+                    )
                 )
 
                 summary = clean_html(
-                    entry.get("summary", "")
+                    entry.get(
+                        "summary",
+                        ""
+                    )
                 )
 
                 link = entry.get(
@@ -281,7 +325,7 @@ def fetch_google_news():
 
                     "title": title,
 
-                    "summary": summary[:200],
+                    "summary": summary[:180],
 
                     "link": link,
 
@@ -307,19 +351,23 @@ def fetch_news():
 
     articles = []
 
+    rss_articles = fetch_rss_news()
+
+    google_articles = fetch_google_news()
+
     articles.extend(
-        fetch_rss_news()
+        rss_articles
     )
 
     articles.extend(
-        fetch_google_news()
+        google_articles
     )
 
     articles = remove_duplicates(
         articles
     )
 
-    return articles
+    return articles[:80]
 
 
 def make_briefing(articles):
