@@ -325,10 +325,10 @@ def fetch_platform_news():
 
     platform_keywords = [
 
-        "직방 부동산",
-        "다방 부동산",
-        "KB부동산",
-        "아실 부동산"
+                 "직방",
+                 "다방",
+                 "KB부동산",
+                 "아실"
     ]
 
     articles = []
@@ -338,8 +338,9 @@ def fetch_platform_news():
         try:
 
             url = (
-                "https://news.google.com/rss/"
-                f"search?q={keyword}"
+                 "https://news.google.com/rss/search?q="
+                 + keyword
+                 + "+부동산"
             )
 
             feed = feedparser.parse(
