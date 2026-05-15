@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -54,11 +56,6 @@ def home():
         "전체"
     )
 
-    refresh = request.args.get(
-        "refresh",
-        "0"
-    )
-
     articles = fetch_news()
 
     if query:
@@ -107,9 +104,7 @@ def home():
 
         query=query,
 
-        category=category,
-
-        refresh=refresh
+        category=category
     )
 
 
@@ -117,20 +112,24 @@ def home():
 def refresh_news():
 
     return redirect(
-        url_for(
-            "home",
-            refresh="1"
-        )
+        url_for("home")
     )
 
 
 if __name__ == "__main__":
 
+    port = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
+    )
+
     app.run(
 
         host="0.0.0.0",
 
-        port=5000,
+        port=port,
 
-        debug=True
+        debug=False
     )
