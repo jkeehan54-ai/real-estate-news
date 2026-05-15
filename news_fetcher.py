@@ -268,7 +268,7 @@ def fetch_naver_real_estate():
 
         url = (
             "https://news.google.com/rss/"
-            "search?q=부동산"
+            "search?q=네이버부동산+아파트+청약+재건축"
         )
 
         feed = feedparser.parse(
