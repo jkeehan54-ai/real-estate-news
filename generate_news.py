@@ -1,5 +1,7 @@
 import feedparser
+import re
 
+# 1. 설정: 키워드 및 매체 리스트
 KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "재개발", "재건축", "대출", "부동산규제", "오피스텔", "공급"]
 
 SOURCES = {
@@ -19,6 +21,7 @@ SOURCES = {
 RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
+# 2. HTML 구성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
@@ -39,26 +42,31 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
+# 3. 뉴스 데이터 처리 (중복 제거 로직 포함)
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found = False
-    seen_titles = set()  # 중복 확인을 위한 저장소 추가
+    seen_topics = set()
     
     for entry in feed.entries:
         if keyword in entry.title:
-            # 제목이 이미 리스트에 있다면 추가하지 않음
-            if entry.title not in seen_titles:
-                html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-                seen_titles.add(entry.title) # 추가된 제목 기록
-                found = True
-                
+            # 대괄호 태그 제거 및 정규화
+            clean_title = re.sub(r'\[.*?\]', '', entry.title).strip()
+            # 제목 앞부분 12글자를 기준으로 주제 유사도 판단 (핵심 중복 제거)
+            topic = clean_title[:12]
+            
+            if topic in seen_topics:
+                continue
+            
+            html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
+            seen_topics.add(topic)
+            found = True
+            
     if not found:
         html += "<li>해당 키워드 뉴스가 없습니다.</li>"
     html += "</ul>"
 
 html += "</body></html>"
 
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html)
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
