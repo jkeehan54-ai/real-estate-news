@@ -1,11 +1,18 @@
 import feedparser
 
-# 1. 뉴스 키워드 및 매체 리스트 정의
 KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "재개발", "재건축", "대출", "부동산규제", "오피스텔", "공급"]
-# 주요 매체 바로가기 링크 설정 (사용자님이 자주 보시는 곳들로 추가 가능)
+
+# 사용자 요청 매체들을 포함한 대폭 확장된 리스트
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/realestate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
+    "동아일보": "https://www.donga.com/news/Economy/Realestate",
+    "한겨레": "https://www.hani.co.kr/arti/economy/property/",
+    "부산일보": "https://www.busan.com/list/economy/realestate",
+    "국제신문": "https://www.kookje.co.kr/news2011/asp/newslist.asp?code=0200",
+    "네이버부동산": "https://land.naver.com/",
+    "부동산원": "https://www.reb.or.kr/",
+    "KB부동산": "https://kbland.kr/",
     "머니투데이": "https://news.mt.co.kr/newsList.html?pDepth1=estate",
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
@@ -13,8 +20,20 @@ SOURCES = {
 RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
-# 2. HTML 구성
-html = "<html><head><meta charset='utf-8'><style>body{font-family:sans-serif; padding:15px;} .source-bar{margin-bottom:20px; padding:10px; background:#f4f4f4;} .source-bar a{margin-right:10px; text-decoration:none; color:blue; font-weight:bold;}</style></head><body>"
+# HTML 구성 (CSS를 조정하여 매체 버튼들이 보기 좋게 정렬되도록 했습니다)
+html = """
+<html><head><meta charset='utf-8'>
+<style>
+    body{font-family:sans-serif; padding:10px; line-height:1.6;}
+    .source-bar{margin-bottom:20px; padding:15px; background:#eef; border-radius:8px;}
+    .source-bar a{margin:5px; display:inline-block; padding:5px 10px; background:#fff; border:1px solid #ccc; text-decoration:none; color:#333; font-size:0.9em; border-radius:4px;}
+    .source-bar a:hover{background:#ddd;}
+    h1{font-size:1.5em;}
+    h2{font-size:1.1em; border-bottom:2px solid #333; padding-bottom:5px; margin-top:20px;}
+    ul{padding-left:20px;}
+</style>
+</head><body>
+"""
 
 # 상단 매체 바로가기 바 생성
 html += "<h1>부동산 맞춤 뉴스</h1><div class='source-bar'><strong>매체 바로가기: </strong>"
