@@ -1,25 +1,26 @@
 import feedparser
 
-KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "재개발", "재축", "대출", "부동산규제", "오피스텔", "공급"]
+KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "재개발", "재건축", "대출", "부동산규제", "오피스텔", "공급"]
 
-# 접속이 더 확실한 고정 URL로 교체했습니다
+# 사용자님께서 직접 지정해주신 정확한 주소로 업데이트 완료
 SOURCES = {
-    "조선일보": "https://www.chosun.com/economy/realestate/",
+    "조선일보": "https://www.chosun.com/economy/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
     "동아일보": "https://www.donga.com/news/Economy/Realestate",
     "한겨레": "https://www.hani.co.kr/arti/economy/property/",
-    "부산일보": "https://www.busan.com/list/economy/realestate",
-    "국제신문": "https://www.kookje.co.kr/news2011/asp/newslist.asp?code=0200",
+    "부산일보": "https://www.busan.com/economy/",
+    "국제신문": "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200&vHeadTitle=%B0%E6%C1%A6",
     "네이버부동산": "https://land.naver.com/",
     "한국부동산원": "https://www.reb.or.kr/reb/main.do",
     "KB부동산": "https://kbland.kr/",
-    "머니투데이": "https://news.mt.co.kr/newsList.html?code=estate",
+    "머니투데이": "https://www.mt.co.kr/estate",
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
 RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
+# HTML 구성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
