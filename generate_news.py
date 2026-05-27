@@ -2,7 +2,6 @@ import feedparser
 
 KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "재개발", "재건축", "대출", "부동산규제", "오피스텔", "공급"]
 
-# 사용자님께서 직접 지정해주신 정확한 주소로 업데이트 완료
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -20,7 +19,6 @@ SOURCES = {
 RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
-# HTML 구성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
@@ -44,15 +42,23 @@ html += "</div>"
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found = False
+    seen_titles = set()  # 중복 확인을 위한 저장소 추가
+    
     for entry in feed.entries:
         if keyword in entry.title:
-            html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-            found = True
+            # 제목이 이미 리스트에 있다면 추가하지 않음
+            if entry.title not in seen_titles:
+                html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
+                seen_titles.add(entry.title) # 추가된 제목 기록
+                found = True
+                
     if not found:
         html += "<li>해당 키워드 뉴스가 없습니다.</li>"
     html += "</ul>"
 
 html += "</body></html>"
 
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html)
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
