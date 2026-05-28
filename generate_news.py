@@ -18,10 +18,11 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko"
+# &sort=date 를 추가하여 최신순으로 정렬
+RSS_URL = "https://news.google.com/rss/search?q=%EB%B6%90%EB%8F%99%EC%82%B0+OR+%EC%95%84%ED%8C%8C%ED%8A%B8&hl=ko&gl=KR&ceid=KR:ko&sort=date"
 feed = feedparser.parse(RSS_URL)
 
-# 2. HTML 구성
+# 2. HTML 구성 (디자인 포함)
 html = """
 <html><head><meta charset='utf-8'>
 <style>
@@ -42,28 +43,31 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 3. 뉴스 데이터 처리 (중복 제거 로직 포함)
+# 3. 뉴스 데이터 처리 (중복 제거 및 최신성 우선)
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found = False
-    seen_topics = set()
+    seen_keys = set()
     
+    # 최신순으로 정렬된 데이터를 하나씩 처리
     for entry in feed.entries:
         if keyword in entry.title:
-            # 대괄호 태그 제거 및 정규화
-            clean_title = re.sub(r'\[.*?\]', '', entry.title).strip()
-            # 제목 앞부분 12글자를 기준으로 주제 유사도 판단 (핵심 중복 제거)
-            topic = clean_title[:12]
+            # 특수문자 제거 후 5자 이상 명사 조합으로 고유 키 생성
+            words = re.findall(r'[가-힣]{2,}', entry.title)
+            topic_key = "_".join(words[:2]) # 앞 단어 2개 조합으로 더 엄격하게 중복 판단
             
-            if topic in seen_topics:
+            if topic_key in seen_keys:
                 continue
             
             html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-            seen_topics.add(topic)
+            seen_keys.add(topic_key)
             found = True
             
+            # 키워드별로 너무 많은 기사가 나오지 않게 5개로 제한
+            if len(seen_keys) >= 5: break
+            
     if not found:
-        html += "<li>해당 키워드 뉴스가 없습니다.</li>"
+        html += "<li>해당 키워드 최신 뉴스가 없습니다.</li>"
     html += "</ul>"
 
 html += "</body></html>"
