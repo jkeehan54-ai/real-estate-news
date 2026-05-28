@@ -2,8 +2,8 @@ import feedparser
 import time
 from datetime import datetime
 
-# 1. 키워드 설정 (집값에 아파트값 추가)
-KEYWORDS = ["집값", "아파트값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
+# 1. 키워드 설정 (집값과 아파트값을 '집값/아파트값'으로 통합)
+KEYWORDS = ["집값/아파트값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
 
 # 2. 13개 매체 바로가기 리스트
 SOURCES = {
@@ -73,10 +73,9 @@ for url in FEEDS:
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found_count = 0
-    # '집값' 키워드 처리 시 '아파트값'도 포함하여 체크
-    search_terms = [keyword]
-    if keyword == "집값":
-        search_terms.append("아파트값")
+    
+    # '집값/아파트값' 통합 로직
+    search_terms = ["집값", "아파트값"] if keyword == "집값/아파트값" else [keyword]
         
     matches = [e for e in all_entries if any(term in e.title or (hasattr(e, 'summary') and term in e.summary) for term in search_terms)]
     
