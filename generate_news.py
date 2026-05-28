@@ -1,8 +1,7 @@
 import feedparser
 
-# 1. 키워드 및 매체 설정
-KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "대출", "재개발", "재건축", 
-            "부동산규제", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발", "부동산정책"]
+# 1. 요청하신 순서대로 카테고리 재배치 및 설정
+KEYWORDS = ["집값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
 
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/",
@@ -20,7 +19,7 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 2. RSS 데이터 가져오기 (가장 넓은 범위 검색)
+# 2. RSS 데이터 가져오기
 RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+주택&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
@@ -41,17 +40,18 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 4. 키워드별 매칭 (유연한 비교)
+# 4. 키워드별 매칭 (요청하신 순서대로 처리)
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     matches = []
     for entry in feed.entries:
-        # 제목과 키워드 비교 (포함 여부 확인)
+        # 제목에서 키워드 포함 여부 확인
         if keyword in entry.title:
             matches.append(f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>")
     
     if matches:
-        html += "".join(matches[:5]) # 결과가 있으면 최대 5개 표시
+        # 결과가 있으면 최대 5개 표시
+        html += "".join(matches[:5])
     else:
         html += "<li>관련 뉴스가 현재 집계되지 않았습니다.</li>"
     html += "</ul>"
