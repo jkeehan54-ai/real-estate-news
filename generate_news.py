@@ -1,6 +1,8 @@
 import feedparser
+import time
+from datetime import datetime, timedelta
 
-# 1. 요청하신 순서대로 카테고리 재배치 및 설정
+# 1. 요청하신 순서대로 카테고리 설정
 KEYWORDS = ["집값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
 
 SOURCES = {
@@ -19,41 +21,50 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 2. RSS 데이터 가져오기
-RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+주택&hl=ko&gl=KR&ceid=KR:ko"
+# 2. 구글 뉴스 RSS 호출 (최신순 정렬)
+RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트&hl=ko&gl=KR&ceid=KR:ko&sort=date"
 feed = feedparser.parse(RSS_URL)
 
 # 3. HTML 생성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
-    body{font-family:sans-serif; padding:10px;}
-    .source-bar{margin-bottom:20px; padding:10px; background:#f4f4f4;}
-    .source-bar a{margin-right:10px;}
-    h2{color:#333; border-bottom:2px solid #333; padding-bottom:5px; margin-top:30px;}
+    body{font-family:sans-serif; padding:10px; line-height:1.6;}
+    .source-bar{margin-bottom:20px; padding:15px; background:#eef; border-radius:8px;}
+    .source-bar a{margin:5px; display:inline-block; padding:8px 12px; background:#fff; border:1px solid #999; text-decoration:none; color:#000; font-size:0.9em; border-radius:4px;}
+    h2{font-size:1.1em; border-left:4px solid #0056b3; padding-left:10px; margin-top:25px; background:#f0f7ff;}
 </style>
 </head><body>
-<h1>부동산 뉴스 대시보드</h1>
+<h1>오늘의 부동산 뉴스 (2026-05-28)</h1>
 <div class='source-bar'><strong>매체 바로가기: </strong>
 """
 for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 4. 키워드별 매칭 (요청하신 순서대로 처리)
+# 4. 24시간 이내 최신 뉴스만 필터링
+limit_time = datetime.now() - timedelta(hours=24)
+
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
-    matches = []
-    for entry in feed.entries:
-        # 제목에서 키워드 포함 여부 확인
-        if keyword in entry.title:
-            matches.append(f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>")
+    found_count = 0
     
-    if matches:
-        # 결과가 있으면 최대 5개 표시
-        html += "".join(matches[:5])
-    else:
-        html += "<li>관련 뉴스가 현재 집계되지 않았습니다.</li>"
+    for entry in feed.entries:
+        # 시간 파싱 오류 방지 및 날짜 검증
+        try:
+            pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+        except:
+            continue
+            
+        # 24시간 내 발행된 뉴스만 포함 [cite: 1.2.2]
+        if pub_time >= limit_time and keyword in entry.title:
+            html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
+            found_count += 1
+        
+        if found_count >= 5: break
+            
+    if found_count == 0:
+        html += "<li>오늘 발행된 관련 뉴스가 없습니다.</li>"
     html += "</ul>"
 
 html += "</body></html>"
