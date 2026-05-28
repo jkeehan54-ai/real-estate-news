@@ -2,8 +2,8 @@ import feedparser
 import time
 from datetime import datetime
 
-# 1. 키워드 설정
-KEYWORDS = ["집값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
+# 1. 키워드 설정 (집값에 아파트값 추가)
+KEYWORDS = ["집값", "아파트값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
 
 # 2. 13개 매체 바로가기 리스트
 SOURCES = {
@@ -22,21 +22,21 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 3. 13개 매체 대응 직접 수집 피드 (공식 RSS 및 대체 수집 경로)
+# 3. 13개 매체 대응 직접 수집 피드
 FEEDS = [
-    "https://www.chosun.com/arc/outboundfeeds/rss/category/economy/?outputType=xml", # 조선일보
-    "https://rss.joins.com/joins_realestate_list.xml",                               # 중앙일보
-    "https://rss.donga.com/economy.xml",                                             # 동아일보
-    "https://www.hani.co.kr/rss/economy/",                                           # 한겨레
-    "https://www.mk.co.kr/rss/realestate.xml",                                       # 매일경제
-    "https://www.hankyung.com/feed/realestate",                                      # 한국경제
-    "http://www.busan.com/rss/pc/economy.xml",                                       # 부산일보
-    "http://www.kookje.co.kr/news2011/rss/rss_0200.xml",                             # 국제신문
-    "https://news.google.com/rss/search?q=site:land.naver.com",                      # 네이버부동산(대체)
-    "https://news.google.com/rss/search?q=site:reb.or.kr",                           # 한국부동산원(대체)
-    "https://news.google.com/rss/search?q=site:kbland.kr",                           # KB부동산(대체)
-    "https://news.mt.co.kr/rss/view.mt?type=estate",                                 # 머니투데이
-    "https://www.yna.co.kr/rss/economy/real-estate.xml"                              # 연합뉴스
+    "https://www.chosun.com/arc/outboundfeeds/rss/category/economy/?outputType=xml", 
+    "https://rss.joins.com/joins_realestate_list.xml",                               
+    "https://rss.donga.com/economy.xml",                                             
+    "https://www.hani.co.kr/rss/economy/",                                           
+    "https://www.mk.co.kr/rss/realestate.xml",                                       
+    "https://www.hankyung.com/feed/realestate",                                      
+    "http://www.busan.com/rss/pc/economy.xml",                                       
+    "http://www.kookje.co.kr/news2011/rss/rss_0200.xml",                             
+    "https://news.google.com/rss/search?q=site:land.naver.com",                      
+    "https://news.google.com/rss/search?q=site:reb.or.kr",                           
+    "https://news.google.com/rss/search?q=site:kbland.kr",                           
+    "https://news.mt.co.kr/rss/view.mt?type=estate",                                 
+    "https://www.yna.co.kr/rss/economy/real-estate.xml"                              
 ]
 
 today_str = datetime.now().strftime('%Y-%m-%d')
@@ -58,7 +58,7 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 5. 모든 데이터 통합 수집
+# 5. 통합 수집
 all_entries = []
 for url in FEEDS:
     feed = feedparser.parse(url)
@@ -73,8 +73,13 @@ for url in FEEDS:
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found_count = 0
-    # 제목/본문 키워드 매칭
-    matches = [e for e in all_entries if keyword in e.title or (hasattr(e, 'summary') and keyword in e.summary)]
+    # '집값' 키워드 처리 시 '아파트값'도 포함하여 체크
+    search_terms = [keyword]
+    if keyword == "집값":
+        search_terms.append("아파트값")
+        
+    matches = [e for e in all_entries if any(term in e.title or (hasattr(e, 'summary') and term in e.summary) for term in search_terms)]
+    
     for entry in matches[:6]:
         html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
         found_count += 1
