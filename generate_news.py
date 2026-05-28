@@ -1,8 +1,8 @@
 import feedparser
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# 1. 요청하신 순서대로 카테고리 설정
+# 1. 카테고리 설정 (요청하신 순서)
 KEYWORDS = ["집값", "부동산정책", "부동산규제", "부동산세금", "청약", "분양", "전세", "금리", "대출", "재개발", "재건축", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발"]
 
 SOURCES = {
@@ -21,11 +21,14 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 2. 구글 뉴스 RSS 호출 (최신순 정렬)
+# 2. RSS 데이터 가져오기
 RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트&hl=ko&gl=KR&ceid=KR:ko&sort=date"
 feed = feedparser.parse(RSS_URL)
 
-# 3. HTML 생성
+# 3. 오늘 날짜 기준 설정 (오늘 날짜와 일치하는 기사만 수집)
+today_str = datetime.now().strftime('%Y-%m-%d')
+
+# 4. HTML 생성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
@@ -42,22 +45,19 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 4. 24시간 이내 최신 뉴스만 필터링
-limit_time = datetime.now() - timedelta(hours=24)
-
+# 5. 뉴스 필터링 (발행 날짜가 오늘인 경우만 추출)
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found_count = 0
     
     for entry in feed.entries:
-        # 시간 파싱 오류 방지 및 날짜 검증
         try:
-            pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+            pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed)).strftime('%Y-%m-%d')
         except:
             continue
             
-        # 24시간 내 발행된 뉴스만 포함 [cite: 1.2.2]
-        if pub_time >= limit_time and keyword in entry.title:
+        # 발행일이 오늘 날짜와 정확히 일치하는지 확인
+        if pub_date == today_str and keyword in entry.title:
             html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
             found_count += 1
         
@@ -69,6 +69,5 @@ for keyword in KEYWORDS:
 
 html += "</body></html>"
 
-# 5. 파일 저장
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
