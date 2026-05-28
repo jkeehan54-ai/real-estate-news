@@ -1,8 +1,6 @@
 import feedparser
-import re
-from datetime import datetime
 
-# 1. 설정
+# 1. 키워드 및 매체 설정
 KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "대출", "재개발", "재건축", 
             "부동산규제", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발", "부동산정책"]
 
@@ -22,51 +20,44 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 2. RSS 피드 파싱 (최신순)
-RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+분양+재건축&hl=ko&gl=KR&ceid=KR:ko&sort=date"
+# 2. RSS 데이터 가져오기 (가장 넓은 범위 검색)
+RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+주택&hl=ko&gl=KR&ceid=KR:ko"
 feed = feedparser.parse(RSS_URL)
 
 # 3. HTML 생성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
-    body{font-family:sans-serif; padding:10px; line-height:1.6;}
-    .source-bar{margin-bottom:20px; padding:15px; background:#eef; border-radius:8px;}
-    .source-bar a{margin:5px; display:inline-block; padding:8px 12px; background:#fff; border:1px solid #999; text-decoration:none; color:#000; font-size:0.9em; border-radius:4px;}
-    .source-bar a:hover{background:#333; color:#fff;}
-    h1{font-size:1.5em; margin-bottom:10px;}
-    h2{font-size:1.1em; border-left:4px solid #0056b3; padding-left:10px; margin-top:25px; background:#f0f7ff;}
-    ul{padding-left:25px;}
-    li{margin-bottom:5px;}
+    body{font-family:sans-serif; padding:10px;}
+    .source-bar{margin-bottom:20px; padding:10px; background:#f4f4f4;}
+    .source-bar a{margin-right:10px;}
+    h2{color:#333; border-bottom:2px solid #333; padding-bottom:5px; margin-top:30px;}
 </style>
 </head><body>
+<h1>부동산 뉴스 대시보드</h1>
+<div class='source-bar'><strong>매체 바로가기: </strong>
 """
-
-html += "<h1>부동산 맞춤 뉴스</h1><div class='source-bar'><strong>매체 바로가기: </strong>"
 for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 4. 뉴스 분류 및 출력
+# 4. 키워드별 매칭 (유연한 비교)
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
-    found_count = 0
-    
+    matches = []
     for entry in feed.entries:
-        # 제목에서 키워드 포함 여부를 더 관대하게 확인 (대소문자/공백 무관)
+        # 제목과 키워드 비교 (포함 여부 확인)
         if keyword in entry.title:
-            html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-            found_count += 1
-        
-        # 각 키워드당 최대 5개씩만 노출하여 화면 최적화
-        if found_count >= 5: break
-            
-    if found_count == 0:
-        html += "<li>검색 결과가 없습니다. (구글 뉴스 업데이트 중)</li>"
+            matches.append(f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>")
+    
+    if matches:
+        html += "".join(matches[:5]) # 결과가 있으면 최대 5개 표시
+    else:
+        html += "<li>관련 뉴스가 현재 집계되지 않았습니다.</li>"
     html += "</ul>"
 
 html += "</body></html>"
 
-# 파일 저장
+# 5. 파일 저장
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
