@@ -1,56 +1,63 @@
 import feedparser
 from datetime import datetime
 
-# 1. 13개 매체 부동산 섹션 최신 RSS/피드 주소
-FEEDS = {
-    "조선일보": "https://www.chosun.com/arc/outboundfeeds/rss/category/economy/?outputType=xml",
-    "중앙일보": "https://rss.joins.com/joins_realestate_list.xml",
-    "동아일보": "https://rss.donga.com/economy.xml",
-    "한겨레": "https://www.hani.co.kr/rss/economy/",
-    "매일경제": "https://www.mk.co.kr/rss/realestate.xml",
-    "한국경제": "https://www.hankyung.com/feed/realestate",
-    "부산일보": "http://www.busan.com/rss/pc/economy.xml",
-    "국제신문": "http://www.kookje.co.kr/news2011/rss/rss_0200.xml",
-    "네이버부동산": "https://news.naver.com/main/list.naver?mode=LS2D&mid=shm&sid1=101&sid2=260",
+# 1. 13개 매체 바로가기 (상단 고정)
+SOURCES_LINKS = {
+    "조선일보": "https://www.chosun.com/economy/realestate/",
+    "중앙일보": "https://www.joongang.co.kr/realestate",
+    "동아일보": "https://www.donga.com/news/Economy/Realestate",
+    "한겨레": "https://www.hani.co.kr/arti/economy/property/",
+    "매일경제": "https://www.mk.co.kr/news/realestate/",
+    "한국경제": "https://www.hankyung.com/realestate",
+    "부산일보": "https://www.busan.com/economy/",
+    "국제신문": "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
+    "네이버부동산": "https://land.naver.com/news/",
     "한국부동산원": "https://www.reb.or.kr/reb/main.do",
-    "KB부동산": "https://kbland.kr/main",
-    "머니투데이": "https://news.mt.co.kr/rss/view.mt?type=estate",
-    "연합뉴스": "https://www.yna.co.kr/rss/economy/real-estate.xml"
+    "KB부동산": "https://kbland.kr/",
+    "머니투데이": "https://news.mt.co.kr/estate/",
+    "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 2. 부동산 관련 키워드 (이 단어가 제목에 있어야만 수집)
-KEYWORDS = ["부동산", "아파트", "청약", "분양", "전세", "월세", "금리", "집값", "재건축", "재개발", "오피스텔", "주택"]
+# 2. 구글 뉴스 검색을 이용한 강제 뉴스 추출 (매체별 부동산 뉴스 타겟팅)
+# RSS 주소 대신 실시간 검색 쿼리를 사용하여 뉴스를 강제로 불러옵니다.
+FEEDS = {name: f"https://news.google.com/rss/search?q=site:{url.split('//')[-1].split('/')[0]}+부동산+아파트+분양&hl=ko&gl=KR&ceid=KR:ko" 
+         for name, url in SOURCES_LINKS.items()}
 
+# 3. HTML 생성
 html = f"""
 <html><head><meta charset='utf-8'>
 <style>
-    body {{font-family: sans-serif; padding: 20px;}}
-    h2 {{color: #0056b3; border-bottom: 2px solid #0056b3; margin-top: 30px;}}
+    body {{font-family: sans-serif; padding: 20px; line-height: 1.5;}}
+    .nav-bar {{background: #f8f9fa; padding: 15px; border: 1px solid #ccc; margin-bottom: 25px; border-radius: 5px;}}
+    .nav-bar a {{margin-right: 15px; text-decoration: none; color: #0056b3; font-weight: bold; display: inline-block;}}
+    h2 {{color: #333; border-bottom: 2px solid #0056b3; margin-top: 30px; padding-bottom: 5px;}}
+    ul {{list-style: none; padding-left: 0;}}
+    li {{margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px;}}
     a:link {{color: #0000FF !important; text-decoration: none;}}
     a:visited {{color: #800080 !important;}}
 </style>
 </head><body>
-<h1>부동산 종합 리포트 ({datetime.now().strftime('%Y-%m-%d')})</h1>
+<h1>오늘의 부동산 종합 리포트 ({datetime.now().strftime('%Y-%m-%d')})</h1>
+<div class='nav-bar'><strong>매체 바로가기: </strong><br><br>
 """
+for name, url in SOURCES_LINKS.items():
+    html += f"<a href='{url}' target='_blank'>{name}</a>"
+html += "</div>"
 
+# 4. 데이터 수집 및 출력
 for name, url in FEEDS.items():
     html += f"<h2>[{name}] 부동산 이슈</h2><ul>"
     feed = feedparser.parse(url)
-    count = 0
     
-    # 기사가 있는 경우 필터링하여 출력
-    for entry in feed.entries:
-        if any(keyword in entry.title for keyword in KEYWORDS):
+    if not feed.entries:
+        html += "<li>뉴스를 가져오는 중입니다. 잠시 후 새로고침하세요.</li>"
+    else:
+        for entry in feed.entries[:8]: # 매체당 8개 뉴스
             html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
-            count += 1
-        if count >= 6: break # 매체당 6개 뉴스만
-    
-    # 필터링 결과가 없으면 해당 페이지로 안내
-    if count == 0:
-        html += f"<li><a href='{url}' target='_blank'>[기사 확인] {name} 부동산 페이지 바로가기</a></li>"
     html += "</ul>"
 
 html += "</body></html>"
 
+# 5. 파일 저장
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
