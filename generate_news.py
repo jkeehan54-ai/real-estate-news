@@ -1,7 +1,7 @@
 import feedparser
 from datetime import datetime
 
-# 1. 13개 매체 바로가기 (상단 고정)
+# 1. 13개 매체 바로가기 링크 (상단 고정)
 SOURCES_LINKS = {
     "조선일보": "https://www.chosun.com/economy/realestate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -18,16 +18,16 @@ SOURCES_LINKS = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 2. 구글 뉴스 검색을 이용한 강제 뉴스 추출 (매체별 부동산 뉴스 타겟팅)
-# RSS 주소 대신 실시간 검색 쿼리를 사용하여 뉴스를 강제로 불러옵니다.
-FEEDS = {name: f"https://news.google.com/rss/search?q=site:{url.split('//')[-1].split('/')[0]}+부동산+아파트+분양&hl=ko&gl=KR&ceid=KR:ko" 
-         for name, url in SOURCES_LINKS.items()}
+# 2. 24시간 내 최신 뉴스만 가져오기 위한 검색 쿼리 세팅
+def get_google_news_url(site_domain):
+    # 'when:1d' 파라미터를 통해 최근 24시간 내 기사만 선별
+    return f"https://news.google.com/rss/search?q=site:{site_domain}+부동산+아파트+분양+when:1d&hl=ko&gl=KR&ceid=KR:ko"
 
 # 3. HTML 생성
 html = f"""
 <html><head><meta charset='utf-8'>
 <style>
-    body {{font-family: sans-serif; padding: 20px; line-height: 1.5;}}
+    body {{font-family: sans-serif; padding: 20px; line-height: 1.6;}}
     .nav-bar {{background: #f8f9fa; padding: 15px; border: 1px solid #ccc; margin-bottom: 25px; border-radius: 5px;}}
     .nav-bar a {{margin-right: 15px; text-decoration: none; color: #0056b3; font-weight: bold; display: inline-block;}}
     h2 {{color: #333; border-bottom: 2px solid #0056b3; margin-top: 30px; padding-bottom: 5px;}}
@@ -44,20 +44,21 @@ for name, url in SOURCES_LINKS.items():
     html += f"<a href='{url}' target='_blank'>{name}</a>"
 html += "</div>"
 
-# 4. 데이터 수집 및 출력
-for name, url in FEEDS.items():
-    html += f"<h2>[{name}] 부동산 이슈</h2><ul>"
+# 4. 뉴스 수집 로직
+for name, domain in SOURCES_LINKS.items():
+    html += f"<h2>[{name}] 부동산 최신 이슈</h2><ul>"
+    url = get_google_news_url(domain.split('//')[-1].split('/')[0])
     feed = feedparser.parse(url)
     
-    if not feed.entries:
-        html += "<li>뉴스를 가져오는 중입니다. 잠시 후 새로고침하세요.</li>"
+    entries = feed.entries
+    if not entries:
+        html += "<li>최근 24시간 내 등록된 부동산 뉴스가 없습니다.</li>"
     else:
-        for entry in feed.entries[:8]: # 매체당 8개 뉴스
+        for entry in entries[:6]: # 매체별 최신 6개 기사 출력
             html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
     html += "</ul>"
 
 html += "</body></html>"
 
-# 5. 파일 저장
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
