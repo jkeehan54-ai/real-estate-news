@@ -1,13 +1,19 @@
 """
 부동산 뉴스 브리핑 - 3단계 하이브리드 중복 제거
-───────────────────────────────────────────────────────
-단계별 역할:
-  1단계 SequenceMatcher  - 표현만 조금 다른 명백한 중복 (속보 vs 일반, 매체만 다른 경우)
-  2단계 키워드 자카드    - 어순·조사가 달라도 핵심어가 같은 중복
-  3단계 핵심 엔티티      - 고유한 숫자(40억, 81%)·지명·기관명이 2개 이상 겹치면 같은 사건
+─────────────────────────────────────────────────
+실행 방법:
+  pip install feedparser
+  python news_dedup.py
+  → index.html 생성됨
+
+중복 제거 3단계:
+  1단계 SequenceMatcher  - 표현만 조금 다른 명백한 중복
+  2단계 키워드 자카드    - 핵심 단어가 같은 중복
+  3단계 핵심 엔티티      - 금액·비율·지명·기관이 2개 이상 겹치는 같은 사건
 """
 
 import feedparser
+from urllib.parse import quote_plus   # ← URL 인코딩 버그 수정
 from difflib import SequenceMatcher
 import re
 
@@ -28,7 +34,7 @@ SOURCES = {
     "연합뉴스":    "https://www.yna.co.kr/economy/real-estate/",
 }
 
-# ── 불용어: 단독으로는 중복 판단 근거가 안 되는 단어 ─────────────────────────
+# ── 불용어 ────────────────────────────────────────────────────────────────────
 STOPWORDS = {
     "은","는","이","가","을","를","의","에","도","와","과","하고","으로","로",
     "에서","까지","부터","이다","합니다","입니다","했다","한다","됩니다","됐다",
@@ -37,7 +43,7 @@ STOPWORDS = {
     "하다","된다","한","더","또","위","아래","앞","뒤","속","간","전","후",
 }
 
-# ── 엔티티 사전 (구체적일수록 좋음, 범용 단어 제외) ────────────────────────
+# ── 엔티티 사전 (범용어 제외, 구체적 고유명사만) ─────────────────────────────
 LOC_ENTITIES = {
     "수도권","서울","강남","강북","강동","강서","부산","경기","인천",
     "대구","광주","대전","울산","세종","제주","경남","경북","전남","전북",
@@ -48,26 +54,21 @@ ORG_ENTITIES = {
     "금융위","금감원","LH","SH","HUG","주택도시보증공사",
 }
 
-# ── 공통 함수 ─────────────────────────────────────────────────────────────────
+# ── 정규화 ────────────────────────────────────────────────────────────────────
 def normalize(title: str) -> str:
-    """매체명·태그·날짜·특수문자 정리 (특수문자는 삭제가 아닌 공백 치환)"""
-    title = re.split(r'\s[-|]\s', title)[0].strip()           # "제목 - 매체명" 분리
-    title = re.sub(r'^\[.*?\]\s*', '', title)                  # [속보][①] 태그 제거
-    title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)  # 날짜 제거
-    title = re.sub(r'[^\w\s]', ' ', title)                    # 특수문자 → 공백 (단어 분리 유지)
-    title = re.sub(r'(?<!\w)[一-龥](?!\w)', '', title)         # 단독 한자 제거(李, 日 등)
+    title = re.split(r'\s[-|]\s', title)[0].strip()
+    title = re.sub(r'^\[.*?\]\s*', '', title)
+    title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)
+    title = re.sub(r'[^\w\s]', ' ', title)          # 특수문자 → 공백 (단어 분리 유지)
+    title = re.sub(r'(?<!\w)[一-龥](?!\w)', '', title)  # 단독 한자 제거
     return re.sub(r'\s+', ' ', title).strip()
 
 def keywords(title: str) -> set:
-    """불용어 제거 후 2글자 이상 핵심 단어 집합"""
     return {w for w in normalize(title).split()
             if w not in STOPWORDS and len(w) >= 2}
 
 def extract_entities(title: str) -> set:
-    """
-    고유한 숫자 표현(금액·비율·물리량) + 지명 + 기관명 추출.
-    "년/월/일" 단독은 너무 범용적이라 제외.
-    """
+    """금액·비율·물리량 + 지명 + 기관명 (년/월/일 단독은 너무 범용적이라 제외)"""
     t = re.sub(r'[^\w\s]', ' ', title)
     ents = set()
     for m in re.finditer(
@@ -84,9 +85,9 @@ def extract_entities(title: str) -> set:
 def is_duplicate(
     new_raw: str,
     seen_raw: list,
-    sim_thr: float = 0.65,  # 1단계: 문자열 유사도 임계값
-    kw_thr:  float = 0.45,  # 2단계: 키워드 자카드 임계값
-    ent_thr: int   = 2,     # 3단계: 공통 엔티티 최소 개수
+    sim_thr: float = 0.65,   # 1단계: 문자열 유사도
+    kw_thr:  float = 0.45,   # 2단계: 키워드 자카드
+    ent_thr: int   = 2,      # 3단계: 공통 엔티티 최소 개수
 ) -> bool:
     norm_new = normalize(new_raw)
     kw_new   = keywords(new_raw)
@@ -105,7 +106,7 @@ def is_duplicate(
         if union and len(kw_new & kw_s) / union >= kw_thr:
             return True
 
-        # 3단계: 핵심 엔티티 겹침 (구체적 숫자·지명·기관이 2개 이상 같으면 같은 사건)
+        # 3단계: 핵심 엔티티 겹침
         ent_s = extract_entities(seen)
         if ent_new and ent_s and len(ent_new & ent_s) >= ent_thr:
             return True
@@ -114,22 +115,23 @@ def is_duplicate(
 
 # ── 뉴스 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news() -> dict:
-    results    = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
-    seen_raw   = []
-    total, dropped = 0, 0
+    results   = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
+    seen_raw  = []
+    total = dropped = 0
 
     queries = [
-        "부동산 분양 청약",
+        "부동산 청약",
         "아파트 재건축 재개발",
         "부동산 세금 종부세",
-        "부동산 대출 정책",
+        "부동산 정책 대출",
         "부동산 시장 동향",
     ]
 
     for q in queries:
-        feed = feedparser.parse(
-            f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
-        )
+        # ← quote_plus: 공백을 +로 인코딩 (Google News RSS 필수)
+        url  = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
+        feed = feedparser.parse(url)
+
         for entry in feed.entries:
             raw    = entry.title
             total += 1
@@ -138,7 +140,6 @@ def get_clean_news() -> dict:
                 dropped += 1
                 continue
 
-            # 카테고리 분류
             t = normalize(raw).lower()
             if   any(k in t for k in ["분양","청약"]):              cat = "청약"
             elif any(k in t for k in ["재건축","재개발"]):           cat = "재건축"
@@ -157,7 +158,7 @@ def get_clean_news() -> dict:
                 })
                 seen_raw.append(raw)
 
-    print(f"[수집] 전체 {total}건 → 중복제거 {dropped}건 → 최종 {total - dropped}건")
+    print(f"[수집] 전체 {total}건 → 중복제거 {dropped}건 → 최종 {total-dropped}건")
     return results
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
@@ -193,3 +194,4 @@ if __name__ == "__main__":
     print(f"[완료] index.html 생성 | 카테고리별 {total}건")
     for cat, lst in data.items():
         print(f"  [{cat}] {len(lst)}건")
+
