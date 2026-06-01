@@ -1,7 +1,7 @@
 import feedparser
 from datetime import datetime
 
-# 13개 매체 고정 리스트 (절대 변하지 않음)
+# 13개 매체 고정 리스트
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/real_estate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -18,44 +18,41 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-def get_unique_news():
+def get_clean_news():
     results = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
-    seen_titles = set()
+    seen_hashes = set()
     
-    # 중복 제거를 위한 함수: 제목에서 조사나 특수문자를 제거한 '핵심 키워드' 비교
-    def get_core_title(t):
-        return "".join([c for c in t if c.isalnum()])[:15]
-
-    queries = ["부동산 청약 분양", "재건축 재개발", "부동산 세금 양도세", "부동산 정책 대출", "부동산 시장 동향"]
+    # 더 넓은 키워드 검색
+    queries = ["부동산 분양 청약", "아파트 재건축 재개발", "부동산 세금 종부세", "부동산 대출 정책", "부동산 시장 동향"]
+    
     for q in queries:
-        url = f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
-        feed = feedparser.parse(url)
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko")
         for entry in feed.entries:
-            core = get_core_title(entry.title)
-            if core in seen_titles: continue
+            # 제목의 핵심 요약 (중복 제거용)
+            title = entry.title.split('-')[0].split('|')[0].strip()
+            title_hash = "".join([c for c in title if c.isalnum()])[:12]
             
-            t = entry.title.lower()
+            if title_hash in seen_hashes: continue
+            
+            t = title.lower()
             cat = "시장동향"
             if any(k in t for k in ["분양", "청약"]): cat = "청약"
             elif any(k in t for k in ["재건축", "재개발"]): cat = "재건축"
             elif any(k in t for k in ["세금", "종부세", "취득세"]): cat = "세제"
             elif any(k in t for k in ["정부", "대출", "금리", "정책"]): cat = "정책"
             
-            results[cat].append({"title": entry.title, "link": entry.link, "src": entry.source.title if 'source' in entry else "뉴스"})
-            seen_titles.add(core)
+            if len(results[cat]) < 10: # 각 카테고리당 최대 10개로 제한하여 중복 분산
+                results[cat].append({"title": title, "link": entry.link, "src": entry.source.title if 'source' in entry else "뉴스"})
+                seen_hashes.add(title_hash)
     return results
 
-data = get_unique_news()
+data = get_clean_news()
 
-# HTML 생성
-html = f"<h1>🏠 부동산 뉴스 브리핑</h1>\n"
-html += " | ".join([f'<a href="{url}" target="_blank">{name}</a>' for name, url in SOURCES.items()])
-html += "\n\n<h2>📊 KB부동산 시황</h2><p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위 시장입니다.</p>\n"
+# HTML 출력
+html = f"<h1>🏠 부동산 뉴스 브리핑</h1>\n" + " | ".join([f'<a href="{url}" target="_blank">{name}</a>' for name, url in SOURCES.items()])
+html += "\n<h2>오늘의 핵심 브리핑</h2><p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위입니다.</p>"
 
 for cat, news_list in data.items():
-    html += f"<h2>[{cat}]</h2>"
-    if not news_list: html += "<p>수집된 기사가 없습니다.</p>"
-    for n in news_list:
-        html += f"<p>{n['title']} | {n['src']} - <a href='{n['link']}' target='_blank'>[바로가기]</a></p>"
+    html += f"<h2>[{cat}]</h2>" + "".join([f"<p>{n['title']} | {n['src']} - <a href='{n['link']}' target='_blank'>[바로가기]</a></p>" for n in news_list])
 
 with open("index.html", "w", encoding="utf-8") as f: f.write(html)
