@@ -1,87 +1,122 @@
+"""
+부동산 뉴스 브리핑 - 3단계 하이브리드 중복 제거
+───────────────────────────────────────────────────────
+단계별 역할:
+  1단계 SequenceMatcher  - 표현만 조금 다른 명백한 중복 (속보 vs 일반, 매체만 다른 경우)
+  2단계 키워드 자카드    - 어순·조사가 달라도 핵심어가 같은 중복
+  3단계 핵심 엔티티      - 고유한 숫자(40억, 81%)·지명·기관명이 2개 이상 겹치면 같은 사건
+"""
+
 import feedparser
 from difflib import SequenceMatcher
 import re
 
-# 13개 매체 고정 리스트
+# ── 13개 매체 ─────────────────────────────────────────────────────────────────
 SOURCES = {
-    "조선일보": "https://www.chosun.com/economy/real_estate/",
-    "중앙일보": "https://www.joongang.co.kr/realestate",
-    "동아일보": "https://www.donga.com/news/Economy/Realestate",
-    "한겨레": "https://www.hani.co.kr/arti/economy/property/",
-    "매일경제": "https://www.mk.co.kr/news/realestate/",
-    "한국경제": "https://www.hankyung.com/realestate",
-    "부산일보": "https://www.busan.com/economy/",
-    "국제신문": "http://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
+    "조선일보":    "https://www.chosun.com/economy/real_estate/",
+    "중앙일보":    "https://www.joongang.co.kr/realestate",
+    "동아일보":    "https://www.donga.com/news/Economy/Realestate",
+    "한겨레":      "https://www.hani.co.kr/arti/economy/property/",
+    "매일경제":    "https://www.mk.co.kr/news/realestate/",
+    "한국경제":    "https://www.hankyung.com/realestate",
+    "부산일보":    "https://www.busan.com/economy/",
+    "국제신문":    "http://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
     "네이버부동산": "https://land.naver.com/news/",
     "한국부동산원": "https://www.reb.or.kr/reb/main.do",
-    "KB부동산": "https://kbland.kr/today",
-    "머니투데이": "https://news.mt.co.kr/estate/",
-    "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
+    "KB부동산":    "https://kbland.kr/today",
+    "머니투데이":  "https://news.mt.co.kr/estate/",
+    "연합뉴스":    "https://www.yna.co.kr/economy/real-estate/",
 }
 
-# 중복 판단 시 의미 없는 불용어
+# ── 불용어: 단독으로는 중복 판단 근거가 안 되는 단어 ─────────────────────────
 STOPWORDS = {
-    "은", "는", "이", "가", "을", "를", "의", "에", "도", "와", "과",
-    "하고", "으로", "로", "에서", "까지", "부터", "이다", "합니다",
-    "입니다", "했다", "한다", "됩니다", "됐다", "및", "등", "것",
-    # 범용적이어서 단독으론 동일기사 판단 불가한 단어
-    "안", "돼", "안돼", "반드시", "이제", "탈출", "공화국", "않다",
-    "이라고", "라며", "했으며", "라고", "하며", "대해", "위해",
+    "은","는","이","가","을","를","의","에","도","와","과","하고","으로","로",
+    "에서","까지","부터","이다","합니다","입니다","했다","한다","됩니다","됐다",
+    "및","등","것","안","돼","안돼","반드시","이제","탈출","공화국","않다",
+    "이라고","라며","했으며","라고","하며","대해","위해","한다","있다","없다",
+    "하다","된다","한","더","또","위","아래","앞","뒤","속","간","전","후",
 }
 
-def normalize_title(title):
-    """제목 정규화: 매체명·태그·날짜·특수문자 정리"""
-    # " - 매체명" 형태 제거
-    title = re.split(r'\s[-|]\s', title)[0].strip()
-    # [속보] [①] 등 앞 태그 제거
-    title = re.sub(r'^\[.*?\]\s*', '', title)
-    # 날짜 제거
-    title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)
-    # ★ 핵심: 특수문자 → 공백 (삭제하면 단어가 붙어버림)
-    title = re.sub(r'[^\w\s]', ' ', title)
-    # 단독 출현 한자 1글자 제거 (李, 日 등)
-    title = re.sub(r'(?<!\w)[一-龥](?!\w)', '', title)
-    # 연속 공백 정리
-    title = re.sub(r'\s+', ' ', title).strip()
-    return title
+# ── 엔티티 사전 (구체적일수록 좋음, 범용 단어 제외) ────────────────────────
+LOC_ENTITIES = {
+    "수도권","서울","강남","강북","강동","강서","부산","경기","인천",
+    "대구","광주","대전","울산","세종","제주","경남","경북","전남","전북",
+    "충남","충북","강원","용산","마포","송파","성동","노원","은평","영등포",
+}
+ORG_ENTITIES = {
+    "국세청","당근부동산","한국부동산원","법원","국토부",
+    "금융위","금감원","LH","SH","HUG","주택도시보증공사",
+}
 
-def title_to_keywords(title):
-    """불용어 제거 후 2글자 이상 핵심 키워드 집합 반환"""
-    return {w for w in title.split() if w not in STOPWORDS and len(w) >= 2}
+# ── 공통 함수 ─────────────────────────────────────────────────────────────────
+def normalize(title: str) -> str:
+    """매체명·태그·날짜·특수문자 정리 (특수문자는 삭제가 아닌 공백 치환)"""
+    title = re.split(r'\s[-|]\s', title)[0].strip()           # "제목 - 매체명" 분리
+    title = re.sub(r'^\[.*?\]\s*', '', title)                  # [속보][①] 태그 제거
+    title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)  # 날짜 제거
+    title = re.sub(r'[^\w\s]', ' ', title)                    # 특수문자 → 공백 (단어 분리 유지)
+    title = re.sub(r'(?<!\w)[一-龥](?!\w)', '', title)         # 단독 한자 제거(李, 日 등)
+    return re.sub(r'\s+', ' ', title).strip()
 
-def is_duplicate(new_title, seen_titles, sim_threshold=0.65, kw_threshold=0.45):
+def keywords(title: str) -> set:
+    """불용어 제거 후 2글자 이상 핵심 단어 집합"""
+    return {w for w in normalize(title).split()
+            if w not in STOPWORDS and len(w) >= 2}
+
+def extract_entities(title: str) -> set:
     """
-    세 가지 기준으로 중복 판단
-      1. 정규화 후 완전 일치
-      2. SequenceMatcher 문자열 유사도 >= sim_threshold
-      3. 핵심 키워드 자카드 유사도 >= kw_threshold
+    고유한 숫자 표현(금액·비율·물리량) + 지명 + 기관명 추출.
+    "년/월/일" 단독은 너무 범용적이라 제외.
     """
-    norm_new = normalize_title(new_title)
-    kw_new   = title_to_keywords(norm_new)
+    t = re.sub(r'[^\w\s]', ' ', title)
+    ents = set()
+    for m in re.finditer(
+        r'\d+\.?\d*\s*(?:억|만|천|백|건|%|개월|곳|층|평|㎡|채|명|가구|세대)', t
+    ):
+        ents.add(m.group().strip())
+    for loc in LOC_ENTITIES:
+        if loc in t: ents.add(loc)
+    for org in ORG_ENTITIES:
+        if org in t: ents.add(org)
+    return ents
 
-    for seen in seen_titles:
-        norm_seen = normalize_title(seen)
+# ── 3단계 중복 판별 ───────────────────────────────────────────────────────────
+def is_duplicate(
+    new_raw: str,
+    seen_raw: list,
+    sim_thr: float = 0.65,  # 1단계: 문자열 유사도 임계값
+    kw_thr:  float = 0.45,  # 2단계: 키워드 자카드 임계값
+    ent_thr: int   = 2,     # 3단계: 공통 엔티티 최소 개수
+) -> bool:
+    norm_new = normalize(new_raw)
+    kw_new   = keywords(new_raw)
+    ent_new  = extract_entities(new_raw)
 
-        # 1. 완전 일치
-        if norm_new == norm_seen:
+    for seen in seen_raw:
+        norm_s = normalize(seen)
+
+        # 1단계: 문자열 유사도
+        if SequenceMatcher(None, norm_new, norm_s).ratio() >= sim_thr:
             return True
 
-        # 2. 문자열 유사도
-        if SequenceMatcher(None, norm_new, norm_seen).ratio() >= sim_threshold:
+        # 2단계: 키워드 자카드 유사도
+        kw_s  = keywords(seen)
+        union = len(kw_new | kw_s)
+        if union and len(kw_new & kw_s) / union >= kw_thr:
             return True
 
-        # 3. 키워드 자카드 유사도
-        kw_seen = title_to_keywords(norm_seen)
-        if kw_new and kw_seen:
-            union = len(kw_new | kw_seen)
-            if union and len(kw_new & kw_seen) / union >= kw_threshold:
-                return True
+        # 3단계: 핵심 엔티티 겹침 (구체적 숫자·지명·기관이 2개 이상 같으면 같은 사건)
+        ent_s = extract_entities(seen)
+        if ent_new and ent_s and len(ent_new & ent_s) >= ent_thr:
+            return True
 
     return False
 
-def get_clean_news():
+# ── 뉴스 수집 ─────────────────────────────────────────────────────────────────
+def get_clean_news() -> dict:
     results    = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
-    seen_titles = []
+    seen_raw   = []
+    total, dropped = 0, 0
 
     queries = [
         "부동산 분양 청약",
@@ -96,56 +131,65 @@ def get_clean_news():
             f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
         )
         for entry in feed.entries:
-            raw = entry.title
+            raw    = entry.title
+            total += 1
 
-            # 중복 검사 (원문 기준)
-            if is_duplicate(raw, seen_titles):
+            if is_duplicate(raw, seen_raw):
+                dropped += 1
                 continue
 
             # 카테고리 분류
-            t = normalize_title(raw).lower()
-            if   any(k in t for k in ["분양", "청약"]):                     cat = "청약"
-            elif any(k in t for k in ["재건축", "재개발"]):                  cat = "재건축"
-            elif any(k in t for k in ["세금", "종부세", "취득세"]):           cat = "세제"
-            elif any(k in t for k in ["정부", "대출", "금리", "정책"]):       cat = "정책"
-            else:                                                            cat = "시장동향"
+            t = normalize(raw).lower()
+            if   any(k in t for k in ["분양","청약"]):              cat = "청약"
+            elif any(k in t for k in ["재건축","재개발"]):           cat = "재건축"
+            elif any(k in t for k in ["세금","종부세","취득세"]):     cat = "세제"
+            elif any(k in t for k in ["정부","대출","금리","정책"]):  cat = "정책"
+            else:                                                   cat = "시장동향"
 
             if len(results[cat]) < 10:
                 src = (entry.source.title
                        if hasattr(entry, "source") and hasattr(entry.source, "title")
                        else "뉴스")
                 results[cat].append({
-                    "title": normalize_title(raw),
+                    "title": normalize(raw),
                     "link":  entry.link,
                     "src":   src,
                 })
-                seen_titles.append(raw)  # 원문을 목록에 추가
+                seen_raw.append(raw)
 
+    print(f"[수집] 전체 {total}건 → 중복제거 {dropped}건 → 최종 {total - dropped}건")
     return results
 
-# ── 실행 ──────────────────────────────────────────────
-data = get_clean_news()
+# ── HTML 생성 ─────────────────────────────────────────────────────────────────
+def build_html(data: dict) -> str:
+    html  = "<h1>🏠 부동산 뉴스 브리핑</h1>\n"
+    html += " | ".join(
+        f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items()
+    )
+    html += "\n<h2>오늘의 핵심 브리핑</h2>"
+    html += ("<p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. "
+             "매수우위지수는 62.9%로 매도자 우위입니다.</p>")
 
-html  = "<h1>🏠 부동산 뉴스 브리핑</h1>\n"
-html += " | ".join(f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items())
-html += "\n<h2>오늘의 핵심 브리핑</h2>"
-html += "<p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위입니다.</p>"
+    for cat, lst in data.items():
+        html += f"<h2>[{cat}]</h2>"
+        if lst:
+            html += "".join(
+                f"<p>{n['title']} | {n['src']} - "
+                f"<a href='{n['link']}' target='_blank'>[바로가기]</a></p>"
+                for n in lst
+            )
+        else:
+            html += "<p>현재 수집된 기사가 없습니다.</p>"
+    return html
 
-for cat, news_list in data.items():
-    html += f"<h2>[{cat}]</h2>"
-    if news_list:
-        html += "".join(
-            f"<p>{n['title']} | {n['src']} - <a href='{n['link']}' target='_blank'>[바로가기]</a></p>"
-            for n in news_list
-        )
-    else:
-        html += "<p>현재 수집된 기사가 없습니다.</p>"
+# ── 실행 ─────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    data = get_clean_news()
 
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html)
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(build_html(data))
 
-# 실행 요약 출력
-total = sum(len(v) for v in data.values())
-print(f"완료: index.html 생성 | 총 {total}건")
-for cat, lst in data.items():
-    print(f"  [{cat}] {len(lst)}건")
+    total = sum(len(v) for v in data.values())
+    print(f"[완료] index.html 생성 | 카테고리별 {total}건")
+    for cat, lst in data.items():
+        print(f"  [{cat}] {len(lst)}건")
