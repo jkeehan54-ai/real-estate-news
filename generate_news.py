@@ -1,5 +1,4 @@
 import feedparser
-from datetime import datetime
 from difflib import SequenceMatcher
 import re
 
@@ -20,27 +19,27 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 의미 없는 불용어 (중복 판단 시 제외)
+# 중복 판단 시 의미 없는 불용어
 STOPWORDS = {
     "은", "는", "이", "가", "을", "를", "의", "에", "도", "와", "과",
     "하고", "으로", "로", "에서", "까지", "부터", "이다", "합니다",
     "입니다", "했다", "한다", "됩니다", "됐다", "및", "등", "것",
-    # 너무 범용적인 단어 (단독으로는 동일 기사 판단 불가)
-    "안", "돼", "안돼", "반드시", "이제", "탈출", "공화국",
-    "이라고", "라며", "했으며", "라고", "하며",
+    # 범용적이어서 단독으론 동일기사 판단 불가한 단어
+    "안", "돼", "안돼", "반드시", "이제", "탈출", "공화국", "않다",
+    "이라고", "라며", "했으며", "라고", "하며", "대해", "위해",
 }
 
 def normalize_title(title):
-    """제목 정규화: 매체명·태그·날짜·특수문자 제거"""
-    # 매체명 구분자 제거 (예: "제목 - 연합뉴스")
+    """제목 정규화: 매체명·태그·날짜·특수문자 정리"""
+    # " - 매체명" 형태 제거
     title = re.split(r'\s[-|]\s', title)[0].strip()
-    # [속보] [李정부 1년①] 같은 앞부분 태그 제거
+    # [속보] [①] 등 앞 태그 제거
     title = re.sub(r'^\[.*?\]\s*', '', title)
-    # 날짜 형식 제거
+    # 날짜 제거
     title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)
-    # ★ 핵심 수정: 특수문자를 공백으로 치환 (제거하면 단어가 붙어버림)
+    # ★ 핵심: 특수문자 → 공백 (삭제하면 단어가 붙어버림)
     title = re.sub(r'[^\w\s]', ' ', title)
-    # 단독 한자 1글자 제거 (李, 日 등 약칭)
+    # 단독 출현 한자 1글자 제거 (李, 日 등)
     title = re.sub(r'(?<!\w)[一-龥](?!\w)', '', title)
     # 연속 공백 정리
     title = re.sub(r'\s+', ' ', title).strip()
@@ -48,21 +47,20 @@ def normalize_title(title):
 
 def title_to_keywords(title):
     """불용어 제거 후 2글자 이상 핵심 키워드 집합 반환"""
-    words = title.split()
-    return {w for w in words if w not in STOPWORDS and len(w) >= 2}
+    return {w for w in title.split() if w not in STOPWORDS and len(w) >= 2}
 
-def is_duplicate(new_title, seen_titles, sim_threshold=0.65, keyword_threshold=0.45):
+def is_duplicate(new_title, seen_titles, sim_threshold=0.65, kw_threshold=0.45):
     """
-    세 가지 기준으로 중복 판단:
-    1. 정규화 후 완전 일치
-    2. SequenceMatcher 문자열 유사도 65% 이상
-    3. 핵심 키워드 자카드 유사도 45% 이상
+    세 가지 기준으로 중복 판단
+      1. 정규화 후 완전 일치
+      2. SequenceMatcher 문자열 유사도 >= sim_threshold
+      3. 핵심 키워드 자카드 유사도 >= kw_threshold
     """
     norm_new = normalize_title(new_title)
-    kw_new = title_to_keywords(norm_new)
+    kw_new   = title_to_keywords(norm_new)
 
-    for seen_title in seen_titles:
-        norm_seen = normalize_title(seen_title)
+    for seen in seen_titles:
+        norm_seen = normalize_title(seen)
 
         # 1. 완전 일치
         if norm_new == norm_seen:
@@ -76,21 +74,21 @@ def is_duplicate(new_title, seen_titles, sim_threshold=0.65, keyword_threshold=0
         kw_seen = title_to_keywords(norm_seen)
         if kw_new and kw_seen:
             union = len(kw_new | kw_seen)
-            if union > 0 and len(kw_new & kw_seen) / union >= keyword_threshold:
+            if union and len(kw_new & kw_seen) / union >= kw_threshold:
                 return True
 
     return False
 
 def get_clean_news():
-    results = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
-    seen_titles = []  # 실제 제목 목록 (유사도 비교에 원문 필요)
+    results    = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
+    seen_titles = []
 
     queries = [
         "부동산 분양 청약",
         "아파트 재건축 재개발",
         "부동산 세금 종부세",
         "부동산 대출 정책",
-        "부동산 시장 동향"
+        "부동산 시장 동향",
     ]
 
     for q in queries:
@@ -98,66 +96,56 @@ def get_clean_news():
             f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
         )
         for entry in feed.entries:
-            raw_title = entry.title
-            title = normalize_title(raw_title)
+            raw = entry.title
 
-            if not title:
-                continue
-
-            if is_duplicate(raw_title, seen_titles):
+            # 중복 검사 (원문 기준)
+            if is_duplicate(raw, seen_titles):
                 continue
 
             # 카테고리 분류
-            t = title.lower()
-            cat = "시장동향"
-            if any(k in t for k in ["분양", "청약"]):
-                cat = "청약"
-            elif any(k in t for k in ["재건축", "재개발"]):
-                cat = "재건축"
-            elif any(k in t for k in ["세금", "종부세", "취득세"]):
-                cat = "세제"
-            elif any(k in t for k in ["정부", "대출", "금리", "정책"]):
-                cat = "정책"
+            t = normalize_title(raw).lower()
+            if   any(k in t for k in ["분양", "청약"]):                     cat = "청약"
+            elif any(k in t for k in ["재건축", "재개발"]):                  cat = "재건축"
+            elif any(k in t for k in ["세금", "종부세", "취득세"]):           cat = "세제"
+            elif any(k in t for k in ["정부", "대출", "금리", "정책"]):       cat = "정책"
+            else:                                                            cat = "시장동향"
 
             if len(results[cat]) < 10:
                 src = (entry.source.title
-                       if hasattr(entry, 'source') and hasattr(entry.source, 'title')
+                       if hasattr(entry, "source") and hasattr(entry.source, "title")
                        else "뉴스")
                 results[cat].append({
-                    "title": title,
-                    "link": entry.link,
-                    "src": src
+                    "title": normalize_title(raw),
+                    "link":  entry.link,
+                    "src":   src,
                 })
-                seen_titles.append(raw_title)  # 원문 기준으로 비교
+                seen_titles.append(raw)  # 원문을 목록에 추가
 
     return results
 
+# ── 실행 ──────────────────────────────────────────────
 data = get_clean_news()
 
-# HTML 출력
-html = "<h1>🏠 부동산 뉴스 브리핑</h1>\n"
-html += " | ".join([
-    f'<a href="{url}" target="_blank">{name}</a>'
-    for name, url in SOURCES.items()
-])
+html  = "<h1>🏠 부동산 뉴스 브리핑</h1>\n"
+html += " | ".join(f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items())
 html += "\n<h2>오늘의 핵심 브리핑</h2>"
 html += "<p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위입니다.</p>"
 
 for cat, news_list in data.items():
     html += f"<h2>[{cat}]</h2>"
     if news_list:
-        html += "".join([
+        html += "".join(
             f"<p>{n['title']} | {n['src']} - <a href='{n['link']}' target='_blank'>[바로가기]</a></p>"
             for n in news_list
-        ])
+        )
     else:
-        html += "<p>관련 뉴스 없음</p>"
+        html += "<p>현재 수집된 기사가 없습니다.</p>"
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("완료: index.html 생성됨")
+# 실행 요약 출력
 total = sum(len(v) for v in data.values())
-print(f"총 수집 뉴스: {total}건")
-for cat, news_list in data.items():
-    print(f"  {cat}: {len(news_list)}건")
+print(f"완료: index.html 생성 | 총 {total}건")
+for cat, lst in data.items():
+    print(f"  [{cat}] {len(lst)}건")
