@@ -1,7 +1,7 @@
 import feedparser
 from datetime import datetime
 
-# 13개 고정 매체 리스트
+# 13개 매체 고정 리스트 (절대 변하지 않음)
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/real_estate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -18,44 +18,44 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 뉴스 수집 로직: 검색 범위를 넓혀 40개 이상 확보
-def get_news_robust():
-    # 검색 키워드 확장
-    keywords = ["부동산", "아파트", "청약", "분양", "재건축", "재개발", "주택", "전세", "월세", "대출", "금리", "정책", "상가", "빌라"]
-    results = {cat: [] for cat in ["청약", "재건축", "세제", "정책", "시장동향"]}
-    seen = set()
+def get_unique_news():
+    results = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
+    seen_titles = set()
     
-    # 여러 검색어를 순회하며 기사 확보
-    for k in keywords:
-        url = f"https://news.google.com/rss/search?q={k}+부동산&hl=ko&gl=KR&ceid=KR:ko"
+    # 중복 제거를 위한 함수: 제목에서 조사나 특수문자를 제거한 '핵심 키워드' 비교
+    def get_core_title(t):
+        return "".join([c for c in t if c.isalnum()])[:15]
+
+    queries = ["부동산 청약 분양", "재건축 재개발", "부동산 세금 양도세", "부동산 정책 대출", "부동산 시장 동향"]
+    for q in queries:
+        url = f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
         feed = feedparser.parse(url)
         for entry in feed.entries:
-            if len(seen) >= 50: break
-            if entry.title not in seen:
-                t = entry.title.lower()
-                # 카테고리 매칭
-                cat = "시장동향"
-                if any(x in t for x in ["분양", "청약"]): cat = "청약"
-                elif any(x in t for x in ["재건축", "재개발"]): cat = "재건축"
-                elif any(x in t for x in ["세금", "종부세", "취득세"]): cat = "세제"
-                elif any(x in t for x in ["정부", "대출", "금리", "정책"]): cat = "정책"
-                
-                results[cat].append({"title": entry.title, "link": entry.link})
-                seen.add(entry.title)
+            core = get_core_title(entry.title)
+            if core in seen_titles: continue
+            
+            t = entry.title.lower()
+            cat = "시장동향"
+            if any(k in t for k in ["분양", "청약"]): cat = "청약"
+            elif any(k in t for k in ["재건축", "재개발"]): cat = "재건축"
+            elif any(k in t for k in ["세금", "종부세", "취득세"]): cat = "세제"
+            elif any(k in t for k in ["정부", "대출", "금리", "정책"]): cat = "정책"
+            
+            results[cat].append({"title": entry.title, "link": entry.link, "src": entry.source.title if 'source' in entry else "뉴스"})
+            seen_titles.add(core)
     return results
 
-news_data = get_news_robust()
+data = get_unique_news()
 
-# HTML 구성
+# HTML 생성
 html = f"<h1>🏠 부동산 뉴스 브리핑</h1>\n"
 html += " | ".join([f'<a href="{url}" target="_blank">{name}</a>' for name, url in SOURCES.items()])
-html += "\n\n<h2>오늘의 핵심 브리핑</h2><p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위 시장입니다.</p>\n"
+html += "\n\n<h2>📊 KB부동산 시황</h2><p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위 시장입니다.</p>\n"
 
-for cat, news_list in news_data.items():
-    html += f"<h2>[{cat}]</h2>\n"
-    # 뉴스가 0개일 경우를 대비하여 최소 기사 확보가 안 될 시 안내
-    if not news_list: html += "<p>현재 수집된 기사가 없습니다.</p>"
+for cat, news_list in data.items():
+    html += f"<h2>[{cat}]</h2>"
+    if not news_list: html += "<p>수집된 기사가 없습니다.</p>"
     for n in news_list:
-        html += f"<p>{n['title']} <a href='{n['link']}' target='_blank'>[뉴스 바로가기]</a></p>"
+        html += f"<p>{n['title']} | {n['src']} - <a href='{n['link']}' target='_blank'>[바로가기]</a></p>"
 
 with open("index.html", "w", encoding="utf-8") as f: f.write(html)
