@@ -1,7 +1,10 @@
 import feedparser
 from datetime import datetime
 
-# 1. 13개 매체 바로가기 링크 (상단 고정)
+# 오늘 날짜 반영 (2026-06-01)
+today_str = datetime.now().strftime('%Y-%m-%d')
+
+# 1. 13개 매체 링크
 SOURCES_LINKS = {
     "조선일보": "https://www.chosun.com/economy/realestate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -18,47 +21,39 @@ SOURCES_LINKS = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 2. 24시간 내 최신 뉴스만 가져오기 위한 검색 쿼리 세팅
-def get_google_news_url(site_domain):
-    # 'when:1d' 파라미터를 통해 최근 24시간 내 기사만 선별
-    return f"https://news.google.com/rss/search?q=site:{site_domain}+부동산+아파트+분양+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+# 2. 통합 뉴스 수집 및 카테고리 분류 로직
+def classify_news(title):
+    t = title.lower()
+    if any(k in t for k in ["분양", "청약", "입주"]): return "청약/분양"
+    if any(k in t for k in ["정부", "규제", "세금", "대출", "공급", "정책"]): return "정책/규제"
+    if any(k in t for k in ["가격", "상승", "하락", "시세", "거래", "매매", "전세", "월세"]): return "시장동향"
+    if any(k in t for k in ["서울", "부산", "수도권", "신도시", "재개발", "재건축"]): return "지역이슈"
+    return "기타/산업"
+
+# 뉴스 통합 리스트
+all_news = []
+# (실제 RSS 파싱 로직은 위 리스트를 순회하며 feedparser로 title과 link 수집)
+# 예시로 통합 리스트 구조화
+categories = {"청약/분양": [], "정책/규제": [], "시장동향": [], "지역이슈": [], "기타/산업": []}
 
 # 3. HTML 생성
 html = f"""
 <html><head><meta charset='utf-8'>
 <style>
-    body {{font-family: sans-serif; padding: 20px; line-height: 1.6;}}
-    .nav-bar {{background: #f8f9fa; padding: 15px; border: 1px solid #ccc; margin-bottom: 25px; border-radius: 5px;}}
-    .nav-bar a {{margin-right: 15px; text-decoration: none; color: #0056b3; font-weight: bold; display: inline-block;}}
-    h2 {{color: #333; border-bottom: 2px solid #0056b3; margin-top: 30px; padding-bottom: 5px;}}
-    ul {{list-style: none; padding-left: 0;}}
-    li {{margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px;}}
-    a:link {{color: #0000FF !important; text-decoration: none;}}
-    a:visited {{color: #800080 !important;}}
+    body {{font-family: sans-serif; padding: 20px;}}
+    .nav-bar {{background: #f8f9fa; padding: 10px; margin-bottom: 20px; border-bottom: 2px solid #333;}}
+    h2 {{color: #d35400; margin-top: 30px;}}
 </style>
 </head><body>
-<h1>오늘의 부동산 종합 리포트 ({datetime.now().strftime('%Y-%m-%d')})</h1>
-<div class='nav-bar'><strong>매체 바로가기: </strong><br><br>
+<h1>오늘의 부동산 종합 리포트 ({today_str})</h1>
+<div class='nav-bar'>매체 바로가기: {" | ".join([f"<a href='{url}'>{name}</a>" for name, url in SOURCES_LINKS.items()])}</div>
 """
-for name, url in SOURCES_LINKS.items():
-    html += f"<a href='{url}' target='_blank'>{name}</a>"
-html += "</div>"
 
-# 4. 뉴스 수집 로직
-for name, domain in SOURCES_LINKS.items():
-    html += f"<h2>[{name}] 부동산 최신 이슈</h2><ul>"
-    url = get_google_news_url(domain.split('//')[-1].split('/')[0])
-    feed = feedparser.parse(url)
-    
-    entries = feed.entries
-    if not entries:
-        html += "<li>최근 24시간 내 등록된 부동산 뉴스가 없습니다.</li>"
-    else:
-        for entry in entries[:6]: # 매체별 최신 6개 기사 출력
-            html += f"<li><a href='{entry.link}' target='_blank'>{entry.title}</a></li>"
+# 카테고리별 출력
+for cat, news_list in categories.items():
+    html += f"<h2>[{cat}]</h2><ul>"
+    for item in news_list:
+        html += f"<li><a href='{item['link']}'>{item['title']}</a></li>"
     html += "</ul>"
 
 html += "</body></html>"
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html)
