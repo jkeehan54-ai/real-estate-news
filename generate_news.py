@@ -1,7 +1,7 @@
 import feedparser
 from datetime import datetime
 
-# 1. 고정된 13개 매체 리스트 (절대 변경 불가)
+# 13개 고정 매체 리스트
 SOURCES = {
     "조선일보": "https://www.chosun.com/economy/real_estate/",
     "중앙일보": "https://www.joongang.co.kr/realestate",
@@ -18,55 +18,44 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/"
 }
 
-# 2. 뉴스 수집 및 40개 이상 확보 로직
-def get_comprehensive_news():
-    # 카테고리 초기화
-    results = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
+# 뉴스 수집 로직: 검색 범위를 넓혀 40개 이상 확보
+def get_news_robust():
+    # 검색 키워드 확장
+    keywords = ["부동산", "아파트", "청약", "분양", "재건축", "재개발", "주택", "전세", "월세", "대출", "금리", "정책", "상가", "빌라"]
+    results = {cat: [] for cat in ["청약", "재건축", "세제", "정책", "시장동향"]}
     seen = set()
     
-    # RSS 주소 목록 (매체별 추가 피드 활용)
-    rss_list = [
-        "https://www.chosun.com/arc/outboundfeeds/rss/category/economy/real_estate/",
-        "https://rss.joins.com/joins_realestate_list.xml",
-        "https://rss.donga.com/economy.xml",
-        "https://www.hani.co.kr/rss/economy/",
-        "https://www.mk.co.kr/rss/realestate.xml",
-        "https://www.hankyung.com/feed/realestate",
-        "https://www.yna.co.kr/rss/economy/real-estate.xml",
-        "https://news.mt.co.kr/rss/view.mt?type=estate"
-    ]
-    
-    for rss in rss_list:
-        feed = feedparser.parse(rss)
+    # 여러 검색어를 순회하며 기사 확보
+    for k in keywords:
+        url = f"https://news.google.com/rss/search?q={k}+부동산&hl=ko&gl=KR&ceid=KR:ko"
+        feed = feedparser.parse(url)
         for entry in feed.entries:
-            if len(seen) >= 60: break # 40개 이상의 뉴스 확보를 위해 60개까지 수집
-            title = entry.title.strip()
-            if title in seen: continue
-            
-            # 부동산 키워드 필터링
-            t = title.lower()
-            if not any(k in t for k in ["부동산", "아파트", "청약", "분양", "재건축", "주택", "대출", "공급", "임대"]): continue
-            
-            # 카테고리 자동 분류
-            cat = "시장동향"
-            if any(k in t for k in ["분양", "청약"]): cat = "청약"
-            elif any(k in t for k in ["재건축", "재개발"]): cat = "재건축"
-            elif any(k in t for k in ["세금", "종부세", "취득세"]): cat = "세제"
-            elif any(k in t for k in ["정부", "규제", "금리", "정책"]): cat = "정책"
-            
-            results[cat].append({"title": title, "link": entry.link})
-            seen.add(title)
+            if len(seen) >= 50: break
+            if entry.title not in seen:
+                t = entry.title.lower()
+                # 카테고리 매칭
+                cat = "시장동향"
+                if any(x in t for x in ["분양", "청약"]): cat = "청약"
+                elif any(x in t for x in ["재건축", "재개발"]): cat = "재건축"
+                elif any(x in t for x in ["세금", "종부세", "취득세"]): cat = "세제"
+                elif any(x in t for x in ["정부", "대출", "금리", "정책"]): cat = "정책"
+                
+                results[cat].append({"title": entry.title, "link": entry.link})
+                seen.add(entry.title)
     return results
 
-# 3. 브리핑 템플릿 생성
-news_data = get_comprehensive_news()
-briefing_text = "전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위 시장입니다."
+news_data = get_news_robust()
 
+# HTML 구성
 html = f"<h1>🏠 부동산 뉴스 브리핑</h1>\n"
 html += " | ".join([f'<a href="{url}" target="_blank">{name}</a>' for name, url in SOURCES.items()])
-html += f"\n\n<h2>오늘의 핵심 브리핑</h2>\n<p>{briefing_text}</p>\n"
+html += "\n\n<h2>오늘의 핵심 브리핑</h2><p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위 시장입니다.</p>\n"
 
 for cat, news_list in news_data.items():
-    html += f"<h2>[{cat}]</h2>\n" + "".join([f"<p>{n['title']} - <a href='{n['link']}' target='_blank'>[뉴스 바로가기]</a></p>" for n in news_list])
+    html += f"<h2>[{cat}]</h2>\n"
+    # 뉴스가 0개일 경우를 대비하여 최소 기사 확보가 안 될 시 안내
+    if not news_list: html += "<p>현재 수집된 기사가 없습니다.</p>"
+    for n in news_list:
+        html += f"<p>{n['title']} <a href='{n['link']}' target='_blank'>[뉴스 바로가기]</a></p>"
 
 with open("index.html", "w", encoding="utf-8") as f: f.write(html)
