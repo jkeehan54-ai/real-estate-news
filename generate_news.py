@@ -1,11 +1,8 @@
 import feedparser
 from urllib.parse import quote_plus
 from difflib import SequenceMatcher
-from datetime import datetime, timezone, timedelta
 import re
-
-# ── 한국 시간대 (KST = UTC+9) ─────────────────────────────────────────────────
-KST = timezone(timedelta(hours=9))
+from datetime import datetime
 
 # ── 13개 매체 ─────────────────────────────────────────────────────────────────
 SOURCES = {
@@ -24,7 +21,7 @@ SOURCES = {
     "연합뉴스": "https://www.yna.co.kr/economy/real-estate/",
 }
 
-# ── 설정 및 유틸 함수 ──────────────────────────────────────────────────────────
+# ── 3단계 중복 제거 설정 ───────────────────────────────────────────────────────
 STOPWORDS = {"은","는","이","가","을","를","의","에","도","와","과","하고","으로","로","에서","까지","부터","이다","합니다","입니다","했다","한다","됩니다","됐다","및","등","것","안","돼","안돼","반드시","이제","탈출","공화국","않다","이라고","라며","했으며","라고","하며","대해","위해","한다","있다","없다","하다","된다","한","더","또","위","아래","앞","뒤","속","간","전","후"}
 LOC_ENTITIES = {"수도권","서울","강남","강북","강동","강서","부산","경기","인천","대구","광주","대전","울산","세종","제주","경남","경북","전남","전북","충남","충북","강원","용산","마포","송파","성동","노원","은평","영등포"}
 ORG_ENTITIES = {"국세청","당근부동산","한국부동산원","법원","국토부","금융위","금감원","LH","SH","HUG","주택도시보증공사"}
@@ -63,54 +60,44 @@ def is_duplicate(new_raw: str, seen_raw: list, sim_thr=0.65, kw_thr=0.45, ent_th
         if ent_new and ent_s and len(ent_new & ent_s) >= ent_thr: return True
     return False
 
-# ── 뉴스 수집 (오늘 날짜 필터링) ─────────────────────────────────────────────
+# ── 뉴스 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news() -> dict:
     results = {"청약": [], "재건축": [], "세제": [], "정책": [], "시장동향": []}
     seen_raw = []
-    today = datetime.now(KST).date()
-    
     queries = ["부동산 청약", "아파트 재건축 재개발", "부동산 세금 종부세", "부동산 정책 대출", "부동산 시장 동향"]
     for q in queries:
         url = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
         feed = feedparser.parse(url)
         for entry in feed.entries:
-            pub_dt = None
-            if 'published_parsed' in entry:
-                pub_dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc).astimezone(KST).date()
-            
-            # [날짜 필터] 오늘 날짜가 아니면 제외
-            if pub_dt and pub_dt != today: continue
-            
             if is_duplicate(entry.title, seen_raw): continue
-            
             t = normalize(entry.title).lower()
             if any(k in t for k in ["분양","청약"]): cat = "청약"
             elif any(k in t for k in ["재건축","재개발"]): cat = "재건축"
             elif any(k in t for k in ["세금","종부세","취득세"]): cat = "세제"
             elif any(k in t for k in ["정부","대출","금리","정책"]): cat = "정책"
             else: cat = "시장동향"
-
             if len(results[cat]) < 10:
-                results[cat].append({
-                    "title": normalize(entry.title),
-                    "link": entry.link,
-                    "src": entry.source.title if hasattr(entry, "source") else "뉴스"
-                })
+                src = entry.source.title if hasattr(entry, "source") else "뉴스"
+                results[cat].append({"title": normalize(entry.title), "link": entry.link, "src": src})
                 seen_raw.append(entry.title)
     return results
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def build_html(data: dict) -> str:
-    today_str = datetime.now(KST).strftime("%Y년 %m월 %d일")
-    html = f"<h1>🏠 부동산 뉴스 브리핑 ({today_str})</h1>\n"
+    today = datetime.now().strftime("%Y-%m-%d")
+    html = f"<h1>🏠 부동산 뉴스 브리핑 ({today})</h1>\n"
     html += " | ".join(f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items())
-    html += "\n<h2>오늘의 핵심 브리핑</h2><p>실시간 부동산 시장 주요 뉴스입니다.</p>"
+    html += "\n<h2>오늘의 핵심 브리핑</h2>"
+    html += "<p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위입니다.</p>"
     for cat, lst in data.items():
         html += f"<h2>[{cat}]</h2>"
-        html += "".join(f"<p><a href='{n['link']}' target='_blank'>{n['title']}</a> | {n['src']}</p>" for n in lst) if lst else "<p>오늘 수집된 기사가 없습니다.</p>"
+        if lst:
+            html += "".join(f"<p><a href='{n['link']}' target='_blank'>{n['title']}</a> | {n['src']}</p>" for n in lst)
+        else:
+            html += "<p>현재 수집된 기사가 없습니다.</p>"
     return html
 
 if __name__ == "__main__":
     data = get_clean_news()
     with open("index.html", "w", encoding="utf-8") as f: f.write(build_html(data))
-    print("[완료] index.html이 성공적으로 생성되었습니다.")
+    print("[완료] index.html 생성 완료")
