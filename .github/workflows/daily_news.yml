@@ -7,31 +7,30 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write      # Pages 배포 권한
-      id-token: write   # 토큰 발급 권한 (오류 해결 핵심)
+      pages: write
+      id-token: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install feedparser requests
 
-      - name: Run news generator
+      - name: Generate news
         run: python generate_news.py
 
-      - name: Commit and push changes
-        
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
