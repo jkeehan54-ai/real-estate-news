@@ -122,7 +122,10 @@ def get_best_pub_dt(entry):
 <<<<<<< HEAD
 def is_within_24h(entry, now_kst):
     d = get_best_pub_dt(entry)
-    return True if d is None else (now_kst-d).total_seconds()<=86400
+    if d is None:
+        return True # 날짜 정보가 없으면 일단 포함시키는 것이 안전합니다
+    # 86400초(24시간)를 259200초(72시간)로 변경
+    return (now_kst - d).total_seconds() <= 259200
 
 def normalize(title):
     title = re.split(r'\s[-|]\s',title)[0].strip()
