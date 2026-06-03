@@ -23,7 +23,6 @@ jobs:
       - name: Run news generator
         run: python generate_news.py
       
-        run: python generate_news.py
       - name: Commit and push changes
         run: |
           git config --global user.name 'github-actions'
