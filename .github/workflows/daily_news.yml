@@ -25,13 +25,7 @@ jobs:
         run: python generate_news.py
 
       - name: Commit and push changes
-        run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          # 파일이 변경되었는지 확인하고 커밋
-          git add index.html
-          git commit -m "Update index.html by GitHub Actions" || echo "No changes to commit"
-          git push
+        
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
