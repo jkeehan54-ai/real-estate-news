@@ -324,12 +324,14 @@ def build_html(data: dict) -> str:
 
 # ── 실행 ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+    # 실행되는 파일(generate_news.py)이 있는 폴더에 index.html을 강제 생성
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(base_path, "index.html")
+    
     data = get_clean_news()
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(build_html(data))
-    total = sum(len(v) for v in data.values())
-    print(f"\n[완료] 파일 생성 위치: {output_path}")
+    print(f"파일이 저장되었습니다: {output_path}")
     print(f"[완료] 카테고리별 수집 결과:")
     for cat, lst in data.items():
         print(f"  [{cat}] {len(lst)}건")
