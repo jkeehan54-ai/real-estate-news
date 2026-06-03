@@ -6,7 +6,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      pages: write      # Pages 배포 권한
+      id-token: write   # 토큰 발급 권한 (오류 해결 핵심)
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
