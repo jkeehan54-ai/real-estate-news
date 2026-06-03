@@ -427,4 +427,3 @@ out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_news.py
 with open(out, "w", encoding="utf-8") as f:
     f.write(code)
 print("생성 완료: " + out)
->>>>>>> f44892253b8c55bbc447b43c1da9fa94bff45e81
