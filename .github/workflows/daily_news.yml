@@ -15,6 +15,14 @@ jobs:
       - name: Install dependencies
         run: pip install feedparser
       - name: Generate Index
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests feedparser
+
+      - name: Run news generator
+        run: python generate_news.py
+      
         run: python generate_news.py
       - name: Commit and push changes
         run: |
