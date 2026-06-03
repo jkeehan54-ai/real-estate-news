@@ -13,6 +13,11 @@
 설치: pip install feedparser requests
 """
 
+import sys, io
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import feedparser
 import requests
 from urllib.parse import quote_plus
@@ -217,9 +222,9 @@ def fetch_rss(name: str, url: str, estate_only: bool,
                    else name)
             pub_dt = get_best_pub_dt(entry)
             items.append((pub_dt, title, entry.link, src))
-        print(f"  ✅ [{name}] {len(items)}건")
+        print(f"  OK [{name}] {len(items)}건")
     except Exception as e:
-        print(f"  ❌ [{name}] {type(e).__name__}: {str(e)[:50]}")
+        print(f"  ER [{name}] {type(e).__name__}: {str(e)[:50]}")
     return items
 
 # ── Google News RSS 수집 ──────────────────────────────────────────────────────
@@ -243,9 +248,9 @@ def fetch_google(now_kst: datetime) -> list:
                 pub_dt = get_best_pub_dt(entry)
                 items.append((pub_dt, title, entry.link, src))
                 cnt += 1
-            print(f"  ✅ [Google·{q}] {cnt}건")
+            print(f"  OK [Google/{q}] {cnt}건")
         except Exception as e:
-            print(f"  ❌ [Google·{q}] {type(e).__name__}: {str(e)[:50]}")
+            print(f"  ER [Google/{q}] {type(e).__name__}: {str(e)[:50]}")
     return items
 
 # ── 메인 수집 함수 ────────────────────────────────────────────────────────────
@@ -299,14 +304,14 @@ def get_clean_news() -> dict:
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def build_html(data: dict) -> str:
     today = datetime.now(KST).strftime("%Y년 %m월 %d일")
-    html  = f"<h1>🏠 부동산 뉴스 브리핑 ({today})</h1>\n"
+    html  = f"<h1>부동산 뉴스 브리핑 ({today})</h1>\n"
     html += " | ".join(
         f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items()
     )
     html += "\n<h2>오늘의 핵심 브리핑</h2>"
     html += "<p>전국 아파트 매매가격 0.05% 상승, 38주 연속 상승세 유지. 매수우위지수는 62.9%로 매도자 우위입니다.</p>"
 
-    icons = {"청약":"🏗","재건축":"🔨","세제":"💰","정책":"📋","부산·경남":"🌊","시장동향":"📈"}
+    icons = {"청약":"[청약]","재건축":"[재건축]","세제":"[세제]","정책":"[정책]","부산·경남":"[부산경남]","시장동향":"[시장동향]"}
     for cat, lst in data.items():
         html += f"<h2>[{icons.get(cat,'')} {cat}]</h2>"
         if lst:
@@ -324,14 +329,12 @@ def build_html(data: dict) -> str:
 
 # ── 실행 ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # 실행되는 파일(generate_news.py)이 있는 폴더에 index.html을 강제 생성
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    output_path = os.path.join(base_path, "index.html")
-    
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
     data = get_clean_news()
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(build_html(data))
-    print(f"파일이 저장되었습니다: {output_path}")
+    total = sum(len(v) for v in data.values())
+    print(f"\n[완료] 파일 생성 위치: {output_path}")
     print(f"[완료] 카테고리별 수집 결과:")
     for cat, lst in data.items():
         print(f"  [{cat}] {len(lst)}건")
