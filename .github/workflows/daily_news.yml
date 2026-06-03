@@ -1,13 +1,12 @@
 name: daily news update
 on:
-  schedule:
-    - cron: '0 0 * * *' # 매일 자정 실행
-  workflow_dispatch:      # 수동 실행 가능
+  push:
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 커밋 권한 부여
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -18,7 +17,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt # 이미 있는 requirements.txt 사용
+        run: pip install -r requirements.txt
 
       - name: Run news generator
         run: python generate_news.py
@@ -27,5 +26,7 @@ jobs:
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
+          # 파일이 변경되었는지 확인하고 커밋
           git add index.html
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update index.html by GitHub Actions" && git push)
+          git commit -m "Update index.html by GitHub Actions" || echo "No changes to commit"
+          git push
