@@ -1,0 +1,4 @@
+  File "C:\claw-projects\generate_news.py", line 194
+    html += "".join(f"<p><a href='{n[\"link\"]}' target='_blank'>{n[\"title\"]}</a> | <b>{n[\"src\"]}</b>" + (f" <small>({n['pub_str']})</small>" if n['pub_str'] else "") + "</p>" for n in lst)
+                                      ^
+SyntaxError: unexpected character after line continuation character
