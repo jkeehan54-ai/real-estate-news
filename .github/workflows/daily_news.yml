@@ -1,14 +1,16 @@
 name: daily news update
+
 on:
-  push:
+  schedule:
+    - cron: '21 21 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write  # 커밋을 위해 write 권한 필요
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -23,14 +25,10 @@ jobs:
       - name: Generate news
         run: python generate_news.py
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add index.html
+          git commit -m "Update news" || exit 0
+          git push
