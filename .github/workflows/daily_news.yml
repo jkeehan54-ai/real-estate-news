@@ -1,45 +1,40 @@
-name: Daily News Update
+name: daily news update
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # 09:00 KST
-    - cron: '0 2 * * *'   # 11:00 KST
-    - cron: '0 5 * * *'   # 14:00 KST
-    - cron: '0 23 * * *'  # 08:00 KST
-  workflow_dispatch:       # 수동 실행
+    - cron: '0 0 * * *' # 매일 00:00(UTC) 자동 실행
+  workflow_dispatch:     # 수동 실행 버튼 활성화
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  update-news:
+  build:
     runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Seoul       # ★ Actions 실행 환경 시간대를 KST로 고정
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: pip install feedparser requests
 
-      - name: Generate news HTML
+      - name: Generate news
         run: python generate_news.py
 
-      - name: Show generated date (디버그용)
-        run: |
-          echo "=== 현재 서버 시간 ==="
-          date
-          echo "=== index.html 날짜 확인 ==="
-          grep -o '브리핑 ([^)]*' index.html | head -1
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      - name: Commit and push index.html
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet || git commit -m "news: $(date '+%Y-%m-%d %H:%M KST')"
-          git push
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
