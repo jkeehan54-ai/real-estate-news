@@ -9,6 +9,7 @@ SOURCES = {
     "조선일보":    "https://www.chosun.com/economy/real_estate/",
     "중앙일보":    "https://www.joongang.co.kr/realestate",
     "동아일보":    "https://www.donga.com/news/Economy/Realestate",
+    "네이버부동산": "https://www.fin.land.naver.com/",
     "한겨레":      "https://www.hani.co.kr/arti/economy/property/",
     "매일경제":    "https://www.mk.co.kr/news/realestate/",
     "한국경제":    "https://www.hankyung.com/realestate",
