@@ -1,4 +1,5 @@
 import feedparser, requests, re, os
+data = []
 def get_news_by_crawling(url, container_selector, title_selector, link_selector, base_url=""):
     headers = {'User-Agent': 'Mozilla/5.0'}
     try:
