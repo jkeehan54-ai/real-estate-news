@@ -316,7 +316,7 @@ def is_valid_news(title):
 def build_html(data):
     # 1. 뉴스 필터링 로직 추가
     # data가 [article, article, ...] 형태의 리스트라고 가정합니다.
-    filtered_data = [article for article in data if is_valid_news(article.get('title', ''))]
+    filtered_data = [article for article in data if isinstance(article, dict) and is_valid_news(article.get('title', ''))]
     
     # 2. 이제 filtered_data를 사용하여 HTML을 작성합니다.
     # (기존에 data를 사용하던 곳을 전부 filtered_data로 변경하세요)
