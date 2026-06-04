@@ -340,6 +340,11 @@ def fetch_google(now_kst):
 
 
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
+# [B] 웹 크롤링을 위한 데이터 설정
+CRAWL_TARGETS = [
+    ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
+    ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
+]
 def get_clean_news():
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
     results = {c: [] for c in cats}
