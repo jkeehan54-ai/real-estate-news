@@ -74,7 +74,8 @@ crawling_tasks = [
     ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
     ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
 ]
-
+for name, url, cont, tit, link, base in crawling_tasks:
+    data.extend(get_news_by_crawling(url, cont, tit, link, base))
 GOOGLE_QUERIES = [
     "부동산 청약 분양",
     "아파트 재건축 재개발",
