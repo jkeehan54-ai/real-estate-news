@@ -91,6 +91,8 @@ def get_news_by_crawling(url, container_selector, title_selector, link_selector,
 # 수집 실행 예시
 print("[보완] 웹 크롤링 수집 시작...")
 crawling_tasks = [
+    CRAWL_TARGETS = [
+    # (이름, URL, 컨테이너 선택자, 제목 선택자, 링크 선택자, 기본URL)
     ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
     ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
 ]
@@ -358,8 +360,8 @@ def get_clean_news():
         all_entries.extend(fetch_rss(name, url, eo, now_kst))
 
     print("\n[B] 웹 크롤링 수집")
-    for name, home, target, selector, base in CRAWL_TARGETS:
-        all_entries.extend(fetch_crawl(name, home, target, selector, base, now_kst))
+    for name, url, container, title_sel, link_sel, base in CRAWL_TARGETS:
+        all_entries.extend(fetch_crawl(name, url, container, title_sel, link_sel, base))
 
     print("\n[C] Google News 보완")
     all_entries.extend(fetch_google(now_kst))
