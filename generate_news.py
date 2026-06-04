@@ -157,18 +157,24 @@ def keywords(title):
 
 
 def extract_entities(title):
-    t = re.sub(r'[^\w\s]', ' ', title)
+    # 1. title이 문자열이 아닐 경우를 대비해 확실하게 변환
+    t = str(title) if title is not None else ""
+    t = re.sub(r'[^\w\s]', ' ', t)
+    
     ents = set()
-    for m in re.finditer(r'\d+\.?\d*\s*(?:억|만|건|%|개월|층|평|채|명|가구)', t):
+    for m in re.finditer(r'\d+\.?\d*\s*(?:억|만|건|%|개월|총|평|채|명|가구)', t):
         ents.add(m.group().strip())
+        
     for loc in LOC_ENTITIES:
-        if loc in t:
+        if isinstance(loc, str) and loc in t:
             ents.add(loc)
+            
+    # 2. ORG_ENTITIES 순회 시 타입 체크 추가
     for org in ORG_ENTITIES:
-        if org in t:
+        if isinstance(org, str) and org in t:
             ents.add(org)
+            
     return ents
-
 
 def is_duplicate(new_raw, seen_raw):
     nn = normalize(new_raw)
