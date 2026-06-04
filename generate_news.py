@@ -68,6 +68,11 @@ RE_EXCLUDE = re.compile(
     r'화재|폭발|투표소|선거|후보|당선|낙선|'
     r'만취|음주운전|교통사고|사기|폭행|'
     r'전동킥보드|전동휠체어|오토바이|승용차 몰다'
+    r'숨진|사망|시신|변사|화상|부상|충돌|입건|구속|체포|검거|'
+    r'화재|폭발|투표소|선거|후보|당선|낙선|'
+    r'만취|음주운전|교통사고|사기|폭행|'
+    r'전동킥보드|전동휠체어|오토바이|승용차 몰다|'
+    r'입찰공고|선정|용역업체|협력업체|현설|현장설명회'
 )
 
 STOPWORDS = {
@@ -83,6 +88,7 @@ LOC_ENTITIES = {
 ORG_ENTITIES = {"국세청","한국부동산원","국토부","금융위","금감원","LH","SH","HUG"}
 
 CAT_KEYWORDS = {
+    "시장동향": ["시장", "매매가", "전세가", "상승", "하락", "거래량", "수요", "공급", "분석", "전망"]
     "청약":    ["분양", "청약", "청약률", "무순위", "줍줍", "분양가", "입주자모집"],
     "재건축":  ["재건축", "재개발", "정비사업", "가로주택", "시공자", "조합", "추진위",
                 "안전진단", "이주", "철거", "착공", "준공", "건설사 수주"],
@@ -285,9 +291,22 @@ def get_clean_news():
 
     print(f"[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
     return results
-
+# 함수 정의는 build_html보다 위쪽에 위치
+def is_valid_news(title):
+    if RE_EXCLUDE.search(title):
+        return False
+    if not RE_ESTATE.search(title):
+        return False
+    return True
+    
 
 def build_html(data):
+    # 1. 뉴스 필터링 로직 추가
+    # data가 [article, article, ...] 형태의 리스트라고 가정합니다.
+    filtered_data = [article for article in data if is_valid_news(article.get('title', ''))]
+    
+    # 2. 이제 filtered_data를 사용하여 HTML을 작성합니다.
+    # (기존에 data를 사용하던 곳을 전부 filtered_data로 변경하세요)
     # ★ KST를 명시적으로 지정해서 서버 시간대와 무관하게 한국 날짜 사용
     today = datetime.now(KST).strftime("%Y년 %m월 %d일")
     html = "<!DOCTYPE html>\n<html lang='ko'>\n<head>\n"
