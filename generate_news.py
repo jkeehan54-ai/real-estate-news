@@ -44,8 +44,8 @@ RSS_FEEDS = [
     ("조선일보",    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", False),
     ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml",                  False),
     ("머니투데이 부동산", https://news.moneytoday.co.kr/rss/rss.php?code=mt050",    False),
-    ("이데일리 부동산", https://rss.edaily.co.kr/realestate.xml,                    False),
-    ("서울경제 부동산(RSS 지원)", https://rss.sedaily.com/News/RealeState.xml,      False),
+    ("이데일리 부동산", https://rss.edaily.co.kr/realestate.xml",                    False),
+    ("서울경제 부동산(RSS 지원)", https://rss.sedaily.com/News/RealeState.xml",      False),
 ]
 
 GOOGLE_QUERIES = [
