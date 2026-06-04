@@ -1,4 +1,22 @@
 import feedparser, requests, re, os
+def get_news_by_crawling(url, container_selector, title_selector, link_selector, base_url=""):
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        news_list = []
+        items = soup.select(container_selector)
+        for item in items:
+            title_tag = item.select_one(title_selector)
+            link_tag = item.select_one(link_selector)
+            if title_tag and link_tag and link_tag.get('href'):
+                link = link_tag['href']
+                if link.startswith('/'): link = base_url + link
+                news_list.append({'title': title_tag.get_text(strip=True), 'link': link})
+        return news_list
+    except Exception as e:
+        print(f"Error crawling {url}: {e}")
+        return []
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, urljoin
 from difflib import SequenceMatcher
@@ -70,6 +88,7 @@ def get_news_by_crawling(url, container_selector, title_selector, link_selector,
         return []
 
 # 수집 실행 예시
+print("[보완] 웹 크롤링 수집 시작...")
 crawling_tasks = [
     ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
     ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
