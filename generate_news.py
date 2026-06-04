@@ -89,14 +89,17 @@ def get_news_by_crawling(url, container_selector, title_selector, link_selector,
         return []
 
 # 수집 실행 예시
+# [보완] 웹 크롤링 수집 시작
 print("[보완] 웹 크롤링 수집 시작...")
-crawling_tasks = [
-    CRAWL_TARGETS = [
-    # (이름, URL, 컨테이너 선택자, 제목 선택자, 링크 선택자, 기본URL)
+
+# 1. 대상 리스트를 먼저 정의합니다
+CRAWL_TARGETS = [
     ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
     ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
 ]
-for name, url, cont, tit, link, base in crawling_tasks:
+
+# 2. 이 리스트를 반복문으로 돌립니다
+for name, url, cont, tit, link, base in CRAWL_TARGETS:
     data.extend(get_news_by_crawling(url, cont, tit, link, base))
 GOOGLE_QUERIES = [
     "부동산 청약 분양",
