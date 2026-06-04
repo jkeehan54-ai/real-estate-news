@@ -50,29 +50,29 @@ RSS_FEEDS = [
 ]
 
 # ── 웹 크롤링 대상 매체 ───────────────────────────────────────────────────────
-# (매체명, 홈URL, 뉴스목록URL, 기사링크 CSS셀렉터, 기사링크 base_url)
-CRAWL_TARGETS = [
-    (
-        "네이버부동산",
-        "https://land.naver.com/",
-        "https://land.naver.com/news/",
-        "a.article_title, .news_list a, .list_news a, ul li a",
-        "https://land.naver.com",
-    ),
-    (
-        "부산일보",
-        "https://www.busan.com/",
-        "https://www.busan.com/economy/",
-        "a.tit, .list_news a, h4 a, h3 a, .news-list a, ul.list li a",
-        "https://www.busan.com",
-    ),
-    (
-        "국제신문",
-        "https://www.kookje.co.kr/",
-        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
-        "td a, .title a, h4 a, h3 a, .news_list a",
-        "https://www.kookje.co.kr",
-    ),
+def get_news_by_crawling(url, container_selector, title_selector, link_selector, base_url=""):
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        news_list = []
+        items = soup.select(container_selector)
+        for item in items:
+            title_tag = item.select_one(title_selector)
+            link_tag = item.select_one(link_selector)
+            if title_tag and link_tag and link_tag.get('href'):
+                link = link_tag['href']
+                if link.startswith('/'): link = base_url + link
+                news_list.append({'title': title_tag.get_text(strip=True), 'link': link})
+        return news_list
+    except Exception as e:
+        print(f"Error crawling {url}: {e}")
+        return []
+
+# 수집 실행 예시
+crawling_tasks = [
+    ('국제신문_부동산', 'https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220', 'ol.tabcontent li', 'a', 'a', 'https://www.kookje.co.kr'),
+    ('네이버_부동산_뉴스', 'https://land.naver.com/news/', 'ul.category_list li', 'a', 'a', '')
 ]
 
 GOOGLE_QUERIES = [
