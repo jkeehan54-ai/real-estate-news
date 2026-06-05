@@ -514,7 +514,7 @@ h2 { color: #16213e; background: #e8f4f8; padding: 8px 12px; border-left: 4px so
             html += '<p class="empty">최근 수집된 기사가 없습니다.</p>\n'
 
     html += "</body>\n</html>"
-    return html
+     return html
 
 
 if __name__ == "__main__":
