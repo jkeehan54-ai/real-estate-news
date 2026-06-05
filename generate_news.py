@@ -453,7 +453,6 @@ for name, url, eo in RSS_FEEDS:
     all_entries.sort(key=lambda x: x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
 
     total = dropped = 0
-    # (for 루프 내부 - 8칸 들여쓰기)
     for pub_dt, title, link, src in all_entries:
         total += 1
         if is_duplicate(title, seen):
@@ -464,8 +463,7 @@ for name, url, eo in RSS_FEEDS:
             ps = pub_dt.strftime("%m/%d %H:%M") if pub_dt else ""
             results[cat].append({"title": normalize(title), "link": link, "src": src, "pub_str": ps})
             seen.append(title)
-    
-    # (for 루프 종료 후 - 4칸 들여쓰기)
+
     print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
     return results
 
