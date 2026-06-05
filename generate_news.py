@@ -46,6 +46,8 @@ RSS_FEEDS = [
     ("아시아경제",  "https://www.asiae.co.kr/rss/all.htm",                         False),
     ("조선일보",    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", False),
     ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml",                  False),
+    ("뉴스핌 부동산: https://www.newspim.com/news/lists/?category_cd=104010",      False),
+    ("노컷뉴스 부동산: https://www.nocutnews.co.kr/news/industry/list?c2=530",     False),
 ]
 
 GOOGLE_QUERIES = [
