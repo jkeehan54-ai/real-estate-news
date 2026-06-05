@@ -465,8 +465,8 @@ for name, url, eo in RSS_FEEDS:
             seen.append(title)
 
     # 이 두 줄이 반드시 for문보다 앞에 있는 def 바로 아래 수준으로 돌아와야 합니다.
-    print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
-    return results
+     print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
+     return results
 
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
