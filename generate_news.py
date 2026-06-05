@@ -49,6 +49,10 @@ RSS_FEEDS = [
     # 뉴스핌과 노컷뉴스는 RSS 주소가 아니므로 아래처럼 분리하세요
     ("뉴스핌_부동산", "https://www.newspim.com/news/lists/?category_cd=104010", False),
     ("노컷뉴스_부동산", "https://www.nocutnews.co.kr/news/industry/list?c2=530", False),
+    ("파이낸셜뉴스", "https://www.fnnews.com/rss/rsk_realestate.xml", False),
+    ("헤럴드경제", "https://biz.heraldcorp.com/rss/realestate.xml", False),
+    ("세계일보", "https://www.segye.com/rss/RSS_economy.xml", False),
+    ("머니투데이", "https://news.moneytoday.co.kr/rss/news_realestate.xml", False),
 ]
 
 GOOGLE_QUERIES = [
@@ -65,6 +69,8 @@ RE_ESTATE = re.compile(
     r'PF|건설사|시공|준공|착공|입주|종부세|취득세|양도세|재산세|집값|매물|'
     r'오피스텔|빌라|다세대|공동주택|정비사업|가로주택|LH|SH|HUG|'
     r'담보대출|주담대|전셋값|갭투자|분양가|거래량|매수|매도'
+    r'아파트|부동산|청약|재건축|재개발|전세|월세|임대|분양|주택|매매|PF|건설사|'
+    r'금리|대출|집값|공급|분양가|용적률|재산세|종부세|상가|오피스텔|빌라'
 )
 
 RE_EXCLUDE = re.compile(
