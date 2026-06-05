@@ -432,14 +432,17 @@ def get_clean_news():
     all_entries = []
 
     print("\n[A] RSS 및 웹 피드 수집")
-for name, url, eo in RSS_FEEDS:
-    if "newspim.com" in url or "nocutnews.co.kr" in url:
-        # 일반 웹 페이지는 크롤링 함수를 사용하도록 처리
-        # (선택자는 해당 사이트 구조에 맞게 입력해야 합니다)
-        all_entries.extend(get_news_by_crawling(url, "ul.list_news li", "a", "a", ""))
-    else:
-        # 기존 RSS 피드 처리
-        all_entries.extend(fetch_rss(name, url, eo, now_kst))
+    for name, url, eo in RSS_FEEDS:
+        if "newspim.com" in url or "nocutnews.co.kr" in url:
+            # get_news_by_crawling 함수가 정의되어 있어야 합니다.
+            # 정의되어 있지 않다면 해당 사이트들은 RSS_FEEDS에서 제외하세요.
+            try:
+                all_entries.extend(get_news_by_crawling(url, "ul.list_news li", "a", "a", ""))
+            except NameError:
+                print(f"  SK [스크랩/{name}] 함수 미정의")
+        else:
+            all_entries.extend(fetch_rss(name, url, eo, now_kst))
+
     print("\n[B] 스크래핑 수집")
     all_entries.extend(scrape_busan(now_kst))
     all_entries.extend(scrape_kookje(now_kst))
@@ -448,12 +451,11 @@ for name, url, eo in RSS_FEEDS:
     print("\n[C] Google News 보완")
     all_entries.extend(fetch_google(now_kst))
 
-    # --- [추가 위치] 수집된 모든 데이터를 여기서 밸런싱합니다 ---
     all_entries = balance_news(all_entries)
     all_entries.sort(key=lambda x: x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
 
     total = dropped = 0
- for pub_dt, title, link, src in all_entries:
+    for pub_dt, title, link, src in all_entries:
         total += 1
         if is_duplicate(title, seen):
             dropped += 1
@@ -465,7 +467,7 @@ for name, url, eo in RSS_FEEDS:
             seen.append(title)
 
     print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
-    return results   
+    return results 
 
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
