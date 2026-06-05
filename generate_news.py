@@ -465,8 +465,8 @@ for name, url, eo in RSS_FEEDS:
             results[cat].append({"title": normalize(title), "link": link, "src": src, "pub_str": ps})
             seen.append(title)
 
-    print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
-    return results
+       print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
+       return results
 
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
