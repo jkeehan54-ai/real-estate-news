@@ -396,7 +396,23 @@ def fetch_google(now_kst):
             print(f"  ER [Google/{q}] {type(e).__name__}: {str(e)[:60]}")
     return items
 
+import random
 
+def balance_news(entries):
+    # 인덱스 3이 소스(src)라고 가정합니다
+    grouped = {}
+    for entry in entries:
+        source = entry[3]  # src 항목
+        if source not in grouped: grouped[source] = []
+        grouped[source].append(entry)
+    
+    balanced = []
+    for source, items in grouped.items():
+        # 매체별로 최대 8개씩만 뽑음 (데이터 양에 따라 조절)
+        balanced.extend(items[:8]) 
+    
+    random.shuffle(balanced)
+    return balanced
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news():
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
@@ -417,6 +433,9 @@ def get_clean_news():
 
     print("\n[C] Google News 보완")
     all_entries.extend(fetch_google(now_kst))
+
+    # --- [추가 위치] 수집된 모든 데이터를 여기서 밸런싱합니다 ---
+    all_entries = balance_news(all_entries)
 
     all_entries.sort(key=lambda x: x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
 
