@@ -464,6 +464,8 @@ for name, url, eo in RSS_FEEDS:
             ps = pub_dt.strftime("%m/%d %H:%M") if pub_dt else ""
             results[cat].append({"title": normalize(title), "link": link, "src": src, "pub_str": ps})
             seen.append(title)
+            
+    # [수정된 부분] for 루프 블록에서 완전히 빠져나온 위치입니다.
     print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
     return results
 
