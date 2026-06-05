@@ -453,7 +453,7 @@ for name, url, eo in RSS_FEEDS:
     all_entries.sort(key=lambda x: x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
 
     total = dropped = 0
-    for pub_dt, title, link, src in all_entries:
+ for pub_dt, title, link, src in all_entries:
         total += 1
         if is_duplicate(title, seen):
             dropped += 1
@@ -465,7 +465,7 @@ for name, url, eo in RSS_FEEDS:
             seen.append(title)
 
     print(f"\n[결과] 전체 {total}건 | 중복제거 {dropped}건 | 최종 {total - dropped}건")
-    return results
+    return results   
 
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
