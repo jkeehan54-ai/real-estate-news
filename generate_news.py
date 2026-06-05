@@ -399,18 +399,23 @@ def fetch_google(now_kst):
 import random
 
 def balance_news(entries):
-    # 인덱스 3이 소스(src)라고 가정합니다
+    # entries는 (pub_dt, title, link, src) 형태의 리스트라고 가정합니다.
     grouped = {}
+    
+    # 1. 매체별로 기사를 분류합니다.
     for entry in entries:
-        source = entry[3]  # src 항목
-        if source not in grouped: grouped[source] = []
+        source = entry[3]  # src(매체명)가 4번째 요소
+        if source not in grouped:
+            grouped[source] = []
         grouped[source].append(entry)
     
+    # 2. 각 매체별로 최대 3개까지만 추출합니다. (이 숫자를 줄이면 더 다양해집니다)
     balanced = []
     for source, items in grouped.items():
-        # 매체별로 최대 8개씩만 뽑음 (데이터 양에 따라 조절)
+        # 최신 기사 3개만 보존
         balanced.extend(items[:3]) 
     
+    # 3. 전체를 섞습니다.
     random.shuffle(balanced)
     return balanced
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
