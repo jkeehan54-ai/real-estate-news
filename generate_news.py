@@ -46,8 +46,9 @@ RSS_FEEDS = [
     ("아시아경제",  "https://www.asiae.co.kr/rss/all.htm",                         False),
     ("조선일보",    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", False),
     ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml",                  False),
-    ("뉴스핌 부동산: https://www.newspim.com/news/lists/?category_cd=104010",      False),
-    ("노컷뉴스 부동산: https://www.nocutnews.co.kr/news/industry/list?c2=530",     False),
+    # 뉴스핌과 노컷뉴스는 RSS 주소가 아니므로 아래처럼 분리하세요
+    ("뉴스핌_부동산", "https://www.newspim.com/news/lists/?category_cd=104010", False),
+    ("노컷뉴스_부동산", "https://www.nocutnews.co.kr/news/industry/list?c2=530", False),
 ]
 
 GOOGLE_QUERIES = [
@@ -430,10 +431,15 @@ def get_clean_news():
     print(f"[실행시각] {now_kst.strftime('%Y-%m-%d %H:%M KST')}")
     all_entries = []
 
-    print("\n[A] RSS 피드 수집")
-    for name, url, eo in RSS_FEEDS:
+    print("\n[A] RSS 및 웹 피드 수집")
+for name, url, eo in RSS_FEEDS:
+    if "newspim.com" in url or "nocutnews.co.kr" in url:
+        # 일반 웹 페이지는 크롤링 함수를 사용하도록 처리
+        # (선택자는 해당 사이트 구조에 맞게 입력해야 합니다)
+        all_entries.extend(get_news_by_crawling(url, "ul.list_news li", "a", "a", ""))
+    else:
+        # 기존 RSS 피드 처리
         all_entries.extend(fetch_rss(name, url, eo, now_kst))
-
     print("\n[B] 스크래핑 수집")
     all_entries.extend(scrape_busan(now_kst))
     all_entries.extend(scrape_kookje(now_kst))
