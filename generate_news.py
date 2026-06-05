@@ -409,7 +409,7 @@ def balance_news(entries):
     balanced = []
     for source, items in grouped.items():
         # 매체별로 최대 8개씩만 뽑음 (데이터 양에 따라 조절)
-        balanced.extend(items[:8]) 
+        balanced.extend(items[:3]) 
     
     random.shuffle(balanced)
     return balanced
