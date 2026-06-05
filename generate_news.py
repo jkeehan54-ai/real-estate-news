@@ -410,11 +410,11 @@ def balance_news(entries):
             grouped[source] = []
         grouped[source].append(entry)
     
-    # 2. 각 매체별로 최대 3개까지만 추출합니다. (이 숫자를 줄이면 더 다양해집니다)
+    # 2. 각 매체별로 최대 2개까지만 추출합니다. (이 숫자를 줄이면 더 다양해집니다)
     balanced = []
     for source, items in grouped.items():
-        # 최신 기사 3개만 보존
-        balanced.extend(items[:3]) 
+        # 최신 기사 2개만 보존
+        balanced.extend(items[:2]) 
     
     # 3. 전체를 섞습니다.
     random.shuffle(balanced)
