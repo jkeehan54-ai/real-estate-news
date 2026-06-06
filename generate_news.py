@@ -283,68 +283,54 @@ def fetch_rss(name, url, estate_only, now_kst):
     return items
 
 
-# ── 통합 수집 코드 (부산일보, 국제신문, 네이버) ──────────────────────────────────
+# 기존의 각 함수들을 아래 내용으로 교체하세요.
 
-def scrape_unified_news(now_kst):
-    items = []
-    # 각 언론사별 수집 설정
-    targets = [
-        {
-            "name": "부산일보",
-            "url": "https://www.busan.com/newsList/realestate",
-            "selector": "div.list_tit > a",
-            "referer": "https://www.busan.com/"
-        },
-        {
-            "name": "국제신문",
-            "url": "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
-            "selector": "dt > a",
-            "referer": "https://www.kookje.co.kr/"
-        }
-    ]
-
-    # 1. 부산일보 및 국제신문 수집
-    for target in targets:
-        headers = HEADERS.copy()
-        headers["Referer"] = target["referer"]
-        try:
-            resp = requests.get(target["url"], headers=headers, timeout=15)
-            if target["name"] == "국제신문": resp.encoding = 'euc-kr'
-            
+def scrape_busan(now_kst):
+    items = []  # ★ 중요: 함수 시작 시 항상 초기화
+    url = "https://www.busan.com/newsList/realestate"
+    try:
+        # 헤더를 명시적으로 전달
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, 'html.parser')
-            for a in soup.select(target["selector"]):
+            for a in soup.select('div.list_tit > a'):
                 title = a.get_text(strip=True)
                 href = a.get('href', '')
-                if not title or len(title) < 10: continue
-                
-                # 링크 정제
-                link = urljoin(target["url"], href)
-                # 부동산 관련성 체크
-                if not is_estate_related(title): continue
-                
-                items.append((None, title, link, target["name"]))
-        except Exception as e:
-            print(f"  ER [스크랩/{target['name']}] {e}")
+                items.append((None, title, urljoin("https://www.busan.com", href), "부산일보"))
+        else:
+            print(f"  ER [스크랩/부산일보] HTTP {resp.status_code}")
+    except Exception as e:
+        print(f"  ER [스크랩/부산일보] {e}")
+    return items
 
-    # 2. 네이버 부동산 (뉴스 검색 API 우회 방식)
-    # 직접 접근이 차단되는 land.naver.com 대신 검색 결과 사용
+def scrape_kookje(now_kst):
+    items = []  # ★ 중요: 함수 시작 시 항상 초기화
+    url = "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220"
     try:
-        naver_headers = HEADERS.copy()
-        naver_headers["Referer"] = "https://search.naver.com/"
-        search_url = f"https://search.naver.com/search.naver?where=news&query=부동산&sm=tab_opt&sort=1"
-        resp = requests.get(search_url, headers=naver_headers, timeout=15)
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.encoding = 'euc-kr' # 국제신문은 필수
         soup = BeautifulSoup(resp.text, 'html.parser')
-        
+        for a in soup.select('dt > a'):
+            title = a.get_text(strip=True)
+            if 'newsbody.asp' in a.get('href', ''):
+                items.append((None, title, urljoin("https://www.kookje.co.kr", a['href']), "국제신문"))
+    except Exception as e:
+        print(f"  ER [스크랩/국제신문] {e}")
+    return items
+
+def scrape_naver_land(now_kst):
+    items = []  # ★ 중요: 여기를 추가하면 NameError가 해결됩니다!
+    try:
+        # 네이버 부동산은 차단이 잦으므로 검색 결과 페이지로 우회합니다
+        search_url = "https://search.naver.com/search.naver?where=news&query=부동산&sm=tab_opt&sort=1"
+        resp = requests.get(search_url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(resp.text, 'html.parser')
         for li in soup.select('li.bx'):
             a = li.select_one('a.news_tit')
             if a:
-                title = a.get('title')
-                link = a.get('href')
-                if title and link:
-                    items.append((None, title, link, "네이버부동산"))
+                items.append((None, a.get('title'), a.get('href'), "네이버부동산"))
     except Exception as e:
         print(f"  ER [스크랩/네이버] {e}")
-
     return items
 
 # ── C. Google News RSS 보완 ───────────────────────────────────────────────────
