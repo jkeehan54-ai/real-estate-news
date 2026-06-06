@@ -385,6 +385,17 @@ def scrape_naver_land(now_kst):
 
     return items
 
+# ── B-3. 네이버 부동산 뉴스 스크래핑 ─────────────────────────────────────────
+def scrape_naver_land(now_kst):
+    # ... 기존 내용 ...
+    return items
+
+# ── [추가] 네이버 뉴스 검색 스크래핑 ─────────────────────────────────────────
+def scrape_naver_news_custom(keyword):
+    # 함수 내용 구현
+    # ...
+    return items
+
 
 # ── C. Google News RSS 보완 ───────────────────────────────────────────────────
 def fetch_google(now_kst):
