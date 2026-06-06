@@ -191,7 +191,32 @@ def scrape_naver_land(now_kst):
         print(f"  ER [스크랩/네이버] {e}")
     return items
 
+# 기존 스크래핑 함수들을 모두 지우고 이 함수 하나로 대체하세요.
+def scrape_all_via_google():
+    items = []
+    # 1. 부산일보 및 경남 지역 기사
+    # 2. 국제신문 기사
+    # 3. 네이버 부동산 관련 기사
+    queries = {
+        "부산일보": "부산 부동산 site:busan.com",
+        "국제신문": "부산 부동산 site:kookje.co.kr",
+        "네이버부동산": "아파트 분양 site:land.naver.com"
+    }
 
+    for name, query in queries.items():
+        try:
+            # Google News API를 직접 호출하는 방식 대신, 
+            # 현재 잘 작동하는 구글 검색 로직을 재사용합니다.
+            # (기존 [C] Google News 보완 함수와 동일한 로직을 사용)
+            results = fetch_google_news(query) # 이미 코드에 있는 함수 사용
+            count = 0
+            for item in results:
+                items.append((None, item['title'], item['link'], name))
+                count += 1
+            print(f"DEBUG: {name} 수집 건수: {count}건")
+        except Exception as e:
+            print(f"  ER [스크랩/{name}] {e}")
+    return items
 # ── 텍스트 처리 ───────────────────────────────────────────────────────────────
 def is_estate_related(title):
     if RE_EXCLUDE.search(title):
