@@ -390,6 +390,28 @@ def balance_news(entries):
     return balanced[:80]
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news():
+    all_entries = []
+    now_kst = datetime.now(KST)
+    
+    # [수집 로그 확인용 코드 추가]
+    # 각 함수가 몇 건을 가져오는지 리스트에 추가하기 전에 확인합니다.
+    
+    # 부산일보 확인
+    busan_items = scrape_busan(now_kst)
+    print(f"DEBUG: 부산일보 수집 건수: {len(busan_items)}")
+    all_entries.extend(busan_items)
+    
+    # 국제신문 확인
+    kookje_items = scrape_kookje(now_kst)
+    print(f"DEBUG: 국제신문 수집 건수: {len(kookje_items)}")
+    all_entries.extend(kookje_items)
+    
+    # 네이버 부동산 확인
+    naver_items = scrape_naver_land(now_kst)
+    print(f"DEBUG: 네이버부동산 수집 건수: {len(naver_items)}")
+    all_entries.extend(naver_items)
+    
+    # ... 나머지 코드 ...
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
     results = {c: [] for c in cats}
     seen = []
