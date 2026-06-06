@@ -283,34 +283,35 @@ def fetch_rss(name, url, estate_only, now_kst):
     return items
 
 
-# 기존의 각 함수들을 아래 내용으로 교체하세요.
+# ── [수정] 언론사별 수집 함수 ──
 
 def scrape_busan(now_kst):
-    items = []  # ★ 중요: 함수 시작 시 항상 초기화
-    url = "https://www.busan.com/newsList/realestate"
+    items = []
+    # 주소 변경: 실제 기사 목록이 올라오는 최신 URL로 수정
+    url = "https://www.busan.com/economy/index.html" 
     try:
-        # 헤더를 명시적으로 전달
         resp = requests.get(url, headers=HEADERS, timeout=15)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            for a in soup.select('div.list_tit > a'):
-                title = a.get_text(strip=True)
-                href = a.get('href', '')
-                items.append((None, title, urljoin("https://www.busan.com", href), "부산일보"))
-        else:
-            print(f"  ER [스크랩/부산일보] HTTP {resp.status_code}")
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        # 부산일보의 현재 뉴스 카드 구조를 모두 잡기 위한 선택자
+        for a in soup.select('div.card-title a, h3.title a'):
+            title = a.get_text(strip=True)
+            link = urljoin("https://www.busan.com", a.get('href', ''))
+            if title and len(title) > 5:
+                items.append((None, title, link, "부산일보"))
     except Exception as e:
         print(f"  ER [스크랩/부산일보] {e}")
     return items
 
 def scrape_kookje(now_kst):
-    items = []  # ★ 중요: 함수 시작 시 항상 초기화
+    items = []
+    # 주소 변경: 국제신문 부동산 섹션 메인
     url = "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220"
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
-        resp.encoding = 'euc-kr' # 국제신문은 필수
+        resp.encoding = 'euc-kr'
         soup = BeautifulSoup(resp.text, 'html.parser')
-        for a in soup.select('dt > a'):
+        # dt 내부뿐만 아니라 뉴스 리스트 전체를 훑음
+        for a in soup.select('div.list_wrap a'):
             title = a.get_text(strip=True)
             if 'newsbody.asp' in a.get('href', ''):
                 items.append((None, title, urljoin("https://www.kookje.co.kr", a['href']), "국제신문"))
@@ -319,16 +320,18 @@ def scrape_kookje(now_kst):
     return items
 
 def scrape_naver_land(now_kst):
-    items = []  # ★ 중요: 여기를 추가하면 NameError가 해결됩니다!
+    items = []
+    # 네이버 부동산 뉴스 메인 페이지 (구조 변경 대응)
+    url = "https://land.naver.com/news/main.naver"
     try:
-        # 네이버 부동산은 차단이 잦으므로 검색 결과 페이지로 우회합니다
-        search_url = "https://search.naver.com/search.naver?where=news&query=부동산&sm=tab_opt&sort=1"
-        resp = requests.get(search_url, headers=HEADERS, timeout=15)
+        resp = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(resp.text, 'html.parser')
-        for li in soup.select('li.bx'):
-            a = li.select_one('a.news_tit')
-            if a:
-                items.append((None, a.get('title'), a.get('href'), "네이버부동산"))
+        # 네이버 부동산 뉴스 타이틀 영역 선택자 최신화
+        for a in soup.select('div.news_txt a, dt.news_tit a'):
+            title = a.get_text(strip=True)
+            link = a.get('href', '')
+            if title and link.startswith('http'):
+                items.append((None, title, link, "네이버부동산"))
     except Exception as e:
         print(f"  ER [스크랩/네이버] {e}")
     return items
