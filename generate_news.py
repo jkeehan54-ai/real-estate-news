@@ -409,25 +409,34 @@ def fetch_google(now_kst):
 import random
 
 def balance_news(entries):
-    # entries는 (pub_dt, title, link, src) 형태의 리스트라고 가정합니다.
+    """
+    1. 매체별 최대 3개로 제한 (범위를 약간 늘림)
+    2. 중복 기사 가능성 제거
+    3. 최종적으로 시간 순으로 정렬하여 반환
+    """
+    if not entries:
+        return []
+
+    # 1. 매체별로 기사를 분류
     grouped = {}
-    
-    # 1. 매체별로 기사를 분류합니다.
     for entry in entries:
-        source = entry[3]  # src(매체명)가 4번째 요소
+        source = entry[3]
         if source not in grouped:
             grouped[source] = []
         grouped[source].append(entry)
-    
-    # 2. 각 매체별로 최대 2개까지만 추출합니다. (이 숫자를 줄이면 더 다양해집니다)
+
+    # 2. 매체별로 최신 기사 3개씩만 추출 (양적 팽창)
     balanced = []
     for source, items in grouped.items():
-        # 최신 기사 2개만 보존
-        balanced.extend(items[:2]) 
+        # 매체별 최신순 정렬 후 3개 선택
+        items.sort(key=lambda x: x[0] or datetime.min.replace(tzinfo=KST), reverse=True)
+        balanced.extend(items[:3])
+
+    # 3. 전체를 다시 최신순으로 정렬 (다양성 유지 + 최신성 보장)
+    balanced.sort(key=lambda x: x[0] or datetime.min.replace(tzinfo=KST), reverse=True)
     
-    # 3. 전체를 섞습니다.
-    random.shuffle(balanced)
-    return balanced
+    # 4. 전체 기사량이 너무 적다면 전체를 반환하고, 너무 많다면 60개 정도로 제한
+    return balanced[:60]
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news():
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
