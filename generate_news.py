@@ -151,6 +151,41 @@ def is_recent(pub_dt, now_kst):
     limit = (now_kst - timedelta(hours=48)).date() 
     return pub_dt.date() >= limit
 
+def is_recent(pub_dt, now_kst):
+    if pub_dt is None: return True
+    # 최신성 확보를 위해 6시간 이내로 필터링 강화
+    limit = (now_kst - timedelta(hours=6)).date() 
+    return pub_dt.date() >= limit
+
+def scrape_busan(now_kst):
+    items = []
+    # 404가 발생하던 URL 제거
+    urls = ["https://www.busan.com/economy/"]
+    s = requests.Session()
+    s.headers.update(HEADERS)
+    for url in urls:
+        try:
+            resp = s.get(url, timeout=10)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for p in soup.select('p.title'):
+                a = p.find('a', href=True)
+                if not a: continue
+                # ... (데이터 추출 로직 동일)
+        except Exception as e:
+            print(f"  ER [스크랩/부산일보] {e}")
+    return items
+
+def scrape_naver_land(now_kst):
+    items = [] # 여기서 items 초기화!
+    seen = set()
+    try:
+        resp = requests.get("https://land.naver.com/news/", headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        # ... (네이버 뉴스 추출 로직)
+    except Exception as e:
+        print(f"  ER [스크랩/네이버] {e}")
+    return items
+
 
 # ── 텍스트 처리 ───────────────────────────────────────────────────────────────
 def is_estate_related(title):
@@ -386,16 +421,25 @@ def scrape_naver_land(now_kst):
     return items
 
 # ── B-3. 네이버 부동산 뉴스 스크래핑 ─────────────────────────────────────────
-def scrape_naver_land(now_kst):
-    # ... 기존 내용 ...
-    return items
-
-# ── [추가] 네이버 뉴스 검색 스크래핑 ─────────────────────────────────────────
 def scrape_naver_news_custom(keyword):
-    # 함수 내용 구현
-    # ...
+    items = []
+    # 최신순(sort=1)으로 검색
+    url = f"https://search.naver.com/search.naver?where=news&query={quote_plus(keyword)}&sm=tab_opt&sort=1"
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        
+        # 네이버 뉴스 검색 결과의 li.bx 태그들
+        for li in soup.select('li.bx'):
+            a = li.select_one('a.news_tit')
+            if a:
+                title = a.get('title')
+                link = a.get('href')
+                # 필요한 경우 is_estate_related(title) 체크 로직 추가
+                items.append((None, title, link, "네이버뉴스_검색"))
+    except Exception as e:
+        print(f"  ER [스크랩/네이버검색] {e}")
     return items
-
 
 # ── C. Google News RSS 보완 ───────────────────────────────────────────────────
 def fetch_google(now_kst):
