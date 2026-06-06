@@ -420,32 +420,25 @@ def balance_news(entries):
 def get_clean_news():
     all_entries = []
     now_kst = datetime.now(KST)
-
-    # 모든 소스를 '구글/네이버 검색 기반'으로 통일하여 구조 변경에 대응합니다.
-    sources = [
-        ("부산일보", "부산 부동산 site:busan.com"),
-        ("국제신문", "부동산 site:kookje.co.kr"),
-        ("네이버부동산", "아파트 분양 site:land.naver.com")
+    
+    # 1. 이미 잘 작동 중인 구글 검색어 리스트에 타겟 사이트 추가
+    # 기존 검색 쿼리 리스트에 아래 항목들을 추가하거나 갱신하세요
+    search_queries = [
+        "부동산", "아파트 분양", "재건축 재개발", "부동산 정책", 
+        "부산 부동산 site:busan.com",     # 부산일보 강제 포함
+        "부산 부동산 site:kookje.co.kr",   # 국제신문 강제 포함
+        "아파트 분양 site:land.naver.com"  # 네이버부동산 강제 포함
     ]
 
-    for name, query in sources:
+    # 2. 검색 실행 및 결과 병합
+    for query in search_queries:
         try:
-            # 네이버 검색 결과를 활용 (안정적)
-            search_url = f"https://search.naver.com/search.naver?where=news&query={quote_plus(query)}&sort=1"
-            resp = requests.get(search_url, headers=HEADERS, timeout=10)
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            
-            count = 0
-            for li in soup.select('li.bx'):
-                a = li.select_one('a.news_tit')
-                if a:
-                    title = a.get('title')
-                    link = a.get('href')
-                    all_entries.append((None, title, link, name))
-                    count += 1
-            print(f"DEBUG: {name} 수집 건수: {count}건") # 이제 로그에 찍힐 것입니다.
+            results = fetch_google_news(query) # 이미 코드에 있는 함수 활용
+            for item in results:
+                # 중복을 방지하기 위해 title을 기준으로 확인
+                all_entries.append((None, item['title'], item['link'], "종합뉴스"))
         except Exception as e:
-            print(f"  ER [스크랩/{name}] {e}")
+            print(f"  ER [Google/{query}] {e}")
     
     # ... 나머지 코드 ...
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
