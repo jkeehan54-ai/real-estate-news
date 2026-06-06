@@ -23,12 +23,17 @@ SOURCES = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "ko-KR,ko;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36", # 124버전에서 최신 버전으로 업데이트
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br, zstd", # zstd 추가 (최신 브라우저 규격)
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0" # 캐시 정책 명시
 }
 
 RSS_FEEDS = [
@@ -278,167 +283,68 @@ def fetch_rss(name, url, estate_only, now_kst):
     return items
 
 
-# ── B-1. 부산일보 스크래핑 ────────────────────────────────────────────────────
-# 구조: <li> > <p class="title"> > <a href="/view/busan/view.php?code=날짜숫자">제목</a>
-def scrape_busan(now_kst):
+# ── 통합 수집 코드 (부산일보, 국제신문, 네이버) ──────────────────────────────────
+
+def scrape_unified_news(now_kst):
     items = []
-    urls = [
-        "https://www.busan.com/economy/",       # 경제 섹션
-        "https://www.busan.com/newsList/realestate",  # 부동산 서브섹션
+    # 각 언론사별 수집 설정
+    targets = [
+        {
+            "name": "부산일보",
+            "url": "https://www.busan.com/newsList/realestate",
+            "selector": "div.list_tit > a",
+            "referer": "https://www.busan.com/"
+        },
+        {
+            "name": "국제신문",
+            "url": "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
+            "selector": "dt > a",
+            "referer": "https://www.kookje.co.kr/"
+        }
     ]
-    s = make_session("https://www.busan.com/")
-    seen = set()
-    for url in urls:
+
+    # 1. 부산일보 및 국제신문 수집
+    for target in targets:
+        headers = HEADERS.copy()
+        headers["Referer"] = target["referer"]
         try:
-            resp = s.get(url, timeout=10)
-            if resp.status_code != 200:
-                print(f"  ER [스크랩/부산일보] HTTP {resp.status_code} ({url})")
-                continue
+            resp = requests.get(target["url"], headers=headers, timeout=15)
+            if target["name"] == "국제신문": resp.encoding = 'euc-kr'
+            
             soup = BeautifulSoup(resp.text, 'html.parser')
-            # p.title > a 패턴
-            for p in soup.select('p.title'):
-                a = p.find('a', href=True)
-                if not a: continue
+            for a in soup.select(target["selector"]):
                 title = a.get_text(strip=True)
-                href  = a['href']
+                href = a.get('href', '')
                 if not title or len(title) < 10: continue
+                
+                # 링크 정제
+                link = urljoin(target["url"], href)
+                # 부동산 관련성 체크
                 if not is_estate_related(title): continue
-                link = urljoin("https://www.busan.com", href)
-                if link in seen: continue
-                seen.add(link)
-                pub_dt = extract_date_from_url(link)
-                if not is_recent(pub_dt, now_kst): continue
-                items.append((pub_dt, title, link, "부산일보"))
+                
+                items.append((None, title, link, target["name"]))
         except Exception as e:
-            print(f"  ER [스크랩/부산일보] {type(e).__name__}: {str(e)[:60]}")
-    print(f"  OK [스크랩/부산일보] {len(items)}건")
-    return items
+            print(f"  ER [스크랩/{target['name']}] {e}")
 
-
-# ── B-2. 국제신문 스크래핑 ────────────────────────────────────────────────────
-# 구조: ol.tabcontent > li > a (EUC-KR 인코딩)
-# key=YYYYMMDD.숫자 패턴으로 날짜 추출
-def scrape_kookje(now_kst):
-    items = []
-    urls = [
-        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",  # 부동산
-        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",  # 경제
-    ]
-    s = make_session("https://www.kookje.co.kr/")
-    seen = set()
-    for url in urls:
-        try:
-            resp = s.get(url, timeout=10)
-            if resp.status_code != 200:
-                print(f"  ER [스크랩/국제신문] HTTP {resp.status_code} ({url})")
-                continue
-            # ★ EUC-KR 인코딩으로 디코딩
-            resp.encoding = 'euc-kr'
-            soup = BeautifulSoup(resp.text, 'html.parser')
-
-            # ol.tabcontent 또는 ol#hitlist1~5 안의 a 태그
-            for sel in ['ol.tabcontent li a', 'ol#hitlist1 li a', 'ol#hitlist2 li a',
-                        'dt a', 'h2 a', 'h3.tit a']:
-                for a in soup.select(sel):
-                    title = a.get_text(strip=True)
-                    href  = a.get('href', '')
-                    if not title or len(title) < 10: continue
-                    if 'newsbody.asp' not in href: continue
-                    if not is_estate_related(title): continue
-                    link = urljoin("https://www.kookje.co.kr", href)
-                    if link in seen: continue
-                    seen.add(link)
-                    pub_dt = extract_date_from_url(link)
-                    if not is_recent(pub_dt, now_kst): continue
-                    items.append((pub_dt, title, link, "국제신문"))
-        except Exception as e:
-            print(f"  ER [스크랩/국제신문] {type(e).__name__}: {str(e)[:60]}")
-    print(f"  OK [스크랩/국제신문] {len(items)}건")
-    return items
-
-
-# ── B-3. 네이버 부동산 뉴스 스크래핑 ─────────────────────────────────────────
-# land.naver.com/news/ : ul.category_list li a → n.news.naver.com 기사 링크
-# fin.land.naver.com/news : Next.js SSR, AllNews_article 클래스 안의 a.NewsList_link
-def scrape_naver_land(now_kst):
-    items = []
-    seen = set()
-
-    # ① land.naver.com/news/ (구버전 - HTML 직접 파싱 가능)
+    # 2. 네이버 부동산 (뉴스 검색 API 우회 방식)
+    # 직접 접근이 차단되는 land.naver.com 대신 검색 결과 사용
     try:
-        s = make_session("https://land.naver.com/")
-        resp = s.get("https://land.naver.com/news/", timeout=10)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            # ul.category_list li a 또는 ul#land_news_list li a
-            for sel in ['ul.category_list li a', 'ul#land_news_list li a',
-                        'li.main_news a', 'li.main_article_beta a',
-                        'li.news_headline a', 'li.news_breaking a']:
-                for a in soup.select(sel):
-                    title = a.get_text(strip=True)
-                    href  = a.get('href', '')
-                    if not title or len(title) < 10: continue
-                    if not href.startswith('http'): continue
-                    if not is_estate_related(title): continue
-                    if href in seen: continue
-                    seen.add(href)
-                    pub_dt = extract_date_from_url(href)
-                    if not is_recent(pub_dt, now_kst): continue
-                    items.append((pub_dt, title, href, "네이버부동산"))
-            print(f"  OK [스크랩/네이버부동산(land)] {len(items)}건")
-        else:
-            print(f"  ER [스크랩/네이버부동산(land)] HTTP {resp.status_code}")
-    except Exception as e:
-        print(f"  ER [스크랩/네이버부동산(land)] {type(e).__name__}: {str(e)[:60]}")
-
-    # ② fin.land.naver.com/news (Next.js SSR - 초기 HTML에 데이터 포함)
-    cnt_before = len(items)
-    try:
-        s2 = make_session("https://fin.land.naver.com/")
-        resp2 = s2.get("https://fin.land.naver.com/news", timeout=10)
-        if resp2.status_code == 200:
-            soup2 = BeautifulSoup(resp2.text, 'html.parser')
-            # a.NewsList_link__qK_7v 또는 a.CardNews_link 클래스
-            for sel in ['a[class*="NewsList_link"]', 'a[class*="CardNews_link"]',
-                        'div[class*="AllNews_article"] a']:
-                for a in soup2.select(sel):
-                    title = a.get_text(strip=True)
-                    href  = a.get('href', '')
-                    if not title or len(title) < 10: continue
-                    if not href.startswith('http'): continue
-                    if not is_estate_related(title): continue
-                    if href in seen: continue
-                    seen.add(href)
-                    pub_dt = extract_date_from_url(href)
-                    if not is_recent(pub_dt, now_kst): continue
-                    items.append((pub_dt, title, href, "네이버부동산"))
-            print(f"  OK [스크랩/네이버부동산(fin)] {len(items)-cnt_before}건 추가")
-        else:
-            print(f"  ER [스크랩/네이버부동산(fin)] HTTP {resp2.status_code}")
-    except Exception as e:
-        print(f"  ER [스크랩/네이버부동산(fin)] {type(e).__name__}: {str(e)[:60]}")
-
-    return items
-
-# ── B-3. 네이버 부동산 뉴스 스크래핑 ─────────────────────────────────────────
-def scrape_naver_news_custom(keyword):
-    items = []
-    # 최신순(sort=1)으로 검색
-    url = f"https://search.naver.com/search.naver?where=news&query={quote_plus(keyword)}&sm=tab_opt&sort=1"
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=10)
+        naver_headers = HEADERS.copy()
+        naver_headers["Referer"] = "https://search.naver.com/"
+        search_url = f"https://search.naver.com/search.naver?where=news&query=부동산&sm=tab_opt&sort=1"
+        resp = requests.get(search_url, headers=naver_headers, timeout=15)
         soup = BeautifulSoup(resp.text, 'html.parser')
         
-        # 네이버 뉴스 검색 결과의 li.bx 태그들
         for li in soup.select('li.bx'):
             a = li.select_one('a.news_tit')
             if a:
                 title = a.get('title')
                 link = a.get('href')
-                # 필요한 경우 is_estate_related(title) 체크 로직 추가
-                items.append((None, title, link, "네이버뉴스_검색"))
+                if title and link:
+                    items.append((None, title, link, "네이버부동산"))
     except Exception as e:
-        print(f"  ER [스크랩/네이버검색] {e}")
+        print(f"  ER [스크랩/네이버] {e}")
+
     return items
 
 # ── C. Google News RSS 보완 ───────────────────────────────────────────────────
