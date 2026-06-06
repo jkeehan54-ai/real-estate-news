@@ -364,6 +364,11 @@ def scrape_naver_land(now_kst):
 # ── C. Google News RSS 보완 ───────────────────────────────────────────────────
 def fetch_google(now_kst):
     items = []
+    domain_map = {
+        "busan.com": "부산일보",
+        "kookje.co.kr": "국제신문",
+        "land.naver.com": "네이버부동산"
+    }
     for q in GOOGLE_QUERIES:
         try:
             url  = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
