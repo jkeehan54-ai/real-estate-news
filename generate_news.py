@@ -146,10 +146,10 @@ def get_best_pub_dt(entry):
 
 
 def is_recent(pub_dt, now_kst):
-    if pub_dt is None:
-        return True
-    yesterday = (now_kst - timedelta(days=1)).date()
-    return pub_dt.date() >= yesterday
+    if pub_dt is None: return True
+    # 48시간(2일) 이내의 기사까지는 일단 포함
+    limit = (now_kst - timedelta(hours=48)).date() 
+    return pub_dt.date() >= limit
 
 
 # ── 텍스트 처리 ───────────────────────────────────────────────────────────────
@@ -439,8 +439,8 @@ def balance_news(entries):
     # 3. 전체를 다시 최신순으로 정렬 (다양성 유지 + 최신성 보장)
     balanced.sort(key=lambda x: x[0] or datetime.min.replace(tzinfo=KST), reverse=True)
     
-    # 4. 전체 기사량이 너무 적다면 전체를 반환하고, 너무 많다면 60개 정도로 제한
-    return balanced[:60]
+    # 4. 전체 기사량이 너무 적다면 전체를 반환하고, 너무 많다면 80개 정도로 제한
+    return balanced[:80]
 # ── 메인 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news():
     cats = ["청약", "재건축", "세제", "정책", "부산경남", "시장동향"]
