@@ -587,7 +587,7 @@ h2 { color: #16213e; background: #e8f4f8; padding: 8px 12px; border-left: 4px so
 .news-meta { font-size: 12px; color: #888; margin-top: 3px; }
 .empty { color: #999; font-style: italic; padding: 8px; }
 </style>\n</head>\n<body>\n"""
-    html += f"<h1>부동산 뉴스 브리핑 ({today})</h1>\n"
+    
     html += '<div class="sources">'
     html += " | ".join(f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items())
     html += "</div>\n"
