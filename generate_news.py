@@ -503,6 +503,9 @@ def build_html(data):
     html += "<meta charset='UTF-8'>\n"
     html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n"
     html += f"<title>부동산 뉴스 브리핑 {today}</title>\n"
+    html += f"""
+    <meta name="generated-time" content="{generated_time}">
+    """
     html += """<style>
 body { font-family: 'Malgun Gothic', sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
 h1 { color: #1a1a2e; border-bottom: 3px solid #e94560; padding-bottom: 10px; }
