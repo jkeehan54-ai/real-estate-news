@@ -494,12 +494,12 @@ def get_clean_news():
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def build_html(data):
-    def build_html(data):
     now = datetime.now(KST)
 
     today = now.strftime("%Y년 %m월 %d일")
     generated_time = now.strftime("%Y-%m-%d %H:%M:%S KST")
-    html  = "<!DOCTYPE html>\n<html lang='ko'>\n<head>\n"
+
+    html = "<!DOCTYPE html>\n<html lang='ko'>\n<head>\n"
     html += "<meta charset='UTF-8'>\n"
     html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n"
     html += f"<title>부동산 뉴스 브리핑 {today}</title>\n"
