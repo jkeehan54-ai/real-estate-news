@@ -318,7 +318,24 @@ def scrape_busan(now_kst):
         resp = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(resp.text, 'html.parser')
         # 부산일보의 현재 뉴스 카드 구조를 모두 잡기 위한 선택자
-        for a in soup.select('div.card-title a, h3.title a'):
+        for a in soup.select("a"):
+            title = a.get_text(" ", strip=True)
+            href = a.get("href","")
+
+            if not title:
+                continue
+
+            if len(title) < 10:
+                continue
+
+            if not is_estate_related(title):
+                continue
+
+            link = urljoin("https://www.busan.com", href)
+
+            items.append(
+                (None, title, link, "부산일보")
+            )
             title = a.get_text(strip=True)
             link = urljoin("https://www.busan.com", a.get('href', ''))
             if title and len(title) > 5:
@@ -336,7 +353,31 @@ def scrape_kookje(now_kst):
         resp.encoding = 'euc-kr'
         soup = BeautifulSoup(resp.text, 'html.parser')
         # dt 내부뿐만 아니라 뉴스 리스트 전체를 훑음
-        for a in soup.select('div.list_wrap a'):
+        for a in soup.select("a"):
+            title = a.get_text(" ", strip=True)
+
+            if len(title) < 10:
+                continue
+
+            if not is_estate_related(title):
+                continue
+
+            href = a.get("href","")
+
+            if "newsbody.asp" not in href:
+                continue
+
+            items.append(
+                (
+                    None,
+                    title,
+                    urljoin(
+                        "https://www.kookje.co.kr",
+                        href
+                    ),
+                    "국제신문"
+                 )
+            )
             title = a.get_text(strip=True)
             if 'newsbody.asp' in a.get('href', ''):
                 items.append((None, title, urljoin("https://www.kookje.co.kr", a['href']), "국제신문"))
@@ -352,7 +393,28 @@ def scrape_naver_land(now_kst):
         resp = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(resp.text, 'html.parser')
         # 네이버 부동산 뉴스 타이틀 영역 선택자 최신화
-        for a in soup.select('div.news_txt a, dt.news_tit a'):
+        for a in soup.select("a"):
+            title = a.get_text(" ", strip=True)
+
+            if len(title) < 10:
+                continue
+
+            href = a.get("href","")
+
+            if not href.startswith("http"):
+                continue
+
+            if not is_estate_related(title):
+                continue
+
+            items.append(
+                (
+                    None,
+                    title,
+                    href,
+                    "네이버부동산"
+                 )
+             )
             title = a.get_text(strip=True)
             link = a.get('href', '')
             if title and link.startswith('http'):
@@ -428,20 +490,7 @@ def get_clean_news():
     
     # 1. 이미 잘 작동 중인 구글 검색어 리스트에 타겟 사이트 추가
     # 기존 검색 쿼리 리스트에 아래 항목들을 추가하거나 갱신하세요
-    search_queries = [
-        "부동산", "아파트 분양", "재건축 재개발", "부동산 정책", 
-        "부산 부동산 site:busan.com",     # 부산일보 강제 포함
-        "부산 부동산 site:kookje.co.kr",   # 국제신문 강제 포함
-        "아파트 분양 site:land.naver.com"  # 네이버부동산 강제 포함
-    ]
-
-    # 2. 검색 실행 및 결과 병합
-    for query in search_queries:
-        try:
-            results = fetch_google_news(query) # 이미 코드에 있는 함수 활용
-            for item in results:
-                # 중복을 방지하기 위해 title을 기준으로 확인
-                all_entries.append((None, item['title'], item['link'], "종합뉴스"))
+    
         except Exception as e:
             print(f"  ER [Google/{query}] {e}")
     
@@ -483,7 +532,16 @@ def get_clean_news():
             dropped += 1
             continue
         cat = classify(title)
-        if len(results[cat]) < 12:
+        limits = {
+            "청약": 12,
+            "재건축": 15,
+            "세제": 15,
+            "정책": 15,
+            "부산경남": 20,
+            "시장동향": 15,
+        }
+
+        if len(results[cat]) < limits[cat]:
             ps = pub_dt.strftime("%m/%d %H:%M") if pub_dt else ""
             results[cat].append({"title": normalize(title), "link": link, "src": src, "pub_str": ps})
             seen.append(title)
@@ -502,7 +560,17 @@ def build_html(data):
     html = "<!DOCTYPE html>\n<html lang='ko'>\n<head>\n"
     html += "<meta charset='UTF-8'>\n"
     html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n"
-    html += f"<title>부동산 뉴스 브리핑 {today}</title>\n"
+    html += f"<h1>부동산 뉴스 브리핑 ({today})</h1>\n"
+
+    html += f"""
+    <div style="
+    color:#666;
+    font-size:13px;
+    margin-bottom:15px;
+    ">
+    업데이트: {generated_time}
+    </div>
+    """
     html += f"""
     <meta name="generated-time" content="{generated_time}">
     """
