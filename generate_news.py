@@ -118,9 +118,8 @@ CAT_KEYWORDS = {
                 "비과세", "감면", "공제", "과세", "세율", "절세"],
     "정책":    ["대출", "금리", "정책", "규제", "완화", "DSR", "LTV", "DTI",
                 "주담대", "담보대출", "전세대출", "보증", "임대차", "계약갱신", "전월세상한"],
-    "부산경남": ["부산 아파트", "부산 부동산", "부산 주택", "부산 전세", "부산 분양",
-                 "해운대 아파트", "해운대 부동산", "경남 아파트", "경남 부동산",
-                 "울산 아파트", "울산 부동산", "부산 재건축", "부산 재개발", "부산 청약"],
+    "부산경남": [ "부산",  "부산일보", "국제신문", "해운대", "수영",  "사하", "동래", "기장", "창원",  "김해",  "양산",  "거제",   "진주","통영",  "울산", "경남"
+    ],
     "시장동향": ["시장", "매매가", "전세가", "거래량", "낙찰"],
 }
 
@@ -454,6 +453,9 @@ def fetch_google(now_kst):
                 src = "뉴스"
                 if hasattr(entry, 'source') and hasattr(entry.source, 'title'):
                     src = entry.source.title
+                # 네이버부동산 강제 지정
+                if "land.naver.com" in entry.link:
+                    src = "네이버부동산"
                 items.append((pub_dt, title, entry.link, src))
                 cnt += 1
             print(f"  OK [Google/{q}] {cnt}건")
@@ -562,7 +564,13 @@ def get_clean_news():
 def build_html(data):
     now = datetime.now(KST)
 
-    today = now.strftime("%Y년 %m월 %d일")
+    from datetime import datetime, timedelta, timezone
+
+    KST = timezone(timedelta(hours=9))
+
+    today = datetime.utcnow().replace(
+        tzinfo=timezone.utc
+    ).astimezone(KST).strftime("%Y년 %m월 %d일")
     generated_time = now.strftime("%Y-%m-%d %H:%M:%S KST")
 
     html = "<!DOCTYPE html>\n<html lang='ko'>\n<head>\n"
