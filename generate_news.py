@@ -1009,18 +1009,36 @@ small {{
 
 
 if __name__ == "__main__":
-       output_path = os.path.join(
-           os.path.dirname(os.path.abspath(__file__)),
-           "index.html"
-       )
+    output_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "index.html"
+    )
+    
+    # 1. 여기서 모든 수집 로직을 수행합니다.
+    now_kst = datetime.now(KST)
+    all_entries = []
+    
+    # 예: RSS 수집 (기존 코드를 그대로 가져와 붙여넣으세요)
+    for item in RSS_FEEDS:
+        # ... (기존 RSS 수집 코드) ...
+        pass
+    
+    # 예: NAVER, Google 수집
+    all_entries.extend(fetch_naver_news(now_kst))
+    all_entries.extend(fetch_google(now_kst))
+    
+    # 2. 수집이 끝난 뒤 정렬
+    all_entries.sort(key=lambda x:x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
+    
+    # 3. 정제 및 필터링 함수 호출
+    data = get_clean_news(all_entries)
 
-       data = get_clean_news(all_entries)
+    # 4. HTML 파일 생성
+    with open(output_path, "w", encoding="utf-8-sig") as f:
+        f.write(build_html(data))
 
-       with open(output_path, "w", encoding="utf-8-sig") as f:
-           f.write(build_html(data))
+    print(f"[done] {output_path}")
 
-       print(f"[done] {output_path}")
-
-       for cat, lst in data.items():
-            print(f"  [{cat}] {len(lst)}")
-
+    # 결과 요약 출력
+    for cat, lst in data.items():
+         print(f"  [{cat}] {len(lst)}")
