@@ -700,9 +700,32 @@ def is_real_estate(title):
         return False
     include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "종부세"]
     return any(k in title for k in include_keywords)
-    
-def get_clean_news():
+
+# [추가] 제목 정제 함수
+def get_clean_title(title):
     return re.sub(r'[^가-힣a-zA-Z0-9]', '', title)
+    
+def get_clean_news(all_news): # 인자로 all_news를 받도록 설정
+    seen_normalized = set()
+    unique_news = []
+    
+    for news in all_news:
+        title = news.get('title', '') # 여기서 title을 먼저 확실히 가져옵니다
+        
+        # 1. 부동산 기사만 필터링
+        if not is_real_estate(title):
+            continue
+            
+        # 2. 제목 정제
+        clean_title = get_clean_title(title)
+        
+        # 3. 중복 제거
+        if clean_title not in seen_normalized:
+            unique_news.append(news)
+            seen_normalized.add(clean_title)
+            
+    return unique_news
+    
     LIMITS = {
         "청약": 3,
         "재건축": 10,
