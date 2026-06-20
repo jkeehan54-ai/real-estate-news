@@ -1014,7 +1014,7 @@ if __name__ == "__main__":
            "index.html"
        )
 
-       data = get_clean_news()
+       data = get_clean_news(all_entries)
 
        with open(output_path, "w", encoding="utf-8-sig") as f:
            f.write(build_html(data))
