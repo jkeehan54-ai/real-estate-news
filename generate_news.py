@@ -22,18 +22,6 @@ def is_real_estate(title):
     include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "신도시", "종부세", "양도세", "전세"]
     return any(k in title for k in include_keywords)
 
-# --- 아래는 기존에 있는 뉴스 저장/분류 반복문 시작 부분 ---
-for item in scraped_news:
-    title = item['title']
-    
-    # 여기서 함수를 호출하여 부동산 관련 기사만 남깁니다!
-    if not is_real_estate(title):
-        continue  # 부동산 관련이 아니면 저장하지 않고 건너뜁니다.
-    
-    # ... 아래에 기존의 저장 로직 ...
-
-
-
 KST = timezone(timedelta(hours=9))
 
 SOURCES = {
