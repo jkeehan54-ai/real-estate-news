@@ -13,6 +13,27 @@ from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9))
 
+# --- 여기에 함수를 정의합니다 ---
+def is_real_estate(title):
+    # 제외할 키워드
+    exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버", "가격 폭탄"]
+    if any(k in title for k in exclude_keywords):
+        return False
+        
+    # 부동산 관련 키워드 (이 중 하나라도 있어야 함)
+    include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "신도시", "종부세", "양도세", "전세"]
+    return any(k in title for k in include_keywords)
+
+# --- 아래는 기존에 있는 뉴스 저장/분류 반복문 시작 부분 ---
+for item in scraped_news:
+    title = item['title']
+    
+    # 여기서 함수를 호출하여 부동산 관련 기사만 남깁니다!
+    if not is_real_estate(title):
+        continue  # 부동산 관련이 아니면 저장하지 않고 건너뜁니다.
+    
+    # ... 아래에 기존의 저장 로직 ...
+
 SOURCES = {
     "조선일보":"https://www.chosun.com/economy/real_estate/",
     "중앙일보":"https://www.joongang.co.kr/realestate",
