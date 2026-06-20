@@ -959,3 +959,4 @@ if __name__ == "__main__":
 
        for cat, lst in data.items():
             print(f"  [{cat}] {len(lst)}")
+
