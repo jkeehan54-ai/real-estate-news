@@ -1,5 +1,4 @@
 import sys, io
-import re
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -11,8 +10,6 @@ from urllib.parse import urljoin
 from urllib.parse import quote_plus
 from difflib import SequenceMatcher
 from datetime import datetime, timezone, timedelta
-
-KST = timezone(timedelta(hours=9))
 
 # --- 여기에 함수를 정의합니다 ---
 def is_real_estate(title):
@@ -26,7 +23,6 @@ def is_real_estate(title):
     return any(k in title for k in include_keywords)
 
 # --- 아래는 기존에 있는 뉴스 저장/분류 반복문 시작 부분 ---
-scraped_news = []
 for item in scraped_news:
     title = item['title']
     
@@ -35,6 +31,10 @@ for item in scraped_news:
         continue  # 부동산 관련이 아니면 저장하지 않고 건너뜁니다.
     
     # ... 아래에 기존의 저장 로직 ...
+
+
+
+KST = timezone(timedelta(hours=9))
 
 SOURCES = {
     "조선일보":"https://www.chosun.com/economy/real_estate/",
@@ -693,65 +693,8 @@ def fetch_naver_news(now_kst):
         print(f"  ER [NAVER_NEWS] {type(e).__name__}: {str(e)[:50]}")
 
     return items
-       
-def is_real_estate(title):
-    exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버"]
-    if any(k in title for k in exclude_keywords):
-        return False
-    include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "종부세"]
-    return any(k in title for k in include_keywords)
 
-# [추가] 제목 정제 함수
-def get_clean_title(title):
-    return re.sub(r'[^가-힣a-zA-Z0-9]', '', title)
-    
-def get_clean_news(all_entries): # 기존 all_entries를 받도록 수정
-    # 1. 설정값들 (기존 코드 그대로 유지)
-    LIMITS = {"청약": 3, "재건축": 10, "공급개발": 10, "세제": 20, "정책": 5, "부산경남": 20, "시장동향": 12}
-    SOURCE_LIMITS = {"건설타임즈": 5, "주택경제신문": 5, "연합뉴스": 4, "서울경제": 5, "경남도민일보": 3, "매일경제": 10, "매일경제 마켓": 5, "부산일보": 8, "국제신문": 8, "한국경제": 5, "네이버부동산": 6}
-    cats = ["부산경남", "청약", "재건축", "공급개발", "세제", "정책", "시장동향"]
-    results = {c: [] for c in cats}
-    
-    seen = set()
-    seen_normalized = set()
-    source_count = {}
-    total = dropped = 0
-
-    # 2. 뉴스 처리 루프 (여기서 필터링과 분류를 한 번에 처리)
-    for pub_dt, title, link, src in all_entries:
-        total += 1
-        
-        # [A] 부동산 필터링
-        if not is_real_estate(title):
-            dropped += 1
-            continue
-            
-        # [B] 제목 정제 및 중복 체크
-        clean_title = get_clean_title(title)
-        if clean_title in seen_normalized or link in seen:
-            dropped += 1
-            continue
-            
-        # [C] 카테고리 분류 (기존 로직)
-        cat = classify(title, src)
-        
-        # [D] 소스별/카테고리별 개수 제한
-        if source_count.get(src, 0) >= SOURCE_LIMITS.get(src, 999):
-            dropped += 1
-            continue
-        if len(results[cat]) >= LIMITS.get(cat, 999):
-            dropped += 1
-            continue
-            
-        # [E] 최종 저장
-        results[cat].append((title, link, src))
-        seen.add(link)
-        seen_normalized.add(clean_title)
-        source_count[src] = source_count.get(src, 0) + 1
-        print(f"[SAVE] {cat} {src} {title}")
-
-    return results
-    
+def get_clean_news():
     LIMITS = {
         "청약": 3,
         "재건축": 10,
@@ -814,37 +757,30 @@ def get_clean_news(all_entries): # 기존 all_entries를 받도록 수정
     for pub_dt, title, link, src in all_entries:
         total += 1
         
-        # --- [추가] 부동산 필터링 ---
-        if not is_real_estate(title):
-            dropped += 1
-            continue
-            
-        # --- [추가] 제목 정제 및 중복 제거 ---
-        clean_title = get_clean_title(title)
-        
-        # 1. 중복 제거 필터 (정제된 제목 사용)
-        if clean_title in seen_normalized or link in seen:
+        # 1. 중복 제거 필터 (제목/링크가 이미 있으면 건너뜀)
+        norm_title = "".join(title.split())
+        if norm_title in seen_normalized or link in seen:
             dropped += 1
             continue
             
         # 2. 카테고리 분류 (기존 classify 함수 사용)
         cat = classify(title, src)
         
-        # 3. 소스별 제한
+        # 3. 소스별 제한 (너무 한 곳에서 많이 나오지 않게 함)
         cnt = source_count.get(src, 0)
         if cnt >= SOURCE_LIMITS.get(src, 999):
             dropped += 1
             continue
             
-        # 4. 카테고리별 제한
+        # 4. 카테고리별 제한 (각 카테고리별 최대 개수)
         if len(results[cat]) >= LIMITS.get(cat, 999):
             dropped += 1
             continue
             
-        # [저장]
+        # [강제 저장] 위 필터를 다 통과했거나, 중요한 뉴스라면 추가
         results[cat].append((title, link, src))
         seen.add(link)
-        seen_normalized.add(clean_title) # 정제된 제목을 추가
+        seen_normalized.add(norm_title)
         source_count[src] = cnt + 1
         print(f"[SAVE] {cat} {src} {title}")
 
@@ -904,7 +840,7 @@ def build_html(data):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="60">
+
 <title>부동산 뉴스 브리핑</title>
 
 <style>
@@ -1009,36 +945,18 @@ small {{
 
 
 if __name__ == "__main__":
-    output_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "index.html"
-    )
-    
-    # 1. 여기서 모든 수집 로직을 수행합니다.
-    now_kst = datetime.now(KST)
-    all_entries = []
-    
-    # 예: RSS 수집 (기존 코드를 그대로 가져와 붙여넣으세요)
-    for item in RSS_FEEDS:
-        # ... (기존 RSS 수집 코드) ...
-        pass
-    
-    # 예: NAVER, Google 수집
-    all_entries.extend(fetch_naver_news(now_kst))
-    all_entries.extend(fetch_google(now_kst))
-    
-    # 2. 수집이 끝난 뒤 정렬
-    all_entries.sort(key=lambda x:x[0] or datetime.max.replace(tzinfo=KST), reverse=True)
-    
-    # 3. 정제 및 필터링 함수 호출
-    data = get_clean_news(all_entries)
+       output_path = os.path.join(
+           os.path.dirname(os.path.abspath(__file__)),
+           "index.html"
+       )
 
-    # 4. HTML 파일 생성
-    with open(output_path, "w", encoding="utf-8-sig") as f:
-        f.write(build_html(data))
+       data = get_clean_news()
 
-    print(f"[done] {output_path}")
+       with open(output_path, "w", encoding="utf-8-sig") as f:
+           f.write(build_html(data))
 
-    # 결과 요약 출력
-    for cat, lst in data.items():
-         print(f"  [{cat}] {len(lst)}")
+       print(f"[done] {output_path}")
+
+       for cat, lst in data.items():
+            print(f"  [{cat}] {len(lst)}")
+
