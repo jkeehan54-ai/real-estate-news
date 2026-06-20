@@ -25,6 +25,7 @@ def is_real_estate(title):
     return any(k in title for k in include_keywords)
 
 # --- 아래는 기존에 있는 뉴스 저장/분류 반복문 시작 부분 ---
+scraped_news = []
 for item in scraped_news:
     title = item['title']
     
