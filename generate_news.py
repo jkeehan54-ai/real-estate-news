@@ -1,4 +1,5 @@
 import sys, io
+import re
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -692,8 +693,16 @@ def fetch_naver_news(now_kst):
         print(f"  ER [NAVER_NEWS] {type(e).__name__}: {str(e)[:50]}")
 
     return items
-
+    
+def is_real_estate(title):
+    exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버"]
+    if any(k in title for k in exclude_keywords):
+        return False
+    include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "종부세"]
+    return any(k in title for k in include_keywords)
+    
 def get_clean_news():
+    return re.sub(r'[^가-힣a-zA-Z0-9]', '', title)
     LIMITS = {
         "청약": 3,
         "재건축": 10,
