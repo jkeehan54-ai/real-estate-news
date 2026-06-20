@@ -1,5 +1,4 @@
 import sys, io
-import re
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -694,6 +693,7 @@ def fetch_naver_news(now_kst):
 
     return items
     
+import re    
 def is_real_estate(title):
     exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버"]
     if any(k in title for k in exclude_keywords):
