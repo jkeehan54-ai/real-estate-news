@@ -817,7 +817,7 @@ def build_html(data):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta http-equiv="refresh" content="60">
 <title>부동산 뉴스 브리핑</title>
 
 <style>
