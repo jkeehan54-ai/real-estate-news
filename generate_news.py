@@ -1,4 +1,5 @@
 import sys, io
+import re
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -692,8 +693,7 @@ def fetch_naver_news(now_kst):
         print(f"  ER [NAVER_NEWS] {type(e).__name__}: {str(e)[:50]}")
 
     return items
-    
-import re    
+       
 def is_real_estate(title):
     exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버"]
     if any(k in title for k in exclude_keywords):
@@ -705,26 +705,52 @@ def is_real_estate(title):
 def get_clean_title(title):
     return re.sub(r'[^가-힣a-zA-Z0-9]', '', title)
     
-def get_clean_news(all_news): # 인자로 all_news를 받도록 설정
-    seen_normalized = set()
-    unique_news = []
+def get_clean_news(all_entries): # 기존 all_entries를 받도록 수정
+    # 1. 설정값들 (기존 코드 그대로 유지)
+    LIMITS = {"청약": 3, "재건축": 10, "공급개발": 10, "세제": 20, "정책": 5, "부산경남": 20, "시장동향": 12}
+    SOURCE_LIMITS = {"건설타임즈": 5, "주택경제신문": 5, "연합뉴스": 4, "서울경제": 5, "경남도민일보": 3, "매일경제": 10, "매일경제 마켓": 5, "부산일보": 8, "국제신문": 8, "한국경제": 5, "네이버부동산": 6}
+    cats = ["부산경남", "청약", "재건축", "공급개발", "세제", "정책", "시장동향"]
+    results = {c: [] for c in cats}
     
-    for news in all_news:
-        title = news.get('title', '') # 여기서 title을 먼저 확실히 가져옵니다
+    seen = set()
+    seen_normalized = set()
+    source_count = {}
+    total = dropped = 0
+
+    # 2. 뉴스 처리 루프 (여기서 필터링과 분류를 한 번에 처리)
+    for pub_dt, title, link, src in all_entries:
+        total += 1
         
-        # 1. 부동산 기사만 필터링
+        # [A] 부동산 필터링
         if not is_real_estate(title):
+            dropped += 1
             continue
             
-        # 2. 제목 정제
+        # [B] 제목 정제 및 중복 체크
         clean_title = get_clean_title(title)
-        
-        # 3. 중복 제거
-        if clean_title not in seen_normalized:
-            unique_news.append(news)
-            seen_normalized.add(clean_title)
+        if clean_title in seen_normalized or link in seen:
+            dropped += 1
+            continue
             
-    return unique_news
+        # [C] 카테고리 분류 (기존 로직)
+        cat = classify(title, src)
+        
+        # [D] 소스별/카테고리별 개수 제한
+        if source_count.get(src, 0) >= SOURCE_LIMITS.get(src, 999):
+            dropped += 1
+            continue
+        if len(results[cat]) >= LIMITS.get(cat, 999):
+            dropped += 1
+            continue
+            
+        # [E] 최종 저장
+        results[cat].append((title, link, src))
+        seen.add(link)
+        seen_normalized.add(clean_title)
+        source_count[src] = source_count.get(src, 0) + 1
+        print(f"[SAVE] {cat} {src} {title}")
+
+    return results
     
     LIMITS = {
         "청약": 3,
@@ -788,30 +814,37 @@ def get_clean_news(all_news): # 인자로 all_news를 받도록 설정
     for pub_dt, title, link, src in all_entries:
         total += 1
         
-        # 1. 중복 제거 필터 (제목/링크가 이미 있으면 건너뜀)
-        norm_title = "".join(title.split())
-        if norm_title in seen_normalized or link in seen:
+        # --- [추가] 부동산 필터링 ---
+        if not is_real_estate(title):
+            dropped += 1
+            continue
+            
+        # --- [추가] 제목 정제 및 중복 제거 ---
+        clean_title = get_clean_title(title)
+        
+        # 1. 중복 제거 필터 (정제된 제목 사용)
+        if clean_title in seen_normalized or link in seen:
             dropped += 1
             continue
             
         # 2. 카테고리 분류 (기존 classify 함수 사용)
         cat = classify(title, src)
         
-        # 3. 소스별 제한 (너무 한 곳에서 많이 나오지 않게 함)
+        # 3. 소스별 제한
         cnt = source_count.get(src, 0)
         if cnt >= SOURCE_LIMITS.get(src, 999):
             dropped += 1
             continue
             
-        # 4. 카테고리별 제한 (각 카테고리별 최대 개수)
+        # 4. 카테고리별 제한
         if len(results[cat]) >= LIMITS.get(cat, 999):
             dropped += 1
             continue
             
-        # [강제 저장] 위 필터를 다 통과했거나, 중요한 뉴스라면 추가
+        # [저장]
         results[cat].append((title, link, src))
         seen.add(link)
-        seen_normalized.add(norm_title)
+        seen_normalized.add(clean_title) # 정제된 제목을 추가
         source_count[src] = cnt + 1
         print(f"[SAVE] {cat} {src} {title}")
 
