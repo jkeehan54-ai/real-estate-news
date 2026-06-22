@@ -880,16 +880,40 @@ def interleave_by_source(items):
 
      return result
 
-def get_market_brief():
-    change = "0.06%"
-    weeks = "39"
-    seller_ratio = "62.3"
+import requests
+from bs4 import BeautifulSoup
+import re
 
-    return (
-        f"전국 아파트 매매가격 {change} 상승, "
-        f"{weeks}주 연속 상승세 유지. "
-        f"매수우위지수는 {seller_ratio}으로 매도자 우위입니다."
-    )
+def get_market_brief():
+
+    try:
+        url = "https://data.kbland.kr/databoard"
+
+        resp = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=10
+        )
+
+        text = resp.text
+
+        m = re.search(
+            r'주간 매매지수.*?\+([0-9.]+)%',
+            text,
+            re.S
+        )
+
+        if m:
+            change = m.group(1)
+
+            return (
+                f"전국 아파트 매매가격 {change}% 상승했습니다."
+            )
+
+    except Exception as e:
+        print("KB summary error:", e)
+
+    return "KB 시황 정보를 불러오지 못했습니다."
 
 
 def build_html(data):
