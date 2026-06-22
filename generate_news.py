@@ -847,7 +847,6 @@ def get_clean_news():
         # [강제 저장] 위 필터를 다 통과했거나, 중요한 뉴스라면 추가
         results[cat].append((title, link, src))
         seen.add(link)
-        seen_normalized.add(norm_title)
         source_count[src] = cnt + 1
         print(f"[SAVE] {cat} {src} {title}")
 
