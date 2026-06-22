@@ -788,11 +788,6 @@ def get_clean_news():
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
     seen_titles = []
-    if is_duplicate(title, seen_titles):
-        continue
-
-    seen_titles.append(title)
-    
     source_count = {}
 
     now_kst = datetime.now(KST)
@@ -823,13 +818,17 @@ def get_clean_news():
     total=dropped=0
 
     for pub_dt, title, link, src in all_entries:
-        total += 1
-        
-        # 1. 중복 제거 필터 (제목/링크가 이미 있으면 건너뜀)
-        norm_title = "".join(title.split())
-        if norm_title in seen_normalized or link in seen:
-            dropped += 1
-            continue
+    total += 1
+
+    if is_duplicate(title, seen_titles):
+        dropped += 1
+        continue
+
+    seen_titles.append(title)
+
+    if link in seen:
+        dropped += 1
+        continue
             
         # 2. 카테고리 분류 (기존 classify 함수 사용)
         cat = classify(title, src)
