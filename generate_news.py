@@ -663,8 +663,8 @@ def fetch_google(now_kst):
                 if RE_EXCLUDE.search(title):
                     continue
 
-if is_bad_news(title):
-    continue
+                if is_bad_news(title):
+                    continue
 
                 
                 src = entry.source.title if hasattr(entry,'source') and hasattr(entry.source,'title') else "news"
