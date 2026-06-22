@@ -13,7 +13,20 @@ from difflib import SequenceMatcher
 from datetime import datetime, timezone, timedelta
 
 # --- 여기에 함수를 정의합니다 ---
-def is_real_estate(title):
+def is_real_estate_news(title):
+    title = title.strip()
+
+    if not RE_ESTATE.search(title):
+        return False
+
+    if RE_EXCLUDE.search(title):
+        return False
+
+    if is_bad_news(title):
+        return False
+
+    return True
+    
     # 제외할 키워드
     exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버", "가격 폭탄"]
     if any(k in title for k in exclude_keywords):
@@ -63,6 +76,9 @@ RSS_FEEDS = [
     ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml", False),
     ("매일경제", "https://www.mk.co.kr/rss/realestate.xml", False) # 404가 나는 메인 rss/ 대신 부동산전용으로 변경
  ]
+    if not is_real_estate_news(title):
+        continue
+
 
 GOOGLE_QUERIES = [   
     "부동산 청약 분양",
@@ -122,7 +138,8 @@ GOOGLE_QUERIES = [
     "오시리아"
 ]
 ]
-
+    if not is_real_estate_news(title):
+        continue
 
 RE_ESTATE = re.compile(
       r'아파트|부동산|청약|분양|'
@@ -231,7 +248,10 @@ def normalize_title(t):
 
     return t.strip()
 
-
+def normalize_url(url):
+    p = urlparse(url)
+    return f"{p.netloc}{p.path}"
+    
 def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
     for old in seen_titles:
@@ -749,7 +769,7 @@ def get_clean_news():
         "공급개발": 10,
         "세제": 20,
         "정책": 5,
-        "부산경남": 20,
+        "부산경남": 30,
         "시장동향": 12,
     }
 
@@ -759,10 +779,10 @@ def get_clean_news():
         "연합뉴스": 4,
         "서울경제": 5,
         "경남도민일보": 3,      # 비중 대폭 축소 (기존 12 -> 3)
-        "매일경제": 10,        # 매일경제 우선 확보 (강제 수집)
+        "매일경제": 5,        # 매일경제 우선 확보 (강제 수집)
         "매일경제 마켓": 5,
-        "부산일보": 8,
-        "국제신문": 8,
+        "부산일보": 10,
+        "국제신문": 10,
         "한국경제": 5,
         "네이버부동산": 6,
     }
