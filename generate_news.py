@@ -76,8 +76,6 @@ RSS_FEEDS = [
     ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml", False),
     ("매일경제", "https://www.mk.co.kr/rss/realestate.xml", False) # 404가 나는 메인 rss/ 대신 부동산전용으로 변경
  ]
-    if not is_real_estate_news(title):
-        continue
 
 
 GOOGLE_QUERIES = [   
@@ -138,9 +136,7 @@ GOOGLE_QUERIES = [
     "오시리아"
 ]
 ]
-    if not is_real_estate_news(title):
-        continue
-
+ 
 RE_ESTATE = re.compile(
       r'아파트|부동산|청약|분양|'
       r'재건축|재개발|정비사업|'
