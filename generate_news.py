@@ -7,6 +7,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 import feedparser, requests, re, os
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 from urllib.parse import quote_plus
 from difflib import SequenceMatcher
 from datetime import datetime, timezone, timedelta
@@ -63,11 +64,7 @@ RSS_FEEDS = [
     ("매일경제", "https://www.mk.co.kr/rss/realestate.xml", False) # 404가 나는 메인 rss/ 대신 부동산전용으로 변경
  ]
 
-GOOGLE_QUERIES = [
-    # 국제신문 전용 쿼리를 최상단에 배치
-    "Google/국제신문 부동산", "부동산 site:kookje.co.kr",
-    "Google/국제신문 아파트", "아파트 site:kookje.co.kr",
-    
+GOOGLE_QUERIES = [   
     "부동산 청약 분양",
     "아파트 재건축 재개발",
     "부동산 세금 종부세",
@@ -108,6 +105,22 @@ GOOGLE_QUERIES = [
     "Google/매일경제 부동산", "부동산 site:mk.co.kr",
     "Google/부산일보 부동산", "부산 부동산 site:busan.com",
     "Google/국제신문 부동산", "부산 부동산 site:kookje.co.kr",
+    "부동산",
+    "아파트",
+    "청약",
+    "분양",
+    "재건축",
+    "재개발",
+    
+    "부산 부동산",
+    "부산 아파트",
+
+    "site:busan.com 부동산",
+    "site:kookje.co.kr 부동산",
+
+    "에코델타시티",
+    "오시리아"
+]
 ]
 
 
@@ -125,6 +138,18 @@ RE_ESTATE = re.compile(
       r'에코델타|오시리아|북항|'
       r'LH|SH|HUG|'
       r'견본주택|모델하우스'
+      r'아파트|부동산|주택|청약|분양|'
+      r'재건축|재개발|정비사업|리모델링|'
+      r'전세|월세|임대|임차|'
+      r'입주|미분양|악성미분양|'
+      r'집값|매매가|전셋값|'
+      r'주담대|DSR|LTV|DTI|'
+      r'종부세|양도세|취득세|재산세|'
+      r'용적률|건폐율|'
+      r'택지|신도시|도시개발|'
+      r'LH|SH|HUG|'
+      r'모델하우스|견본주택|'
+      r'에코델타|오시리아|북항'
 )
 
 
@@ -132,7 +157,8 @@ RE_ESTATE = re.compile(
 RE_EXCLUDE = re.compile(
     r'숨진|사망|시신|변사|화상|부상|충돌|입건|구속|체포|검거|'
     r'화재|폭발|투표소|선거|후보|당선|낙선|'
-    r'코스닥|코스피|주식|공급|매도|매수|증권|'
+    r'코스닥|코스피|주식|증권|'
+    r'공개매수|지분매도|대량매도|주식매수|'
     r'만취|음주운전|교통사고|폭행|'
     r'전동킥보드|전동휠체어|오토바이|승용차 몰다'
     r'업무협약|MOU|상생대상|본사 이전|발전 5개사|기탁|봉사' # [추가]
@@ -182,15 +208,21 @@ def extract_entities(title):
 
 
 from difflib import SequenceMatcher
-
+def normalize_url(url):
+    p = urlparse(url)
+    return f"{p.scheme}://{p.netloc}{p.path}"
 def normalize_title(t):
     t = t.lower()
 
     t = re.sub(r'\([^)]*\)', '', t)
     t = re.sub(r'\[[^\]]*\]', '', t)
 
-    t = re.sub(r'종합', '', t)
-    t = re.sub(r'속보', '', t)
+    t = re.sub(r'[^\w\s]', ' ', t)
+
+    t = re.sub(r'\d+주 연속', '', t)
+    t = re.sub(r'\d+%', '', t)
+    t = re.sub(r'\d+억', '', t)
+    t = re.sub(r'\d+가구', '', t)
 
     t = re.sub(r'3\.3㎡당', '', t)
     t = re.sub(r'평당', '', t)
@@ -204,9 +236,9 @@ def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
     for old in seen_titles:
         old_n = normalize_title(old)
-        # 임계치를 0.85로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
+        # 임계치를 0.92로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
         ratio = SequenceMatcher(None, title_n, old_n).ratio()
-        if ratio >= 0.85:
+        if ratio >= 0.92:
             return True
     return False
 
@@ -481,7 +513,7 @@ BAD_SOURCES = [
 def classify(title, src):
     t = title
     # [정책] 카테고리 확장
-    if any(keyword in title for keyword in ["정책", "규제", "국토부", "기획재정부", "금리", "대출", "공급", "계획"]):
+    if any(keyword in title for keyword in ["정책", "규제", "국토부", "기획재정부", "금리", "대출", "DSR", "LTV", "DTI", "규제"]):
         return "정책"
         
     # [세제] 카테고리 확장
@@ -579,7 +611,16 @@ def fetch_rss(name, url, estate_only, now_kst):
             if any(x in title for x in LOCAL_EXCLUDE):
                 continue
 
-            # if not RE_ESTATE.search(title): continue
+            if not RE_ESTATE.search(title):
+                continue
+
+            if RE_EXCLUDE.search(title):
+                continue
+
+            if is_bad_news(title):
+                continue
+
+            
             src = entry.source.title if hasattr(entry,'source') and hasattr(entry.source,'title') else name
             items.append((get_best_pub_dt(entry), title, entry.link, src))
         print(f"  OK [{name}] {len(items)}geon")
@@ -601,6 +642,16 @@ def fetch_google(now_kst):
                 if not title: continue
                 if any(x in title for x in LOCAL_EXCLUDE):
                      continue
+                if not RE_ESTATE.search(title):
+                    continue
+
+                if RE_EXCLUDE.search(title):
+                    continue
+
+if is_bad_news(title):
+    continue
+
+                
                 src = entry.source.title if hasattr(entry,'source') and hasattr(entry.source,'title') else "news"
                 
                 if ( "land.naver.com" in entry.link or "fin.land.naver.com" in entry.link
@@ -646,6 +697,15 @@ def fetch_naver_news(now_kst):
                 continue
             if any(x in title for x in LOCAL_EXCLUDE):
                  continue
+
+            if not RE_ESTATE.search(title):
+                continue
+
+            if RE_EXCLUDE.search(title):
+                continue
+
+            if is_bad_news(title):
+                continue
         
             try:
                 article_html = requests.get(
@@ -712,7 +772,12 @@ def get_clean_news():
     
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
-    seen_normalized = set()
+    seen_titles = []
+    if is_duplicate(title, seen_titles):
+        continue
+
+    seen_titles.append(title)
+    
     source_count = {}
 
     now_kst = datetime.now(KST)
