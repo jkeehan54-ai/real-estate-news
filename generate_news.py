@@ -818,7 +818,7 @@ def get_clean_news():
     total=dropped=0
 
     for pub_dt, title, link, src in all_entries:
-    total += 1
+        total += 1
 
     if is_duplicate(title, seen_titles):
         dropped += 1
