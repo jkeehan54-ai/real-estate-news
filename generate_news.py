@@ -820,15 +820,15 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
 
-    if is_duplicate(title, seen_titles):
-        dropped += 1
-        continue
+        if is_duplicate(title, seen_titles):
+            dropped += 1
+            continue
 
-    seen_titles.append(title)
+        seen_titles.append(title)
 
-    if link in seen:
-        dropped += 1
-        continue
+        if link in seen:
+            dropped += 1
+            continue
             
         # 2. 카테고리 분류 (기존 classify 함수 사용)
         cat = classify(title, src)
