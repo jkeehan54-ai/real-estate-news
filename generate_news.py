@@ -896,7 +896,8 @@ def get_market_brief():
         )
 
         text = resp.text
-
+        print("[KB STATUS]", resp.status_code)
+        print(text[:2000])
         m = re.search(
             r'주간 매매지수.*?\+([0-9.]+)%',
             text,
