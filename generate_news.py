@@ -135,7 +135,6 @@ GOOGLE_QUERIES = [
     "에코델타시티",
     "오시리아"
 ]
-]
  
 RE_ESTATE = re.compile(
       r'아파트|부동산|청약|분양|'
