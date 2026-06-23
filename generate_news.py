@@ -245,6 +245,11 @@ def normalize_url(url):
     return f"{p.netloc}{p.path}"
 
 def normalize_title(t):
+    norm_title = normalize_title(title)
+
+    if "범천4구역" in title:
+       print("[ORIGINAL]", title)
+       print("[NORMAL]", norm_title)
 
     t = t.lower()
 
@@ -266,8 +271,17 @@ def normalize_title(t):
     t = re.sub(r'민선\s*\d+기', '', t)
 
     t = re.sub(r'적극 검토', '검토', t)
-    t = re.sub(r'상향안', '', t)
+ 
     t = re.sub(r'착수', '', t)
+    t = re.sub(r'고양대전환준비위', '고양시', t)
+    t = re.sub(r'민선\s*\d+기', '', t)
+
+    t = re.sub(r'일산신도시', '일산', t)
+
+
+    t = re.sub(r'상향안', '', t)
+   
+    t = re.sub(r'검토 착수', '검토', t)
 
     t = re.sub(r'용적률\s*350%', '용적률', t)
     t = re.sub(r'300%\s*→\s*350%', '용적률', t)
@@ -277,7 +291,10 @@ def normalize_title(t):
     t = re.sub(r'주택재개발정비사업', '재개발', t)
     t = re.sub(r'계약 체결', '', t)
     t = re.sub(r'규모', '', t)
+    
+    t = re.sub(r'범천4구역 주택재개발정비사업', '범천4구역 재개발', t)
 
+    t = re.sub(r'8531억.*', '', t)
     # 숫자 제거
     t = re.sub(r'\d+억원?', '', t)
     t = re.sub(r'\d+주 연속', '', t)
@@ -659,6 +676,17 @@ def classify(title, src):
     "배우",
     "가수",
     "포스터"
+    "외도",
+    "재산분할",
+    "이혼",
+    "맞춤복",
+    "기성복",
+    "갑질",
+    "동대표",
+    "관리실",
+    "전원 사표",
+    "법률상담",
+    "로톡",    
     ]
 
     if any(k in title for k in EXCLUDE_KEYWORDS):
