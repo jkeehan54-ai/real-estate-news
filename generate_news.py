@@ -245,11 +245,7 @@ def normalize_url(url):
     return f"{p.netloc}{p.path}"
 
 def normalize_title(t):
-    norm_title = normalize_title(title)
-
-    if "범천4구역" in title:
-       print("[ORIGINAL]", title)
-       print("[NORMAL]", norm_title)
+    
 
     t = t.lower()
 
@@ -1043,6 +1039,12 @@ def get_clean_news():
 
         print(f"[SAVE] {cat} {src} {title}")
 
+        norm_title = normalize_title(title)
+
+        if "범천4구역" in title:
+            print("[ORIGINAL]", title)
+            print("[NORMAL]", norm_title)
+    
     # 루프 종료 후 결과 출력
     print(f"\n[result] total={total} dup={dropped} kept={total-dropped}")
 
