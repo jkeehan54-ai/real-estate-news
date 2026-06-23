@@ -238,48 +238,57 @@ def extract_entities(title):
 
 
 
-from difflib import SequenceMatcher
+from urllib.parse import urlparse
 
+def normalize_url(url):
     p = urlparse(url)
-    return f"{p.scheme}://{p.netloc}{p.path}"
+    return f"{p.netloc}{p.path}"
+
 def normalize_title(t):
+
     t = t.lower()
 
+    # 괄호 제거
     t = re.sub(r'\([^)]*\)', '', t)
     t = re.sub(r'\[[^\]]*\]', '', t)
 
+    # 특수문자 제거
     t = re.sub(r'[^\w\s]', ' ', t)
-    title = re.sub(r'현대건설', '', title)
-    title = re.sub(r'삼성물산', '', title)
-    title = re.sub(r'포스코이앤씨', '', title)
-    title = re.sub(r'dl이앤씨', '', title)
 
-    title = re.sub(r'고양대전환준비위원회', '고양시', title)
-    title = re.sub(r'민선\s*\d+기', '', title)
+    # 회사명 제거
+    t = re.sub(r'현대건설', '', t)
+    t = re.sub(r'삼성물산', '', t)
+    t = re.sub(r'포스코이앤씨', '', t)
+    t = re.sub(r'dl이앤씨', '', t)
 
-    title = re.sub(r'적극 검토', '검토', title)
-    title = re.sub(r'상향안', '', title)
-    title = re.sub(r'착수', '', title)
+    # 동일 기사 표현 통일
+    t = re.sub(r'고양대전환준비위원회', '고양시', t)
+    t = re.sub(r'민선\s*\d+기', '', t)
 
-    title = re.sub(r'용적률\s*350%', '용적률', title)
-    title = re.sub(r'300%\s*→\s*350%', '용적률', title)
-    title = re.sub(r'현대건설.*범천4구역', '범천4구역 재개발', title) 
-    title = re.sub(r'\d+억원?', '', title)
+    t = re.sub(r'적극 검토', '검토', t)
+    t = re.sub(r'상향안', '', t)
+    t = re.sub(r'착수', '', t)
+
+    t = re.sub(r'용적률\s*350%', '용적률', t)
+    t = re.sub(r'300%\s*→\s*350%', '용적률', t)
+
+    # 범천4구역 기사 통합
+    t = re.sub(r'현대건설.*범천4구역', '범천4구역 재개발', t)
+    t = re.sub(r'주택재개발정비사업', '재개발', t)
+    t = re.sub(r'계약 체결', '', t)
+    t = re.sub(r'규모', '', t)
+
+    # 숫자 제거
+    t = re.sub(r'\d+억원?', '', t)
     t = re.sub(r'\d+주 연속', '', t)
     t = re.sub(r'\d+%', '', t)
     t = re.sub(r'\d+억', '', t)
     t = re.sub(r'\d+가구', '', t)
 
-    title = re.sub(r'\d+%', '', title)
-    title = re.sub(r'\d+억원?', '', title)
-    title = re.sub(r'민선\s*\d+기', '', title)
-    title = re.sub(r'적극', '', title)
-    title = re.sub(r'검토 착수', '검토', title)
-    
     t = re.sub(r'3\.3㎡당', '', t)
     t = re.sub(r'평당', '', t)
 
-    t = re.sub(r'\s+', ' ', t)
+    # 언론사 꼬리 제거
     t = re.sub(
         r'\s*-\s*(뉴스1|네이트|daum|v\.daum\.net|chosunbiz|조선비즈).*',
         '',
@@ -287,11 +296,11 @@ def normalize_title(t):
         flags=re.I
     )
 
+    # 공백 정리
+    t = re.sub(r'\s+', ' ', t)
+
     return t.strip()
 
-def normalize_url(url):
-    p = urlparse(url)
-    return f"{p.netloc}{p.path}"
     
 def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
