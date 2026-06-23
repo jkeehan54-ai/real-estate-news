@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.parse import quote_plus
-from difflib import SequenceMatcher
+
 from datetime import datetime, timezone, timedelta
 
 # --- 여기에 함수를 정의합니다 ---
@@ -300,6 +300,17 @@ LOCAL_EXCLUDE = [
     "도서관",
     "문화센터",
     "환승센터",
+    "경로당",
+    "개소",
+    "개소식",
+    "주민 화합",
+    "의원",
+    "조례",
+    "본회의",
+    "문화",
+    "체육",
+    "봉사",
+    "복지",
 ]
 
 BAD_KEYWORDS = [
@@ -590,10 +601,6 @@ BUSAN_KEYWORDS = [
     "기장",
     "정관",
     "명지",
-    "거제",
-    "양산",
-    "김해",
-    "창원"
 ]
 
 
@@ -601,6 +608,24 @@ BUSAN_KEYWORDS = [
 def classify(title, src):
     t = title
     
+    EXCLUDE_KEYWORDS = [
+    "경로당",
+    "개소식",
+    "복지관",
+    "노인회",
+    "축제",
+    "문화행사",
+    "공연",
+    "전시",
+    "드라마",
+    "영화",
+    "배우",
+    "가수",
+    "포스터"
+    ]
+
+    if any(k in title for k in EXCLUDE_KEYWORDS):
+        return "기타"
 
     for kw in BUSAN_KEYWORDS:
         if kw in title:
@@ -849,7 +874,7 @@ def get_clean_news():
         "공급개발": 10,
         "세제": 20,
         "정책": 5,
-        "부산경남": 10,
+        "부산경남": 8,
         "시장동향": 12,
     }
 
@@ -913,7 +938,7 @@ def get_clean_news():
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.88:
+            if score >= 0.84:
                 duplicate = True
                 break
 
