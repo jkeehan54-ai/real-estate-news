@@ -847,19 +847,6 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
 
-       norm_title = normalize_title(title)
-
-       if norm_title in seen_normalized:
-              dropped += 1
-              continue
-
-       seen_normalized.add(norm_title)
-       seen_titles.append(title)
-
-       if link in seen:
-           dropped += 1
-           continue
-
         norm_title = normalize_title(title)
 
         if norm_title in seen_normalized:
@@ -867,25 +854,27 @@ def get_clean_news():
             continue
 
         seen_normalized.add(norm_title)
-            
-        # 2. 카테고리 분류 (기존 classify 함수 사용)
+
+        if link in seen:
+            dropped += 1
+            continue
+
         cat = classify(title, src)
-        
-        # 3. 소스별 제한 (너무 한 곳에서 많이 나오지 않게 함)
+
         cnt = source_count.get(src, 0)
+
         if cnt >= SOURCE_LIMITS.get(src, 999):
-            dropped += 1
-            continue
-            
-        # 4. 카테고리별 제한 (각 카테고리별 최대 개수)
+           dropped += 1
+           continue
+
         if len(results[cat]) >= LIMITS.get(cat, 999):
-            dropped += 1
-            continue
-            
-        # [강제 저장] 위 필터를 다 통과했거나, 중요한 뉴스라면 추가
+           dropped += 1
+           continue
+
         results[cat].append((title, link, src))
         seen.add(link)
         source_count[src] = cnt + 1
+
         print(f"[SAVE] {cat} {src} {title}")
 
     # 루프 종료 후 결과 출력
