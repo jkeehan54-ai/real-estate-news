@@ -910,6 +910,12 @@ def get_market_brief():
 
         data = r.json()
 
+        import json
+
+        print("========== KB JSON START ==========")
+        print(json.dumps(data, ensure_ascii=False, indent=2)[:3000])
+        print("========== KB JSON END ==========")
+
         summary = data["dataBody"]["data"]["시장요약"]
 
         change = summary["대표지역변동률"]
