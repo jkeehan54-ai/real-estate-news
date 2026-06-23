@@ -203,7 +203,18 @@ def is_within_24h(entry, now_kst):
     return True if d is None else (now_kst-d).total_seconds()<=86400
 
 
-def normalize(title):
+def normalize_title(title):
+    title = title.lower()
+
+    title = re.sub(r"\s+", "", title)
+
+    title = re.sub(
+        r"-\s*(뉴스1|네이트|chosunbiz|조선비즈|v\.daum\.net|daum).*",
+        "",
+        title,
+        flags=re.I
+    )
+
     return title.strip()
 
 def keywords(title):
@@ -242,6 +253,12 @@ def normalize_title(t):
     t = re.sub(r'평당', '', t)
 
     t = re.sub(r'\s+', ' ', t)
+    t = re.sub(
+        r'\s*-\s*(뉴스1|네이트|daum|v\.daum\.net|chosunbiz|조선비즈).*',
+        '',
+        t,
+        flags=re.I
+    )
 
     return t.strip()
 
@@ -253,9 +270,9 @@ def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
     for old in seen_titles:
         old_n = normalize_title(old)
-        # 임계치를 0.92로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
+        # 임계치를 0.88로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
         ratio = SequenceMatcher(None, title_n, old_n).ratio()
-        if ratio >= 0.92:
+        if ratio >= 0.88:
             return True
     return False
 
@@ -790,6 +807,7 @@ def get_clean_news():
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
     seen_titles = []
+    seen_normalized = set()
     source_count = {}
 
     now_kst = datetime.now(KST)
@@ -831,6 +849,14 @@ def get_clean_news():
         if link in seen:
             dropped += 1
             continue
+
+        norm_title = normalize_title(title)
+
+        if norm_title in seen_normalized:
+            dropped += 1
+            continue
+
+        seen_normalized.add(norm_title)
             
         # 2. 카테고리 분류 (기존 classify 함수 사용)
         cat = classify(title, src)
@@ -890,31 +916,30 @@ def get_market_brief():
 
     try:
 
-        url = (
-            "https://api.kbland.kr/land-extra/today/property/daily"
-            "?거래유형=1,2,3"
-        )
+        url = "https://api.kbland.kr/land-extra/today/property/daily?거래유형=1,2,3"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://kbland.kr",
+            "Referer": "https://kbland.kr/",
+            "webservice": "1",
+            "traceid": "user_202403125985"
+        }
+
+        print("[KB URL]", url)
 
         r = requests.get(
             url,
-            headers={
-                "User-Agent": "Mozilla/5.0",
-                "Accept": "application/json",
-                "Origin": "https://kbland.kr",
-                "Referer": "https://kbland.kr/"
-            },
+            headers=headers,
             timeout=20
         )
 
         print("[KB STATUS]", r.status_code)
+        print("[KB RESPONSE]")
+        print(r.text[:3000])
 
         data = r.json()
-
-        import json
-
-        print("========== KB JSON START ==========")
-        print(json.dumps(data, ensure_ascii=False, indent=2)[:3000])
-        print("========== KB JSON END ==========")
 
         summary = data["dataBody"]["data"]["시장요약"]
 
@@ -925,7 +950,7 @@ def get_market_brief():
         return (
             f"전국 아파트 매매가격 {change}% 상승, "
             f"{weeks}주 연속 상승세 유지. "
-            f"매수우위지수는 {seller}로 매도자 우위입니다."
+            f"매도자많음 응답은 {seller}%입니다."
         )
 
     except Exception as e:
