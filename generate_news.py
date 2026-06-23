@@ -889,8 +889,9 @@ import re
 def get_market_brief():
 
     try:
+
         url = (
-            "https://api.kbland.kr/land-extra/today/property/sales"
+            "https://api.kbland.kr/land-extra/today/property/daily"
             "?거래유형=1,2,3"
         )
 
@@ -901,30 +902,27 @@ def get_market_brief():
                 "Accept": "application/json",
                 "Referer": "https://kbland.kr/"
             },
-            timeout=10
+            timeout=20
         )
+
+        print("[KB STATUS]", r.status_code)
+        print(r.text[:1000])
 
         data = r.json()
 
         summary = data["dataBody"]["data"]["시장요약"]
 
-        change = summary["대표지역변동률"]
-        weeks = summary["대표지역변동률연속주수"]
-        trend = summary["대표지역변동률연속상태"]
-
-        seller = summary["매도자많음응답"]
-        buyer = summary["매수자많음응답"]
-
         return (
-            f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
-            f"{weeks}주 연속 {trend}세를 유지했습니다. "
-            f"전국 매수우위지수는 '매도자많음' 응답이 {seller}%, "
-            f"'매수자많음' 응답이 {buyer}%로 "
-            f"매수자에게 유리한 시장이에요."
+            f"전국 아파트 매매가격은 "
+            f"{summary['대표지역변동률']}% "
+            f"{summary['대표지역변동률연속상태']}했어요. "
+            f"{summary['대표지역변동률연속주수']}주 연속 상승세를 유지했어요. "
+            f"매도자많음 {summary['매도자많음응답']}%, "
+            f"매수자많음 {summary['매수자많음응답']}%"
         )
 
     except Exception as e:
-        print("[KB ERROR]", e)
+        print("[KB ERROR]", repr(e))
 
     return "KB 시황 정보를 불러오지 못했습니다."
 
