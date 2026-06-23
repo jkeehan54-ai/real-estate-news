@@ -270,9 +270,9 @@ def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
     for old in seen_titles:
         old_n = normalize_title(old)
-        # 임계치를 0.88로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
+        # 임계치를 0.92로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
         ratio = SequenceMatcher(None, title_n, old_n).ratio()
-        if ratio >= 0.88:
+        if ratio >= 0.92:
             return True
     return False
 
@@ -916,18 +916,18 @@ def get_market_brief():
 
     try:
 
-        url = "https://api.kbland.kr/land-extra/today/property/daily?거래유형=1,2,3"
+        url = (
+            "https://api.kbland.kr/land-extra/today/property/sales"
+            "?거래유형=1,2,3"
+        )
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0",
             "Accept": "application/json, text/plain, */*",
             "Origin": "https://kbland.kr",
             "Referer": "https://kbland.kr/",
-            "webservice": "1",
-            "traceid": "user_202403125985"
+            "webservice": "1"
         }
-
-        print("[KB URL]", url)
 
         r = requests.get(
             url,
@@ -935,22 +935,22 @@ def get_market_brief():
             timeout=20
         )
 
-        print("[KB STATUS]", r.status_code)
-        print("[KB RESPONSE]")
-        print(r.text[:3000])
-
         data = r.json()
 
         summary = data["dataBody"]["data"]["시장요약"]
 
         change = summary["대표지역변동률"]
         weeks = summary["대표지역변동률연속주수"]
+        trend = summary["대표지역변동률연속상태"]
+
         seller = summary["매도자많음응답"]
+        buyer = summary["매수자많음응답"]
 
         return (
-            f"전국 아파트 매매가격 {change}% 상승, "
-            f"{weeks}주 연속 상승세 유지. "
-            f"매도자많음 응답은 {seller}%입니다."
+            f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
+            f"{weeks}주 연속 {trend}세를 유지했습니다. "
+            f"매수우위지수는 매도자많음 {seller}%, "
+            f"매수자많음 {buyer}%입니다."
         )
 
     except Exception as e:
