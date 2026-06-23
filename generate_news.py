@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import re
 import sys, io
+from difflib import SequenceMatcher
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -864,9 +865,18 @@ def get_clean_news():
 
         norm_title = normalize_title(title)
 
-        if norm_title in seen_normalized:
-            dropped += 1
-            continue
+        duplicate = False
+
+        for old in seen_normalized:
+            score = SequenceMatcher(None, norm_title, old).ratio()
+
+            if score >= 0.90:
+                duplicate = True
+                break
+
+        if duplicate:
+           dropped += 1
+           continue
 
         seen_normalized.add(norm_title)
 
