@@ -546,6 +546,13 @@ BAD_SOURCES = [
 
 def classify(title, src):
     t = title
+
+    if "공모청약" in title:
+        return "기타"
+
+    if "상장" in title:
+        return "기타"
+    
     # [정책] 카테고리 확장
     if any(keyword in title for keyword in ["정책", "규제", "국토부", "기획재정부", "금리", "대출", "DSR", "LTV", "DTI", "규제"]):
         return "정책"
@@ -840,11 +847,14 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
 
-        if is_duplicate(title, seen_titles):
-            dropped += 1
-            continue
+        norm_title = normalize_title(title)
 
-        seen_titles.append(title)
+    if norm_title in seen_normalized:
+       dropped += 1
+       continue
+
+    seen_normalized.add(norm_title)
+    seen_titles.append(title)
 
         if link in seen:
             dropped += 1
