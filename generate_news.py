@@ -860,7 +860,9 @@ def get_clean_news():
             continue
 
         cat = classify(title, src)
-
+        if cat not in results:
+            dropped += 1
+            continue
         cnt = source_count.get(src, 0)
 
         if cnt >= SOURCE_LIMITS.get(src, 999):
