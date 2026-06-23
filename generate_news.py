@@ -1,3 +1,5 @@
+from playwright.sync_api import sync_playwright
+import re
 import sys, io
 import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -885,34 +887,52 @@ from bs4 import BeautifulSoup
 import re
 
 def get_market_brief():
-
     try:
-        url = "https://data.kbland.kr/databoard"
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
 
-        resp = requests.get(
-            url,
-            headers=HEADERS,
-            timeout=10
+            page = browser.new_page()
+
+            page.goto(
+                "https://kbland.kr/today",
+                wait_until="networkidle",
+                timeout=60000
+            )
+
+            page.wait_for_timeout(5000)
+
+            text = page.locator("body").inner_text()
+
+            browser.close()
+
+        m1 = re.search(
+            r'전국 아파트 매매가격은\s*([0-9.]+%)\s*상승',
+            text
         )
 
-        text = resp.text
-        print("[KB STATUS]", resp.status_code)
-        print(text[:2000])
-        m = re.search(
-            r'주간 매매지수.*?\+([0-9.]+)%',
+        m2 = re.search(
+            r'(\d+)주 연속 상승세',
+            text
+        )
+
+        m3 = re.search(
+            r'매도자많음.*?([0-9.]+)%.*?매수자많음.*?([0-9.]+)%',
             text,
             re.S
         )
 
-        if m:
-            change = m.group(1)
-
+        if m1 and m2 and m3:
             return (
-                f"전국 아파트 매매가격 {change}% 상승했습니다."
+                f"전국 아파트 매매가격 {m1.group(1)} 상승, "
+                f"{m2.group(1)}주 연속 상승세 유지. "
+                f"매도자많음 응답 {m3.group(1)}%입니다."
             )
 
+        print("[KB TEXT]")
+        print(text[:3000])
+
     except Exception as e:
-        print("KB summary error:", e)
+        print("[KB ERROR]", repr(e))
 
     return "KB 시황 정보를 불러오지 못했습니다."
 
