@@ -887,49 +887,35 @@ from bs4 import BeautifulSoup
 import re
 
 def get_market_brief():
+
     try:
+        print("[KB] Playwright start")
+
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox"]
+            )
 
             page = browser.new_page()
 
             page.goto(
                 "https://kbland.kr/today",
-                wait_until="networkidle",
+                wait_until="domcontentloaded",
                 timeout=60000
             )
 
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(10000)
 
             text = page.locator("body").inner_text()
 
+            print("[KB TEXT LEN]", len(text))
+            print(text[:5000])
+
             browser.close()
 
-        m1 = re.search(
-            r'전국 아파트 매매가격은\s*([0-9.]+%)\s*상승',
-            text
-        )
-
-        m2 = re.search(
-            r'(\d+)주 연속 상승세',
-            text
-        )
-
-        m3 = re.search(
-            r'매도자많음.*?([0-9.]+)%.*?매수자많음.*?([0-9.]+)%',
-            text,
-            re.S
-        )
-
-        if m1 and m2 and m3:
-            return (
-                f"전국 아파트 매매가격 {m1.group(1)} 상승, "
-                f"{m2.group(1)}주 연속 상승세 유지. "
-                f"매도자많음 응답 {m3.group(1)}%입니다."
-            )
-
-        print("[KB TEXT]")
-        print(text[:3000])
+            return "KB 테스트 성공"
 
     except Exception as e:
         print("[KB ERROR]", repr(e))
