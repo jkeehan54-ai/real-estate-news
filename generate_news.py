@@ -934,7 +934,9 @@ def get_market_brief():
             headers=headers,
             timeout=20
         )
-
+        print("[KB STATUS]", r.status_code)
+        print("[KB RESPONSE]", r.text[:5000])
+        
         data = r.json()
 
         summary = data["dataBody"]["data"]["시장요약"]
