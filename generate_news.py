@@ -205,16 +205,21 @@ def is_within_24h(entry, now_kst):
 
 
 def normalize_title(title):
+
     title = title.lower()
 
-    title = re.sub(r"\s+", "", title)
+    # 따옴표 제거
+    title = re.sub(r"[\"'‘’“”]", "", title)
 
-    title = re.sub(
-        r"-\s*(뉴스1|네이트|chosunbiz|조선비즈|v\.daum\.net|daum).*",
-        "",
-        title,
-        flags=re.I
-    )
+    # 괄호 제거
+    title = re.sub(r"\[.*?\]", "", title)
+    title = re.sub(r"\(.*?\)", "", title)
+
+    # 언론사 꼬리 제거
+    title = re.sub(r"\s*-\s*.*$", "", title)
+
+    # 공백 정리
+    title = re.sub(r"\s+", " ", title)
 
     return title.strip()
 
@@ -559,9 +564,40 @@ BAD_SOURCES = [
     "youtube.com",
 ]
 
+BUSAN_KEYWORDS = [
+    "부산",
+    "해운대",
+    "수영구",
+    "남구",
+    "동래",
+    "사상",
+    "사하",
+    "강서구",
+    "에코델타",
+    "오시리아",
+    "센텀",
+    "북항",
+    "범천",
+    "좌천",
+    "재송",
+    "기장",
+    "정관",
+    "명지",
+    "거제",
+    "양산",
+    "김해",
+    "창원"
+]
+
+
 
 def classify(title, src):
     t = title
+    
+
+    for kw in BUSAN_KEYWORDS:
+        if kw in title:
+            return "부산경남"
 
     if "공모청약" in title:
         return "기타"
@@ -870,7 +906,7 @@ def get_clean_news():
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.90:
+            if score >= 0.88:
                 duplicate = True
                 break
 
