@@ -889,36 +889,42 @@ import re
 def get_market_brief():
 
     try:
-        print("[KB] Playwright start")
+        url = (
+            "https://api.kbland.kr/land-extra/today/property/sales"
+            "?거래유형=1,2,3"
+        )
 
-        with sync_playwright() as p:
+        r = requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json",
+                "Referer": "https://kbland.kr/"
+            },
+            timeout=10
+        )
 
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox"]
-            )
+        data = r.json()
 
-            page = browser.new_page()
+        summary = data["dataBody"]["data"]["시장요약"]
 
-            page.goto(
-                "https://kbland.kr/today",
-                wait_until="domcontentloaded",
-                timeout=60000
-            )
+        change = summary["대표지역변동률"]
+        weeks = summary["대표지역변동률연속주수"]
+        trend = summary["대표지역변동률연속상태"]
 
-            page.wait_for_timeout(10000)
+        seller = summary["매도자많음응답"]
+        buyer = summary["매수자많음응답"]
 
-            text = page.locator("body").inner_text()
-
-            print("[KB TEXT LEN]", len(text))
-            print(text[:5000])
-
-            browser.close()
-
-            return "KB 테스트 성공"
+        return (
+            f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
+            f"{weeks}주 연속 {trend}세를 유지했습니다. "
+            f"전국 매수우위지수는 '매도자많음' 응답이 {seller}%, "
+            f"'매수자많음' 응답이 {buyer}%로 "
+            f"매수자에게 유리한 시장이에요."
+        )
 
     except Exception as e:
-        print("[KB ERROR]", repr(e))
+        print("[KB ERROR]", e)
 
     return "KB 시황 정보를 불러오지 못했습니다."
 
