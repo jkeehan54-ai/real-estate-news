@@ -917,8 +917,9 @@ def get_market_brief():
     try:
 
         url = (
-            "https://api.kbland.kr/land-extra/today/property/sales"
-            "?거래유형=1,2,3"
+            "https://api.kbland.kr/land-extra/market-conditions/sales"
+            "?기준년월일=20260615"
+            "&법정동코드=0000000000"
         )
 
         headers = {
