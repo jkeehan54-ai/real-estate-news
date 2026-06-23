@@ -996,16 +996,17 @@ def get_clean_news():
 
         norm_title = normalize_title(title)
 
+        # 디버그 출력
+        print("ORIGINAL:", title)
+        print("NORMAL  :", norm_title)
+
         duplicate = False
 
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score > 0.70:
-                print("[SIM]", round(score, 2))
-                print("NEW:", norm_title)
-                print("OLD:", old)
-                print()
+            if score >= 0.84:
+                print(f"[DUP] {score:.2f} | {title}")
                 duplicate = True
                 break
 
