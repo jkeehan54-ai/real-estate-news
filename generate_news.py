@@ -949,11 +949,25 @@ def get_market_brief():
         seller = summary["매도자많음응답"]
         buyer = summary["매수자많음응답"]
 
+        all_market = data["dataBody"]["data"]["전체시황"]
+
+        seoul = next(
+            x["변동률"]
+            for x in all_market
+            if x["지역명"] == "서울"
+        )
+
+        busan = next(
+            x["변동률"]
+            for x in all_market
+            if x["지역명"] == "부산"
+        )
+
         return (
             f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
             f"{weeks}주 연속 {trend}세를 유지했습니다. "
-            f"매수우위지수는 매도자많음 {seller}%, "
-            f"매수자많음 {buyer}%입니다."
+            f"서울은 {seoul}% 상승, 부산은 {busan}% 보합입니다. "
+            f"매도자많음 {seller}%, 매수자많음 {buyer}%입니다."
         )
 
     except Exception as e:
