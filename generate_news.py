@@ -900,25 +900,26 @@ def get_market_brief():
             headers={
                 "User-Agent": "Mozilla/5.0",
                 "Accept": "application/json",
+                "Origin": "https://kbland.kr",
                 "Referer": "https://kbland.kr/"
             },
             timeout=20
         )
 
         print("[KB STATUS]", r.status_code)
-        print(r.text[:1000])
 
         data = r.json()
 
         summary = data["dataBody"]["data"]["시장요약"]
 
+        change = summary["대표지역변동률"]
+        weeks = summary["대표지역변동률연속주수"]
+        seller = summary["매도자많음응답"]
+
         return (
-            f"전국 아파트 매매가격은 "
-            f"{summary['대표지역변동률']}% "
-            f"{summary['대표지역변동률연속상태']}했어요. "
-            f"{summary['대표지역변동률연속주수']}주 연속 상승세를 유지했어요. "
-            f"매도자많음 {summary['매도자많음응답']}%, "
-            f"매수자많음 {summary['매수자많음응답']}%"
+            f"전국 아파트 매매가격 {change}% 상승, "
+            f"{weeks}주 연속 상승세 유지. "
+            f"매수우위지수는 {seller}로 매도자 우위입니다."
         )
 
     except Exception as e:
