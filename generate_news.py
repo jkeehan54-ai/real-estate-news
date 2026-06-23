@@ -249,12 +249,33 @@ def normalize_title(t):
     t = re.sub(r'\[[^\]]*\]', '', t)
 
     t = re.sub(r'[^\w\s]', ' ', t)
+    title = re.sub(r'현대건설', '', title)
+    title = re.sub(r'삼성물산', '', title)
+    title = re.sub(r'포스코이앤씨', '', title)
+    title = re.sub(r'DL이앤씨', '', title)
 
+    title = re.sub(r'고양대전환준비위원회', '고양시', title)
+    title = re.sub(r'민선\s*\d+기', '', title)
+
+    title = re.sub(r'적극 검토', '검토', title)
+    title = re.sub(r'상향안', '', title)
+    title = re.sub(r'착수', '', title)
+
+    title = re.sub(r'용적률\s*350%', '용적률', title)
+    title = re.sub(r'300%\s*→\s*350%', '용적률', title)
+    title = re.sub(r'현대건설.*범천4구역', '범천4구역 재개발', title) 
+    title = re.sub(r'\d+억원?', '', title)
     t = re.sub(r'\d+주 연속', '', t)
     t = re.sub(r'\d+%', '', t)
     t = re.sub(r'\d+억', '', t)
     t = re.sub(r'\d+가구', '', t)
 
+    title = re.sub(r'\d+%', '', title)
+    title = re.sub(r'\d+억원?', '', title)
+    title = re.sub(r'민선\s*\d+기', '', title)
+    title = re.sub(r'적극', '', title)
+    title = re.sub(r'검토 착수', '검토', title)
+    
     t = re.sub(r'3\.3㎡당', '', t)
     t = re.sub(r'평당', '', t)
 
@@ -575,6 +596,13 @@ BAD_KEYWORDS = [
     "포스터",
     "예능",
     "방송",
+    "행복home",
+    "사회공헌",
+    "봉사활동",
+    "취약계층",
+    "후원",
+    "기부",
+    "캠페인"
 ]
 
 BAD_SOURCES = [
@@ -659,6 +687,8 @@ def classify(title, src):
     
     # 2. [추가] 제목에 부산 관련 키워드가 있으면 지역 뉴스로 분류
     # 전국 매체라도 부산 관련 내용이면 부산 카테고리로 모아줍니다.
+    if "에코델타" in title and "부산" in title:
+        return "부산경남"
     if any(k in t for k in ["부산", "해운대", "에코델타", "오시리아", "수영구", "명지", "북항", "센텀"]):
         return "부산경남"
 
@@ -938,7 +968,11 @@ def get_clean_news():
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.84:
+            if score > 0.70:
+                print("[SIM]", round(score, 2))
+                print("NEW:", norm_title)
+                print("OLD:", old)
+                print()
                 duplicate = True
                 break
 
