@@ -239,7 +239,7 @@ def extract_entities(title):
 
 
 from difflib import SequenceMatcher
-def normalize_url(url):
+
     p = urlparse(url)
     return f"{p.scheme}://{p.netloc}{p.path}"
 def normalize_title(t):
@@ -252,7 +252,7 @@ def normalize_title(t):
     title = re.sub(r'현대건설', '', title)
     title = re.sub(r'삼성물산', '', title)
     title = re.sub(r'포스코이앤씨', '', title)
-    title = re.sub(r'DL이앤씨', '', title)
+    title = re.sub(r'dl이앤씨', '', title)
 
     title = re.sub(r'고양대전환준비위원회', '고양시', title)
     title = re.sub(r'민선\s*\d+기', '', title)
