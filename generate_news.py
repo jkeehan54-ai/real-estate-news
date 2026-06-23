@@ -847,18 +847,18 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
 
-        norm_title = normalize_title(title)
+       norm_title = normalize_title(title)
 
-    if norm_title in seen_normalized:
-       dropped += 1
-       continue
+       if norm_title in seen_normalized:
+              dropped += 1
+              continue
 
-    seen_normalized.add(norm_title)
-    seen_titles.append(title)
+       seen_normalized.add(norm_title)
+       seen_titles.append(title)
 
-        if link in seen:
-            dropped += 1
-            continue
+       if link in seen:
+           dropped += 1
+           continue
 
         norm_title = normalize_title(title)
 
