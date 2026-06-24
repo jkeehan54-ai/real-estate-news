@@ -743,6 +743,17 @@ NEGATIVE_KEYWORDS = [
     "공모가",
     "계약서 공개",
     "외도",
+    "감자",
+    "씨감자",
+    "반려견",
+    "강아지",
+    "늑대개",
+    "브리더",
+    "분양견",
+    "축산",
+    "묘목",
+    "종자",
+    "농업",
 ]
 
 REAL_ESTATE_SOURCES = [
@@ -810,7 +821,7 @@ def classify(title, src):
 
     if any(k in title for k in BUSAN_KEYWORDS):
 
-        if real_estate_score(title) >= 3:
+        if real_estate_score(title, src) >= 3:
             return "부산경남"
 
     if "공모청약" in title:
