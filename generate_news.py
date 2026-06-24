@@ -653,7 +653,72 @@ BUSAN_KEYWORDS = [
     "명지",
 ]
 
+REAL_ESTATE_KEYWORDS = {
+    "부동산": 3,
+    "아파트": 2,
+    "청약": 4,
+    "분양": 4,
+    "재건축": 5,
+    "재개발": 5,
+    "정비사업": 5,
+    "주택": 3,
+    "오피스텔": 3,
+    "전세": 3,
+    "월세": 3,
+    "매매": 3,
+    "입주": 3,
+    "공급": 2,
+    "신도시": 3,
+    "용적률": 3,
+    "역세권": 2,
+    "주담대": 4,
+    "DSR": 4,
+    "LTV": 4,
+    "종부세": 5,
+    "양도세": 5,
+    "취득세": 5,
+}
 
+NEGATIVE_KEYWORDS = [
+    "배우",
+    "드라마",
+    "영화",
+    "가수",
+    "포스터",
+    "연극",
+    "축제",
+    "공연",
+    "경로당",
+    "복지관",
+    "봉사",
+    "기부",
+    "캠페인",
+    "이혼",
+    "외도",
+    "재산분할",
+    "학교",
+]
+
+def real_estate_score(title):
+
+    score = 0
+
+    for kw, weight in REAL_ESTATE_KEYWORDS.items():
+        if kw in title:
+            score += weight
+
+    for kw in NEGATIVE_KEYWORDS:
+        if kw in title:
+            score -= 5
+
+    return score
+
+    score = real_estate_score(title)
+
+    if score < 3:
+        dropped += 1
+        print(f"[DROP {score}] {title}")
+        continue
 
 def classify(title, src):
     t = title
@@ -688,9 +753,10 @@ def classify(title, src):
     if any(k in title for k in EXCLUDE_KEYWORDS):
         return "기타"
 
-    for kw in BUSAN_KEYWORDS:
-        if kw in title:
-            return "부산경남"
+    if any(k in title for k in BUSAN_KEYWORDS):
+
+    if real_estate_score(title) >= 3:
+        return "부산경남"
 
     if "공모청약" in title:
         return "기타"
@@ -1002,6 +1068,13 @@ def get_clean_news():
 
         duplicate = False
 
+        score = real_estate_score(title)
+
+        if score < 2:
+            dropped += 1
+            print(f"[DROP SCORE={score}] {title}")
+            continue
+        
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
