@@ -803,7 +803,6 @@ def real_estate_score(title, src):
 def classify(title, src):
 
     print("=" * 80)
-    print(f"SCORE : {score}")
     print(f"SRC   : {src}")
     print(f"TITLE : {title}")
 
