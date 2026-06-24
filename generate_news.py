@@ -204,12 +204,6 @@ def is_within_24h(entry, now_kst):
     return True if d is None else (now_kst-d).total_seconds()<=86400
 
 
-normalize_title()
-    # 공백 정리
-    title = re.sub(r"\s+", " ", title)
-
-    return title.strip()
-
 def keywords(title):
     return {w for w in normalize(title).split() if w not in STOPWORDS and len(w)>=2}
 
