@@ -768,6 +768,7 @@ REAL_ESTATE_SOURCES = [
     "산업단지",
     "산단",
     "공장용지",
+    "산업용지",
     "지식산업센터",
 ]
 
@@ -790,6 +791,19 @@ def real_estate_score(title, src):
 
 
 def classify(title, src):
+    score = real_estate_score(title, src)
+
+    print("=" * 80)
+    print(f"SCORE : {score}")
+    print(f"SRC   : {src}")
+    print(f"TITLE : {title}")
+
+    if score < 4:
+        print("=> REJECT")
+        return "기타"
+
+    print("=> PASS")
+
     t = title
 
     
