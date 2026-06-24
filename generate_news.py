@@ -701,6 +701,14 @@ REAL_ESTATE_KEYWORDS = {
     "도시개발": 4,
     "택지": 4,
     "지구": 2,
+    # 추가
+    "아파트값": 4,
+    "집값": 4,
+    "주거": 2,
+    "재개발사업": 5,
+    "재건축사업": 5,
+    "조합": 2,
+    "시공사": 2,
 }
 
 NEGATIVE_KEYWORDS = [
@@ -754,6 +762,11 @@ NEGATIVE_KEYWORDS = [
     "묘목",
     "종자",
     "농업",
+    "국무총리 표창",
+    "표창 수상",
+    "정부 발전 유공",
+    "AI 기반",
+    "인공지능정부",
 ]
 
 REAL_ESTATE_SOURCES = [
@@ -798,7 +811,7 @@ def classify(title, src):
     print(f"SRC   : {src}")
     print(f"TITLE : {title}")
 
-    if score < 4:
+    if score < 3:
         print("=> REJECT")
         return "기타"
 
