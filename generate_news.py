@@ -1174,7 +1174,12 @@ def get_clean_news():
            continue
         
 
-        event_text = normalize_title(title)
+        event_text = " ".join(
+            sorted(
+                keywords(title)
+                | extract_entities(title)
+            )
+       )
 
         duplicate_event = False
 
@@ -1186,7 +1191,7 @@ def get_clean_news():
                 old_event
             ).ratio()
 
-            if ratio >= 0.70:
+            if ratio >= 0.82:
                 duplicate_event = True
                 print(f"[EVENT DUP {ratio:.2f}] {title}")
                 break
