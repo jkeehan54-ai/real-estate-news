@@ -1124,7 +1124,7 @@ def get_clean_news():
     seen_normalized = set()
     source_count = {}
     
-    event_groups = {}
+    event_groups = []
     
     now_kst = datetime.now(KST)
     all_entries = []
@@ -1164,33 +1164,33 @@ def get_clean_news():
         score = real_estate_score(title, src)
         print(f"[SCORE={score}] [{src}] {title}")
         
-        if score < 5:
+        if score < 3:
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
         norm_title = normalize_title(title)
 
 
-     #   duplicate = False
+        duplicate = False
 
-     #   score = real_estate_score(title, src)
+        score = real_estate_score(title, src)
 
-     #   if score < 2:
-     #       dropped += 1
-     #       print(f"[DROP SCORE={score}] {title}")
-     #       continue
+        if score < 2:
+            dropped += 1
+            print(f"[DROP SCORE={score}] {title}")
+            continue
         
-     #   for old in seen_normalized:
-     #       score = SequenceMatcher(None, norm_title, old).ratio()
+        for old in seen_normalized:
+            score = SequenceMatcher(None, norm_title, old).ratio()
 
-     #       if score >= 0.84:
-     #           print(f"[DUP] {score:.2f} | {title}")
-     #           duplicate = True
-     #           break
+            if score >= 0.84:
+                print(f"[DUP] {score:.2f} | {title}")
+                duplicate = True
+                break
 
-     #   if duplicate:
-     #      dropped += 1
-     #      continue
+        if duplicate:
+           dropped += 1
+           continue
         
 
         if event_key in event_groups:
