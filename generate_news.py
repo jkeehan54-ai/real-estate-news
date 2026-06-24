@@ -1156,10 +1156,10 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
         norm_title = normalize_title(title)
-        print(
-            f"[EVENT] "
-            f"{event_key}"
-        )
+
+        event_key = make_event_key(title)
+
+        print(f"[EVENT] {event_key}")
         
         score = real_estate_score(title, src)
         print(f"[SCORE={score}] [{src}] {title}")
@@ -1170,12 +1170,6 @@ def get_clean_news():
             continue
         norm_title = normalize_title(title)
 
-        duplicate = False
-        
-
-        # 디버그 출력
-        print("ORIGINAL:", title)
-        print("NORMAL  :", norm_title)
 
      #   duplicate = False
 
@@ -1198,7 +1192,6 @@ def get_clean_news():
      #      dropped += 1
      #      continue
         
-        event_key = make_event_key(title)
 
         if event_key in event_groups:
 
@@ -1210,9 +1203,9 @@ def get_clean_news():
                  f"{title}"
             )
 
-         continue
+            continue
 
-event_groups[event_key] = title
+        event_groups[event_key] = title
 
         seen_normalized.add(norm_title)
 
