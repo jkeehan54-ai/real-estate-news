@@ -205,7 +205,11 @@ def is_within_24h(entry, now_kst):
 
 
 def keywords(title):
-    return {w for w in normalize(title).split() if w not in STOPWORDS and len(w)>=2}
+    return {
+        w
+        for w in normalize_title(title).split()
+        if w not in STOPWORDS and len(w) >= 2
+    }
 
 def extract_entities(title):
     t = re.sub(r'[^\w\s]',' ',title)
