@@ -756,7 +756,7 @@ REAL_ESTATE_SOURCES = [
     "건설타임즈",
 ]
 
-def real_estate_score(title):
+def real_estate_score(title, src):
 
     score = 0
 
@@ -1117,7 +1117,7 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
         norm_title = normalize_title(title)
-        score = real_estate_score(title)
+        score = real_estate_score(title, src)
         print(f"[SCORE={score}] [{src}] {title}")
         
         if score < 4:
