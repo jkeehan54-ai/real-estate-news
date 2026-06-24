@@ -762,7 +762,7 @@ def real_estate_score(title):
 
     for kw, weight in REAL_ESTATE_KEYWORDS.items():
         if kw in title:
-             score += point
+             score += weight
         if src in REAL_ESTATE_SOURCES:
             score += 2
 
@@ -1124,7 +1124,9 @@ def get_clean_news():
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
-         
+        norm_title = normalize_title(title)
+
+        duplicate = False
         
 
         # 디버그 출력
