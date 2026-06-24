@@ -801,7 +801,6 @@ def real_estate_score(title, src):
 
 
 def classify(title, src):
-    score = real_estate_score(title, src)
 
     print("=" * 80)
     print(f"SCORE : {score}")
@@ -1173,12 +1172,6 @@ def get_clean_news():
 
         duplicate = False
 
-        score = real_estate_score(title, src)
-
-        if score < 2:
-            dropped += 1
-            print(f"[DROP SCORE={score}] {title}")
-            continue
         
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
@@ -1193,19 +1186,28 @@ def get_clean_news():
            continue
         
 
-        if event_key in event_groups:
+        event_text = normalize_title(title)
 
-            dropped += 1
+        duplicate_event = False
 
-            print(
-                 f"[EVENT DUP] "
-                 f"{event_key} "
-                 f"{title}"
-            )
+        for old_event in event_groups:
 
-            continue
+            ratio = SequenceMatcher(
+                None,
+                event_text,
+                old_event
+            ).ratio()
 
-        event_groups[event_key] = title
+            if ratio >= 0.70:
+                duplicate_event = True
+                print(f"[EVENT DUP {ratio:.2f}] {title}")
+                break
+
+if duplicate_event:
+    dropped += 1
+    continue
+
+event_groups.append(event_text) 
 
         seen_normalized.add(norm_title)
 
