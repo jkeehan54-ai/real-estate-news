@@ -319,9 +319,9 @@ def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
     for old in seen_titles:
         old_n = normalize_title(old)
-        # 임계치를 0.92로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
+        # 임계치를 0.88로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
         ratio = SequenceMatcher(None, title_n, old_n).ratio()
-        if ratio >= 0.92:
+        if ratio >= 0.88:
             return True
     return False
 
@@ -655,9 +655,9 @@ BUSAN_KEYWORDS = [
 
 REAL_ESTATE_KEYWORDS = {
     "부동산": 3,
-    "아파트": 2,
-    "청약": 4,
-    "분양": 4,
+    "아파트": 3,
+    "청약": 5,
+    "분양": 5,
     "재건축": 5,
     "재개발": 5,
     "정비사업": 5,
@@ -765,6 +765,10 @@ REAL_ESTATE_SOURCES = [
     "네이버부동산",
     "주택경제신문",
     "건설타임즈",
+    "산업단지",
+    "산단",
+    "공장용지",
+    "지식산업센터",
 ]
 
 def real_estate_score(title, src):
@@ -1129,7 +1133,7 @@ def get_clean_news():
         score = real_estate_score(title, src)
         print(f"[SCORE={score}] [{src}] {title}")
         
-        if score < 4:
+        if score < 5:
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
