@@ -763,21 +763,19 @@ def real_estate_score(title, src):
     for kw, weight in REAL_ESTATE_KEYWORDS.items():
         if kw in title:
              score += weight
-        if src in REAL_ESTATE_SOURCES:
-            score += 2
+    if src in REAL_ESTATE_SOURCES:
+        score += 2
 
     for kw in NEGATIVE_KEYWORDS:
         if kw in title:
             score -= 5
+    print(f"[TOTAL={score}] {title}")
 
     return score
 
 
 def classify(title, src):
     t = title
-
-    if real_estate_score(title) < 4:
-        return "기타"
 
     
     EXCLUDE_KEYWORDS = [
