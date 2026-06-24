@@ -671,12 +671,36 @@ REAL_ESTATE_KEYWORDS = {
     "신도시": 3,
     "용적률": 3,
     "역세권": 2,
+
+    # 금융
     "주담대": 4,
     "DSR": 4,
     "LTV": 4,
+
+    # 세금
     "종부세": 5,
     "양도세": 5,
     "취득세": 5,
+
+    # 부산 개발
+    "에코델타": 5,
+    "에코델타시티": 5,
+    "오시리아": 5,
+    "북항": 5,
+    "센텀": 4,
+    "명지": 3,
+
+    # 개발 인프라
+    "광역교통": 4,
+    "광역교통개선대책": 5,
+    "트램": 4,
+    "GTX": 4,
+
+    # 정비사업
+    "용도지역": 4,
+    "도시개발": 4,
+    "택지": 4,
+    "지구": 2,
 }
 
 NEGATIVE_KEYWORDS = [
@@ -701,7 +725,6 @@ NEGATIVE_KEYWORDS = [
     "인터뷰",
     "분가",
     "이혼",
-    "외도",
     "재산분할",
     "관리노동자",
     "동대표",
@@ -709,6 +732,28 @@ NEGATIVE_KEYWORDS = [
     "엘리베이터",
     "안전교육",
     "공지문",
+    "이민우",
+    "가족사진",
+    "새출발",
+    "살림남",
+    "공모주",
+    "일반공모",
+    "상장",
+    "IPO",
+    "공모가",
+    "계약서 공개",
+    "외도",
+]
+
+REAL_ESTATE_SOURCES = [
+    "부산일보",
+    "국제신문",
+    "매일경제",
+    "한국경제",
+    "서울경제",
+    "네이버부동산",
+    "주택경제신문",
+    "건설타임즈",
 ]
 
 def real_estate_score(title):
@@ -717,7 +762,9 @@ def real_estate_score(title):
 
     for kw, weight in REAL_ESTATE_KEYWORDS.items():
         if kw in title:
-            score += weight
+             score += point
+        if src in REAL_ESTATE_SOURCES:
+            score += 2
 
     for kw in NEGATIVE_KEYWORDS:
         if kw in title:
@@ -729,7 +776,7 @@ def real_estate_score(title):
 def classify(title, src):
     t = title
 
-    if real_estate_score(title) < 3:
+    if real_estate_score(title) < 4:
         return "기타"
 
     
@@ -1069,16 +1116,16 @@ def get_clean_news():
 
     for pub_dt, title, link, src in all_entries:
         total += 1
-     
+        norm_title = normalize_title(title)
         score = real_estate_score(title)
         print(f"[SCORE={score}] [{src}] {title}")
         
-        if score < 3:
+        if score < 4:
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
          
-        norm_title = normalize_title(title)
+        
 
         # 디버그 출력
         print("ORIGINAL:", title)
