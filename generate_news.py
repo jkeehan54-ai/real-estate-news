@@ -1203,11 +1203,11 @@ def get_clean_news():
                 print(f"[EVENT DUP {ratio:.2f}] {title}")
                 break
 
-if duplicate_event:
-    dropped += 1
-    continue
+        if duplicate_event:
+             dropped += 1
+             continue
 
-event_groups.append(event_text) 
+        event_groups.append(event_text) 
 
         seen_normalized.add(norm_title)
 
