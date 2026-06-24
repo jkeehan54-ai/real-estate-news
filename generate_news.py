@@ -204,20 +204,7 @@ def is_within_24h(entry, now_kst):
     return True if d is None else (now_kst-d).total_seconds()<=86400
 
 
-def normalize_title(title):
-
-    title = title.lower()
-
-    # 따옴표 제거
-    title = re.sub(r"[\"'‘’“”]", "", title)
-
-    # 괄호 제거
-    title = re.sub(r"\[.*?\]", "", title)
-    title = re.sub(r"\(.*?\)", "", title)
-
-    # 언론사 꼬리 제거
-    title = re.sub(r"\s*-\s*.*$", "", title)
-
+normalize_title()
     # 공백 정리
     title = re.sub(r"\s+", " ", title)
 
@@ -314,6 +301,22 @@ def normalize_title(t):
 
     return t.strip()
 
+def make_event_key(title):
+
+    t = normalize_title(title)
+
+    words = []
+
+    for w in t.split():
+
+        if len(w) < 2:
+            continue
+
+        words.append(w)
+
+    words = sorted(words)
+
+    return " ".join(words[:5])
     
 def is_duplicate(title, seen_titles):
     title_n = normalize_title(title)
@@ -1126,7 +1129,9 @@ def get_clean_news():
     seen_titles = []
     seen_normalized = set()
     source_count = {}
-
+    
+    event_groups = {}
+    
     now_kst = datetime.now(KST)
     all_entries = []
 
@@ -1157,6 +1162,11 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
         norm_title = normalize_title(title)
+        print(
+            f"[EVENT] "
+            f"{event_key}"
+        )
+        
         score = real_estate_score(title, src)
         print(f"[SCORE={score}] [{src}] {title}")
         
@@ -1173,26 +1183,42 @@ def get_clean_news():
         print("ORIGINAL:", title)
         print("NORMAL  :", norm_title)
 
-        duplicate = False
+     #   duplicate = False
 
-        score = real_estate_score(title, src)
+     #   score = real_estate_score(title, src)
 
-        if score < 2:
-            dropped += 1
-            print(f"[DROP SCORE={score}] {title}")
-            continue
+     #   if score < 2:
+     #       dropped += 1
+     #       print(f"[DROP SCORE={score}] {title}")
+     #       continue
         
-        for old in seen_normalized:
-            score = SequenceMatcher(None, norm_title, old).ratio()
+     #   for old in seen_normalized:
+     #       score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.84:
-                print(f"[DUP] {score:.2f} | {title}")
-                duplicate = True
-                break
+     #       if score >= 0.84:
+     #           print(f"[DUP] {score:.2f} | {title}")
+     #           duplicate = True
+     #           break
 
-        if duplicate:
-           dropped += 1
-           continue
+     #   if duplicate:
+     #      dropped += 1
+     #      continue
+        
+        event_key = make_event_key(title)
+
+        if event_key in event_groups:
+
+            dropped += 1
+
+            print(
+                 f"[EVENT DUP] "
+                 f"{event_key} "
+                 f"{title}"
+            )
+
+         continue
+
+event_groups[event_key] = title
 
         seen_normalized.add(norm_title)
 
