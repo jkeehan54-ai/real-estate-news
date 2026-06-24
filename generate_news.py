@@ -755,8 +755,8 @@ def classify(title, src):
 
     if any(k in title for k in BUSAN_KEYWORDS):
 
-    if real_estate_score(title) >= 3:
-        return "부산경남"
+        if real_estate_score(title) >= 3:
+            return "부산경남"
 
     if "공모청약" in title:
         return "기타"
