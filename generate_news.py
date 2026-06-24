@@ -1135,7 +1135,7 @@ def get_clean_news():
 
         duplicate = False
 
-        score = real_estate_score(title)
+        score = real_estate_score(title, src)
 
         if score < 2:
             dropped += 1
