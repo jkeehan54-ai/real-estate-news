@@ -713,12 +713,6 @@ def real_estate_score(title):
 
     return score
 
-    score = real_estate_score(title)
-
-    if score < 3:
-        dropped += 1
-        print(f"[DROP {score}] {title}")
-        continue
 
 def classify(title, src):
     t = title
@@ -1059,7 +1053,14 @@ def get_clean_news():
 
     for pub_dt, title, link, src in all_entries:
         total += 1
+     
+        score = real_estate_score(title)
 
+        if score < 3:
+            dropped += 1
+            print(f"[DROP {score}] {title}")
+            continue
+         
         norm_title = normalize_title(title)
 
         # 디버그 출력
