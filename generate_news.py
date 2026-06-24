@@ -802,18 +802,7 @@ def real_estate_score(title, src):
 
 def classify(title, src):
 
-    print("=" * 80)
-    print(f"SRC   : {src}")
-    print(f"TITLE : {title}")
-
-    if score < 3:
-        print("=> REJECT")
-        return "기타"
-
-    print("=> PASS")
-
     t = title
-
     
     EXCLUDE_KEYWORDS = [
     "경로당",
