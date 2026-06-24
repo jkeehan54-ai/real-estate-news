@@ -697,6 +697,18 @@ NEGATIVE_KEYWORDS = [
     "외도",
     "재산분할",
     "학교",
+    "연예",
+    "인터뷰",
+    "분가",
+    "이혼",
+    "외도",
+    "재산분할",
+    "관리노동자",
+    "동대표",
+    "전원 사직",
+    "엘리베이터",
+    "안전교육",
+    "공지문",
 ]
 
 def real_estate_score(title):
@@ -716,6 +728,10 @@ def real_estate_score(title):
 
 def classify(title, src):
     t = title
+
+    if real_estate_score(title) < 3:
+        return "기타"
+
     
     EXCLUDE_KEYWORDS = [
     "경로당",
@@ -1055,7 +1071,8 @@ def get_clean_news():
         total += 1
      
         score = real_estate_score(title)
-
+        print(f"[SCORE={score}] [{src}] {title}")
+        
         if score < 3:
             dropped += 1
             print(f"[DROP {score}] {title}")
