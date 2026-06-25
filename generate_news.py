@@ -977,7 +977,13 @@ def fetch_google(now_kst):
             cnt = 0
             for entry in feed.entries:
                 if not is_within_24h(entry, now_kst): continue
+                    
                 title = (entry.title or "").strip()
+                if "v.daum.net" in entry.link:
+                    continue
+                 if "nate.com" in entry.link:
+                     continue
+                     
                 if not title: continue
                 if any(x in title for x in LOCAL_EXCLUDE):
                      continue
@@ -1111,10 +1117,9 @@ def get_clean_news():
     
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
-    
+    seen_titles = []
     seen_normalized = set()
     source_count = {}
-    
     event_groups = []
     
     now_kst = datetime.now(KST)
@@ -1182,14 +1187,8 @@ def get_clean_news():
         if duplicate:
            dropped += 1
            continue
-        
 
-        event_text = " ".join(
-            sorted(
-                keywords(title)
-                | extract_entities(title)
-            )
-       )
+        event_key = make_event_key(title)
 
         duplicate_event = False
 
@@ -1197,20 +1196,22 @@ def get_clean_news():
 
             ratio = SequenceMatcher(
                 None,
-                event_text,
+                event_key,
                 old_event
-            ).ratio()
+             ).ratio()
 
-            if ratio >= 0.82:
-                duplicate_event = True
-                print(f"[EVENT DUP {ratio:.2f}] {title}")
-                break
+             if ratio >= 0.92:
+                 duplicate_event = True
+                 print(f"[EVENT DUP {ratio:.2f}] {title}")
+                 break
 
         if duplicate_event:
-             dropped += 1
-             continue
+            dropped += 1
+            continue
 
-        event_groups.append(event_text) 
+        event_groups.append(event_key)
+
+         
 
         seen_normalized.add(norm_title)
 
