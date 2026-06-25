@@ -1111,7 +1111,7 @@ def get_clean_news():
     
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
-    seen_titles = []
+    
     seen_normalized = set()
     source_count = {}
     
@@ -1149,7 +1149,13 @@ def get_clean_news():
         norm_title = normalize_title(title)
 
         event_key = make_event_key(title)
-
+        if event_key in seen_events:
+            dropped += 1
+            print(f"[EVENT KEY DUP] {title}")
+            continue
+ 
+        seen_events.add(event_key)
+        
         print(f"[EVENT] {event_key}")
         
         score = real_estate_score(title, src)
@@ -1168,7 +1174,7 @@ def get_clean_news():
         for old in seen_normalized:
             score = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.84:
+            if score >= 0.90:
                 print(f"[DUP] {score:.2f} | {title}")
                 duplicate = True
                 break
