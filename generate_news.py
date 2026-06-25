@@ -825,6 +825,8 @@ def real_estate_score(title, src):
 
     score = 0
 
+    
+            
     for kw, weight in REAL_ESTATE_KEYWORDS.items():
         if kw in title:
              score += weight
