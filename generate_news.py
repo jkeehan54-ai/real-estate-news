@@ -873,11 +873,44 @@ def classify(title, src):
         return "부산경남"
 
     # 3. 주제별 분류
-    if any(k in t for k in ["청약", "무순위", "특별공급"]):
+    # 공모주 청약 제외
+    if (
+        "청약" in t
+        and not any(
+            x in t
+            for x in [
+                "공모주",
+                "ipo",
+                "증거금",
+                "상장",
+                "코스닥",
+                "코스피",
+                "일반청약 경쟁률",
+                "기관수요예측"
+            ]
+        )
+    ):
         return "청약"
+
+    if "무순위" in t:
+        return "청약"
+
+    if "특별공급" in t:
+       return "청약"
+        
     elif any(k in t for k in ["재건축", "재개발", "정비사업", "가로주택", "리모델링"]):
         return "재건축"
-    elif any(k in t for k in ["신도시", "3기 신도시", "착공", "분양", "입주", "공급", "택지", "역세권"]):
+    elif any(k in t for k in ["신도시",
+                        "3기 신도시",
+                        "택지",
+                        "공급",
+                        "착공",
+                        "입주",
+                        "분양",
+                        "공공주택",
+                        "도심복합",
+                        "도심복합개발",
+                        "뉴홈", "택지", "역세권"]):
         return "공급개발"
     
     elif any(k in t for k in [
@@ -890,8 +923,12 @@ def classify(title, src):
         return "세제"
 
     elif any(k in t for k in [
-        "주담대",
-        "주택담보대출",
+        "주담대","정책",
+        "규제",
+        "국토부",
+        "기획재정부",
+        "주택담보대출","대책",
+        "국민 대토론회",
         "전세대출",
         "주거자금",
         "모기지",
@@ -902,7 +939,22 @@ def classify(title, src):
         "규제완화"
     ]):
         return "정책"
-
+    # 전국 언론이라도 부산 관련 기사이면 부산경남으로 분류
+    elif any(k in t for k in [
+        "부산",
+        "해운대",
+        "수영",
+        "남천",
+        "에코델타",
+        "명지",
+        "북항",
+        "가덕도",
+        "오시리아",
+        "센텀",
+        "기장"
+    ]):
+        return "부산경남"
+        
     elif src in ["부산일보","국제신문","경남도민일보"]:
 
         if any(k in t for k in [
