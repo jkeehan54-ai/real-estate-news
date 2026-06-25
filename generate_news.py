@@ -1266,7 +1266,10 @@ def get_clean_news():
             
         norm_title = normalize_title(title)
 
-
+        if norm_title in seen_normalized:
+           dropped += 1
+           continue
+            
         duplicate = False
 
         
