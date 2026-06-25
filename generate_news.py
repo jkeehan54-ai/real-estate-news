@@ -1048,6 +1048,9 @@ def fetch_naver_news(now_kst):
 
             if is_bad_news(title):
                 continue
+                
+            if real_estate_score(title, "네이버부동산") < 3:
+                continue    
         
             try:
                 article_html = requests.get(
@@ -1204,6 +1207,7 @@ def get_clean_news():
 
         seen_normalized.add(norm_title)
 
+        clean_link = normalize_url(link)
         if link in seen:
             dropped += 1
             continue
@@ -1223,7 +1227,9 @@ def get_clean_news():
            continue
 
         results[cat].append((title, link, src))
-        seen.add(link)
+        
+        seen.add(clean_link)
+        
         source_count[src] = cnt + 1
 
         print(f"[SAVE] {cat} {src} {title}")
