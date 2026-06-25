@@ -1117,7 +1117,7 @@ def get_clean_news():
     
     # [수정] 변수 정의를 명확히 상단에 배치
     seen = set()
-    seen_titles = []
+    
     seen_normalized = set()
     source_count = {}
     event_groups = []
@@ -1152,14 +1152,6 @@ def get_clean_news():
     for pub_dt, title, link, src in all_entries:
         total += 1
         norm_title = normalize_title(title)
-
-        event_key = make_event_key(title)
-        if event_key in seen_events:
-            dropped += 1
-            print(f"[EVENT KEY DUP] {title}")
-            continue
- 
-        seen_events.add(event_key)
         
         print(f"[EVENT] {event_key}")
         
@@ -1170,6 +1162,7 @@ def get_clean_news():
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
+            
         norm_title = normalize_title(title)
 
 
@@ -1198,17 +1191,16 @@ def get_clean_news():
                 None,
                 event_key,
                 old_event
-            ).ratio()
+             ).ratio()
 
-            if ratio >= 0.92:
+             if ratio >= 0.92:
                  duplicate_event = True
                  print(f"[EVENT DUP {ratio:.2f}] {title}")
                  break
 
         if duplicate_event:
-            dropped += 1
-            continue
-
+             dropped += 1
+             continue
         event_groups.append(event_key)
 
          
