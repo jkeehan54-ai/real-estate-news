@@ -119,11 +119,7 @@ GOOGLE_QUERIES = [
     "부산 재건축 site:busan.com",
     "부산 정비사업 site:busan.com",
     "부산 주택 site:busan.com",
-    "Google/매일경제 부동산", "부동산 site:mk.co.kr",
-    "Google/부산일보 부동산", "부산 부동산 site:busan.com",
-    "Google/국제신문 부동산", "부산 부동산 site:kookje.co.kr",
-    "부동산",
-    "아파트",
+    
     "청약",
     "분양",
     "재건축",
@@ -985,6 +981,7 @@ def fetch_google(now_kst):
                     continue
                      
                 if not title: continue
+                    
                 if any(x in title for x in LOCAL_EXCLUDE):
                      continue
                 if not RE_ESTATE.search(title):
