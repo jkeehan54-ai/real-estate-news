@@ -981,8 +981,8 @@ def fetch_google(now_kst):
                 title = (entry.title or "").strip()
                 if "v.daum.net" in entry.link:
                     continue
-                 if "nate.com" in entry.link:
-                     continue
+                if "nate.com" in entry.link:
+                    continue
                      
                 if not title: continue
                 if any(x in title for x in LOCAL_EXCLUDE):
