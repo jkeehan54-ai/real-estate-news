@@ -1257,18 +1257,22 @@ def get_clean_news():
     total=dropped=0
 
     for pub_dt, title, link, src in all_entries:
-        total += 1
-        norm_title = normalize_title(title)
-        
-        print(f"[EVENT] {event_key}")
-        
-        score = real_estate_score(title, src)
-        print(f"[SCORE={score}] [{src}] {title}")
-        
-        if score < 3:
-            dropped += 1
-            print(f"[DROP {score}] {title}")
-            continue
+                        total += 1
+
+                        event_key = make_event_key(title)
+
+                        norm_title = normalize_title(title)
+
+                        print(f"[EVENT] {event_key}")
+
+                        score = real_estate_score(title, src)
+
+                        print(f"[SCORE={score}] [{src}] {title}")
+
+                        if score < 3:
+                            dropped += 1
+                            print(f"[DROP {score}] {title}")
+                            continue
             
         norm_title = normalize_title(title)
 
@@ -1296,21 +1300,21 @@ def get_clean_news():
         duplicate_event = False
 
         for old_event in event_groups:
-
             ratio = SequenceMatcher(
                 None,
                 event_key,
                 old_event
-           ).ratio()
+            ).ratio()
 
-           if ratio >= 0.92:
-               duplicate_event = True
-               print(f"[EVENT DUP {ratio:.2f}] {title}")
-               break
+            if ratio >= 0.92:
+                duplicate_event = True
+                print(f"[EVENT DUP {ratio:.2f}] {title}")
+                break
 
         if duplicate_event:
-             dropped += 1
-             continue
+            dropped += 1
+            continue
+
         event_groups.append(event_key)
 
          
@@ -1318,7 +1322,7 @@ def get_clean_news():
         seen_normalized.add(norm_title)
 
         clean_link = normalize_url(link)
-        if link in seen:
+        if clean_link in seen:
             dropped += 1
             continue
 
