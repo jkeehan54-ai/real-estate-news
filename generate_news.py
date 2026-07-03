@@ -238,10 +238,25 @@ def normalize_title(t):
     t = re.sub(r'[^\w\s]', ' ', t)
 
     # 회사명 제거
-    t = re.sub(r'현대건설', '', t)
-    t = re.sub(r'삼성물산', '', t)
-    t = re.sub(r'포스코이앤씨', '', t)
-    t = re.sub(r'dl이앤씨', '', t)
+    for company in [
+        "현대건설",
+        "삼성물산",
+        "포스코이앤씨",
+        "DL이앤씨",
+        "GS건설",
+        "대우건설",
+        "롯데건설",
+        "HDC현대산업개발",
+        "금호건설",
+        "한화건설",
+        "계룡건설",
+        "호반건설",
+        "반도건설",
+        "우미건설",
+        "동부건설",
+        "두산건설",
+    ]:
+    t = t.replace(company.lower(), "")
 
     # 동일 기사 표현 통일
     t = re.sub(r'고양대전환준비위원회', '고양시', t)
@@ -249,14 +264,10 @@ def normalize_title(t):
 
     t = re.sub(r'적극 검토', '검토', t)
  
-    t = re.sub(r'착수', '', t)
     t = re.sub(r'고양대전환준비위', '고양시', t)
-    t = re.sub(r'민선\s*\d+기', '', t)
 
     t = re.sub(r'일산신도시', '일산', t)
 
-
-    t = re.sub(r'상향안', '', t)
    
     t = re.sub(r'검토 착수', '검토', t)
 
@@ -276,11 +287,22 @@ def normalize_title(t):
     t = re.sub(r'\d+억원?', '', t)
     t = re.sub(r'\d+주 연속', '', t)
     t = re.sub(r'\d+%', '', t)
-    t = re.sub(r'\d+억', '', t)
     t = re.sub(r'\d+가구', '', t)
 
     t = re.sub(r'3\.3㎡당', '', t)
     t = re.sub(r'평당', '', t)
+
+    t = re.sub(r'\d+(\.\d+)?%','',t)
+
+    t = re.sub(r'\d+억','',t)
+
+    t = re.sub(r'\d+가구','',t)
+
+    t = re.sub(r'\d+층','',t)
+
+    t = re.sub(r'\d+호','',t)
+
+    t = re.sub(r'\s+',' ',t)
 
     # 언론사 꼬리 제거
     t = re.sub(
@@ -292,6 +314,10 @@ def normalize_title(t):
 
     # 공백 정리
     t = re.sub(r'\s+', ' ', t)
+
+    words = sorted(set(t.split()))
+
+    t = " ".join(words)
 
     return t.strip()
 
