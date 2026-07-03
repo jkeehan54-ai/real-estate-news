@@ -887,12 +887,18 @@ def real_estate_score(title, src):
     # 사고 기사 감점
     for kw in ACCIDENT_WORDS:
         if kw in title:
-            score -= 6
+            score -= 10
 
     # 범죄 기사 감점
     for kw in CRIME_WORDS:
         if kw in title:
-            score -= 6
+            score -= 10
+
+    if "신임" in title:
+            score -= 5
+
+    if "취임" in title:
+            score -= 5
 
     print(f"[TOTAL={score}] {title}")
 
