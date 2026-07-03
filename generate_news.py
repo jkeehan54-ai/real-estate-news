@@ -282,7 +282,6 @@ def normalize_title(t):
 
     t = re.sub(r'\d+호','',t)
 
-    t = re.sub(r'\s+',' ',t)
 
     # 언론사 꼬리 제거
     t = re.sub(
@@ -1086,7 +1085,13 @@ def fetch_google(now_kst):
                     continue
                 if "nate.com" in entry.link:
                     continue
-                     
+
+                if "youtube.com" in entry.link:
+                    continue
+
+                if "blog.naver.com" in entry.link:
+                    continue
+                
                 if not title: continue
                     
                 if any(x in title for x in LOCAL_EXCLUDE):
@@ -1223,7 +1228,7 @@ def get_clean_news():
     results = {c: [] for c in cats}
     
     # [수정] 변수 정의를 명확히 상단에 배치
-    seen = set()
+    seen_links = set()
     
     seen_normalized = set()
     source_count = {}
@@ -1251,7 +1256,7 @@ def get_clean_news():
     print("[1.5단계] NAVER")
     all_entries.extend(fetch_naver_news(now_kst))
 
-        print("[2단계] Google")
+    print("[2단계] Google")
     all_entries.extend(fetch_google(now_kst))
 
     all_entries.sort(
@@ -1316,7 +1321,7 @@ def get_clean_news():
 
         clean_link = normalize_url(link)
 
-        if clean_link in seen:
+        if clean_link in seen_links:
             dropped += 1
             continue
 
@@ -1337,7 +1342,7 @@ def get_clean_news():
             continue
 
         results[cat].append((title, link, src))
-        seen.add(clean_link)
+        seen_links.add(clean_link)
         source_count[src] = cnt + 1
 
         print(f"[SAVE] {cat} {src} {title}")
