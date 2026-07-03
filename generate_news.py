@@ -1301,12 +1301,12 @@ def get_clean_news():
                 None,
                 event_key,
                 old_event
-             ).ratio()
+           ).ratio()
 
-             if ratio >= 0.92:
-                 duplicate_event = True
-                 print(f"[EVENT DUP {ratio:.2f}] {title}")
-                 break
+           if ratio >= 0.92:
+               duplicate_event = True
+               print(f"[EVENT DUP {ratio:.2f}] {title}")
+               break
 
         if duplicate_event:
              dropped += 1
