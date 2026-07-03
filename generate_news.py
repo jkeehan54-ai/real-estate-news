@@ -552,7 +552,7 @@ BAD_KEYWORDS = [
     "ETF",
     "인사",
     "공고",
-    "매각"
+    "매각",
     "갤러리 오픈",
     "오픈하우스",
     "고분양태",
@@ -823,9 +823,6 @@ ECONOMY_WORDS = [
     "코스닥",
 ]
 
-for kw in ECONOMY_WORDS:
-    if kw in title:
-        score -= 4
 
 REAL_ESTATE_SOURCES = [
     "부산일보",
@@ -855,9 +852,6 @@ ACCIDENT_WORDS = [
     "차량",
 ]
 
-for kw in ACCIDENT_WORDS:
-    if kw in title:
-        score -= 6
 
 CRIME_WORDS = [
     "적발",
@@ -869,25 +863,37 @@ CRIME_WORDS = [
     "횡령",
 ]
 
-for kw in CRIME_WORDS:
-    if kw in title:
-        score -= 6
 
 def real_estate_score(title, src):
 
     score = 0
 
-    
-            
     for kw, weight in REAL_ESTATE_KEYWORDS.items():
         if kw in title:
-             score += weight
+            score += weight
+
     if src in REAL_ESTATE_SOURCES:
         score += 2
 
     for kw in NEGATIVE_KEYWORDS:
         if kw in title:
             score -= 5
+
+    # 경제 기사 감점
+    for kw in ECONOMY_WORDS:
+        if kw in title:
+            score -= 4
+
+    # 사고 기사 감점
+    for kw in ACCIDENT_WORDS:
+        if kw in title:
+            score -= 6
+
+    # 범죄 기사 감점
+    for kw in CRIME_WORDS:
+        if kw in title:
+            score -= 6
+
     print(f"[TOTAL={score}] {title}")
 
     return score
