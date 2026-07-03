@@ -1251,12 +1251,19 @@ def get_clean_news():
     print("[1.5단계] NAVER")
     all_entries.extend(fetch_naver_news(now_kst))
 
-    print("[2단계] Google")
+        print("[2단계] Google")
     all_entries.extend(fetch_google(now_kst))
-    all_entries.sort(key=lambda x:x[0] or datetime.max.replace(tzinfo=KST),reverse=True)
-    total=dropped=0
 
-        for pub_dt, title, link, src in all_entries:
+    all_entries.sort(
+        key=lambda x: x[0] or datetime.max.replace(tzinfo=KST),
+        reverse=True,
+    )
+
+    total = 0
+    dropped = 0
+
+    for pub_dt, title, link, src in all_entries:
+
         total += 1
 
         event_key = make_event_key(title)
@@ -1271,7 +1278,7 @@ def get_clean_news():
             dropped += 1
             print(f"[DROP {score}] {title}")
             continue
-
+            
         if norm_title in seen_normalized:
             dropped += 1
             continue
