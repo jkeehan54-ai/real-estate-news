@@ -1256,55 +1256,44 @@ def get_clean_news():
     all_entries.sort(key=lambda x:x[0] or datetime.max.replace(tzinfo=KST),reverse=True)
     total=dropped=0
 
-    for pub_dt, title, link, src in all_entries:
-                        total += 1
+        for pub_dt, title, link, src in all_entries:
+        total += 1
 
-                        event_key = make_event_key(title)
-
-                        norm_title = normalize_title(title)
-
-                        print(f"[EVENT] {event_key}")
-
-                        score = real_estate_score(title, src)
-
-                        print(f"[SCORE={score}] [{src}] {title}")
-
-                        if score < 3:
-                            dropped += 1
-                            print(f"[DROP {score}] {title}")
-                            continue
-            
+        event_key = make_event_key(title)
         norm_title = normalize_title(title)
 
+        print(f"[EVENT] {event_key}")
+
+        score = real_estate_score(title, src)
+        print(f"[SCORE={score}] [{src}] {title}")
+
+        if score < 3:
+            dropped += 1
+            print(f"[DROP {score}] {title}")
+            continue
+
         if norm_title in seen_normalized:
-           dropped += 1
-           continue
-            
+            dropped += 1
+            continue
+
         duplicate = False
 
-        
         for old in seen_normalized:
-            score = SequenceMatcher(None, norm_title, old).ratio()
+            ratio = SequenceMatcher(None, norm_title, old).ratio()
 
-            if score >= 0.90:
-                print(f"[DUP] {score:.2f} | {title}")
+            if ratio >= 0.90:
+                print(f"[DUP] {ratio:.2f} | {title}")
                 duplicate = True
                 break
 
         if duplicate:
-           dropped += 1
-           continue
-
-        event_key = make_event_key(title)
+            dropped += 1
+            continue
 
         duplicate_event = False
 
         for old_event in event_groups:
-            ratio = SequenceMatcher(
-                None,
-                event_key,
-                old_event
-            ).ratio()
+            ratio = SequenceMatcher(None, event_key, old_event).ratio()
 
             if ratio >= 0.92:
                 duplicate_event = True
@@ -1316,39 +1305,35 @@ def get_clean_news():
             continue
 
         event_groups.append(event_key)
-
-         
-
         seen_normalized.add(norm_title)
 
         clean_link = normalize_url(link)
+
         if clean_link in seen:
             dropped += 1
             continue
 
         cat = classify(title, src)
+
         if cat not in results:
             dropped += 1
             continue
+
         cnt = source_count.get(src, 0)
 
         if cnt >= SOURCE_LIMITS.get(src, 999):
-           dropped += 1
-           continue
+            dropped += 1
+            continue
 
         if len(results[cat]) >= LIMITS.get(cat, 999):
-           dropped += 1
-           continue
+            dropped += 1
+            continue
 
         results[cat].append((title, link, src))
-        
         seen.add(clean_link)
-        
         source_count[src] = cnt + 1
 
         print(f"[SAVE] {cat} {src} {title}")
-
-        norm_title = normalize_title(title)
 
         if "범천4구역" in title:
             print("[ORIGINAL]", title)
