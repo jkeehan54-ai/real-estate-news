@@ -1058,7 +1058,7 @@ def classify(title, src):
             return category
         
     # 전국 언론이라도 부산 관련 기사이면 부산경남으로 분류
-    elif any(k in t for k in [
+    if any(k in t for k in [
         "부산",
         "해운대",
         "수영",
@@ -1073,7 +1073,7 @@ def classify(title, src):
     ]):
         return "부산경남"
         
-    elif src in ["부산일보","국제신문","경남도민일보"]:
+    if src in ["부산일보","국제신문","경남도민일보"]:
 
         if any(k in t for k in [
              "아파트",
