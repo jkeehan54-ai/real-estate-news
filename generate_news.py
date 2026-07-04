@@ -607,10 +607,11 @@ def get_market_brief():
     return "KB 시황 정보를 불러오지 못했습니다."
 
 def interleave_by_source(items):
+
     groups = {}
 
-    for pub_dt, title, link, src in items:
-        groups.setdefault(src, []).append((pub_dt, title, link, src))
+    for item in items:
+        groups.setdefault(item["src"], []).append(item)
 
     result = []
 
