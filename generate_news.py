@@ -839,6 +839,54 @@ REAL_ESTATE_SOURCES = [
     "산업용지",
     "지식산업센터",
 ]
+
+CATEGORY_RULES = {
+    "청약": [
+        "청약",
+        "무순위",
+        "특별공급",
+    ],
+
+    "재건축": [
+        "재건축",
+        "재개발",
+        "정비사업",
+        "가로주택",
+        "리모델링",
+    ],
+
+    "공급개발": [
+        "분양",
+        "신도시",
+        "공급",
+        "착공",
+        "입주",
+        "공공주택",
+        "도심복합",
+        "역세권",
+    ],
+
+    "세제": [
+        "종부세",
+        "양도세",
+        "취득세",
+        "재산세",
+        "세금",
+    ],
+
+    "정책": [
+        "국토부",
+        "규제",
+        "대책",
+        "DSR",
+        "LTV",
+        "DTI",
+        "전세대출",
+        "주담대",
+    ],
+}
+
+
 ACCIDENT_WORDS = [
     "화재",
     "전소",
@@ -861,7 +909,12 @@ CRIME_WORDS = [
     "불법",
     "도박",
     "횡령",
+    "특공",
 ]
+
+
+
+
 
 
 def real_estate_score(title, src):
@@ -903,6 +956,9 @@ def real_estate_score(title, src):
     print(f"[TOTAL={score}] {title}")
 
     return score
+
+
+
 
 
 def classify(title, src):
@@ -997,53 +1053,10 @@ def classify(title, src):
     ):
         return "청약"
 
-    if "무순위" in t:
-        return "청약"
-
-    if "특별공급" in t:
-       return "청약"
+    for category, keywords in CATEGORY_RULES.items():
+    if any(k in t for k in keywords):
+        return category
         
-    elif any(k in t for k in ["재건축", "재개발", "정비사업", "가로주택", "리모델링"]):
-        return "재건축"
-    elif any(k in t for k in ["신도시",
-                        "3기 신도시",
-                        "택지",
-                        "공급",
-                        "착공",
-                        "입주",
-                        "분양",
-                        "공공주택",
-                        "도심복합",
-                        "도심복합개발",
-                        "뉴홈", "택지", "역세권"]):
-        return "공급개발"
-    
-    elif any(k in t for k in [
-        "종부세",
-        "재산세",
-        "양도세",
-        "취득세",
-        "세금"
-    ]):
-        return "세제"
-
-    elif any(k in t for k in [
-        "주담대","정책",
-        "규제",
-        "국토부",
-        "기획재정부",
-        "주택담보대출","대책",
-        "국민 대토론회",
-        "전세대출",
-        "주거자금",
-        "모기지",
-        "DSR",
-        "LTV",
-        "DTI",
-        "대출규제",
-        "규제완화"
-    ]):
-        return "정책"
     # 전국 언론이라도 부산 관련 기사이면 부산경남으로 분류
     elif any(k in t for k in [
         "부산",
