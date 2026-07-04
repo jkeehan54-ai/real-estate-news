@@ -606,6 +606,24 @@ def get_market_brief():
 
     return "KB 시황 정보를 불러오지 못했습니다."
 
+def interleave_by_source(items):
+    groups = {}
+
+    for title, link, src in items:
+        groups.setdefault(src, []).append((title, link, src))
+
+    result = []
+
+    while groups:
+        for src in list(groups.keys()):
+            result.append(groups[src].pop(0))
+
+            if not groups[src]:
+                del groups[src]
+
+    return result
+
+
 def build_html(data):
     today       = datetime.now(KST).strftime("%Y년 %m월 %d일")
     update_time = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
