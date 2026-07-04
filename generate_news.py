@@ -609,8 +609,8 @@ def get_market_brief():
 def interleave_by_source(items):
     groups = {}
 
-    for title, link, src in items:
-        groups.setdefault(src, []).append((title, link, src))
+    for pub_dt, title, link, src in items:
+        groups.setdefault(src, []).append((pub_dt, title, link, src))
 
     result = []
 
