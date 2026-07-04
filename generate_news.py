@@ -541,6 +541,17 @@ def get_clean_news():
         print(f"  {k}: {v}건")
     return results
 
+def market_text(value):
+
+    value = float(value)
+
+    if value > 0:
+        return f"{value:.2f}% 상승"
+
+    elif value < 0:
+        return f"{abs(value):.2f}% 하락"
+
+    return "0.00% 보합"
 def get_latest_kb_date():
 
     url = (
@@ -553,10 +564,15 @@ def get_latest_kb_date():
         "Accept": "application/json, text/plain, */*",
         "Origin": "https://kbland.kr",
         "Referer": "https://kbland.kr/",
-        "webservice": "1"
+        "webservice": "1",
     }
 
-    r = requests.get(url, headers=headers, timeout=20)
+    r = requests.get(
+        url,
+        headers=headers,
+        timeout=20
+    )
+
     r.raise_for_status()
 
     data = r.json()
@@ -566,7 +582,7 @@ def get_latest_kb_date():
     print("[KB 최신 기준일]", latest)
 
     return latest
-
+    
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
 
@@ -574,37 +590,34 @@ def get_market_brief():
 
         latest = get_latest_kb_date()
 
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://kbland.kr",
+            "Referer": "https://kbland.kr/",
+            "webservice": "1",
+        }
+
         url = (
             "https://api.kbland.kr/land-extra/market-conditions/sales"
             f"?기준년월일={latest}"
             "&법정동코드=0000000000"
         )
 
-def market_text(v):
-
-    v = float(v)
-
-    if v > 0:
-        return f"{v:.2f}% 상승"
-
-    elif v < 0:
-        return f"{abs(v):.2f}% 하락"
-
-    return "0.00% 보합"
-
-
-
-    
-
         r = requests.get(
             url,
             headers=headers,
             timeout=20
         )
+
         print("[KB STATUS]", r.status_code)
-        print("[KB RESPONSE]", r.text[:5000])
-        
+
         data = r.json()
+
+        print(
+            "[KB DATA DATE]",
+            data["dataBody"]["data"]["기준년월일"]
+        )
 
         summary = data["dataBody"]["data"]["시장요약"]
 
@@ -632,14 +645,17 @@ def market_text(v):
         return (
             f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
             f"{weeks}주 연속 {trend}세를 유지했습니다. "
-            f"서울은 {market_text(seoul)}, 부산은 {market_text(busan)}입니다."
-            f"매도자많음 {seller}%, 매수자많음 {buyer}%입니다."
+            f"서울은 {market_text(seoul)}, "
+            f"부산은 {market_text(busan)}입니다. "
+            f"매도자많음 {seller}%, "
+            f"매수자많음 {buyer}%입니다."
         )
 
     except Exception as e:
+
         print("[KB ERROR]", repr(e))
 
-    return "KB 시황 정보를 불러오지 못했습니다."
+        return "KB 시황 정보를 불러오지 못했습니다."
 
 def interleave_by_source(items):
 
