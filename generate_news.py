@@ -620,7 +620,8 @@ def get_market_brief():
         )
 
         summary = data["dataBody"]["data"]["시장요약"]
-
+        print("[KB SUMMARY]")
+        print(summary)
         change = summary["대표지역변동률"]
         weeks = summary["대표지역변동률연속주수"]
         trend = summary["대표지역변동률연속상태"]
