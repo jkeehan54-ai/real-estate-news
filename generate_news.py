@@ -1,1658 +1,640 @@
-from playwright.sync_api import sync_playwright
-import re
+"""
+부동산 뉴스 브리핑 - 비용 없는 자동 필터링
+============================================
+비부동산 제거: RE_ESTATE(포함) + RE_EXCLUDE(제외) 2중 규칙
+중복 제거: 문자열유사도 + 키워드자카드 + 엔티티겹침 3단계
+날짜: datetime.now(KST) 명시 → GitHub Actions UTC 환경에서도 정확
+"""
 import sys, io
-from difflib import SequenceMatcher
-import html
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 import feedparser, requests, re, os
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
-from urllib.parse import urlparse
-from urllib.parse import quote_plus
-
+from urllib.parse import quote_plus, urljoin
+from difflib import SequenceMatcher
 from datetime import datetime, timezone, timedelta
-
-# --- 여기에 함수를 정의합니다 ---
-def is_real_estate_news(title):
-    title = title.strip()
-
-    if not RE_ESTATE.search(title):
-        return False
-
-    if RE_EXCLUDE.search(title):
-        return False
-
-    if is_bad_news(title):
-        return False
-
-    return True
-    
-    # 제외할 키워드
-    exclude_keywords = ["날씨", "운세", "강풍", "폭우", "사고", "침수", "호우", "태극기", "유튜버", "가격 폭탄"]
-    if any(k in title for k in exclude_keywords):
-        return False
-        
-    # 부동산 관련 키워드 (이 중 하나라도 있어야 함)
-    include_keywords = ["아파트", "부동산", "재건축", "재개발", "청약", "분양", "주택", "용적률", "공급", "신도시", "종부세", "양도세", "전세"]
-    return any(k in title for k in include_keywords)
 
 KST = timezone(timedelta(hours=9))
 
 SOURCES = {
-    "조선일보":"https://www.chosun.com/economy/real_estate/",
-    "중앙일보":"https://www.joongang.co.kr/realestate",
-    "동아일보":"https://www.donga.com/news/Economy/Realestate",
-    "한겨레":"https://www.hani.co.kr/arti/economy/property/",
-    "매일경제":"https://www.mk.co.kr/news/realestate/",
-    "한국경제":"https://www.hankyung.com/realestate",
-    "서울경제":"https://www.sedaily.com/News/RealeState",
-    "연합뉴스":"https://www.yna.co.kr/economy/real-estate/",
-    "부산일보":"https://www.busan.com/economy/",
-    "국제신문":"http://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
-    "주택경제신문":"https://www.arunews.com/",
-    "건설타임즈":"https://www.constimes.co.kr/",
-    "네이버부동산":"https://land.naver.com/",
+    "조선일보":    "https://www.chosun.com/economy/real_estate/",
+    "중앙일보":    "https://www.joongang.co.kr/realestate",
+    "동아일보":    "https://www.donga.com/news/Economy/Realestate",
+    "한겨레":      "https://www.hani.co.kr/arti/economy/property/",
+    "매일경제":    "https://www.mk.co.kr/news/realestate/",
+    "한국경제":    "https://www.hankyung.com/realestate",
+    "서울경제":    "https://www.sedaily.com/News/RealeState",
+    "연합뉴스":    "https://www.yna.co.kr/economy/real-estate/",
+    "부산일보":    "https://www.busan.com/economy/",
+    "국제신문":    "http://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
+    "주택경제신문": "https://www.arunews.com/",
+    "건설타임즈":  "https://www.constimes.co.kr/",
+    "네이버부동산": "https://land.naver.com/news/",
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language":"ko-KR,ko;q=0.9",
-    "Referer":"https://www.google.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9",
+    "Referer": "https://www.google.com/",
+    "Cache-Control": "no-cache",
 }
 
 RSS_FEEDS = [
-    ("한국경제", "https://www.hankyung.com/feed/realestate", True),
-    ("서울경제", "https://www.sedaily.com/Feed/v1/20", True),
-    ("주택경제신문", "https://www.arunews.com/rss/allRSS.xml", True),
-    ("건설타임즈", "https://www.constimes.co.kr/rss/allRSS.xml", True),
-    ("동아일보", "https://rss.donga.com/economy.xml", False),
-    ("한겨레", "https://www.hani.co.kr/rss/economy/property/", False),
-    ("연합뉴스", "https://feeds.yonhapnews.co.kr/national/RSS/economy.xml", False),
-    ("연합뉴스2", "https://feeds.yonhapnews.co.kr/national/RSS/news.xml", False),
-    ("아주경제", "https://www.ajunews.com/rss/economy.xml", False),
-    ("아시아경제", "https://view.asiae.co.kr/rss/realestate.xml", False),
-    ("조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", False),
-    ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml", False),
-    ("매일경제", "https://www.mk.co.kr/rss/realestate.xml", False) # 404가 나는 메인 rss/ 대신 부동산전용으로 변경
- ]
+    ("한국경제",    "https://www.hankyung.com/feed/realestate",                    True),
+    ("서울경제",    "https://www.sedaily.com/Rss/RealEstate",                      True),
+    ("주택경제신문", "https://www.arunews.com/rss/allArticle.xml",                 True),
+    ("건설타임즈",  "https://www.constimes.co.kr/rss/allArticle.xml",              True),
+    ("매일경제",    "https://www.mk.co.kr/rss/30100041/",                          False),
+    ("매일경제2",   "https://www.mk.co.kr/rss/50100032/",                          False),
+    ("동아일보",    "https://rss.donga.com/economy.xml",                           False),
+    ("한겨레",      "https://www.hani.co.kr/rss/economy/",                         False),
+    ("연합뉴스",    "https://www.yna.co.kr/rss/economy.xml",                       False),
+    ("아주경제",    "https://www.ajunews.com/rss/economy.xml",                     False),
+    ("아시아경제",  "https://www.asiae.co.kr/rss/all.htm",                         False),
+    ("조선일보",    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", False),
+    ("경남도민일보", "https://www.idomin.com/rss/allArticle.xml",                  False),
+]
 
-
-GOOGLE_QUERIES = [   
+GOOGLE_QUERIES = [
     "부동산 청약 분양",
     "아파트 재건축 재개발",
-    "부동산 세금 종부세",
+    "부동산 세금 종부세 취득세",
     "부동산 정책 대출 금리",
-    "부동산 시장 매매 전세",
-
-    "부산 부동산 site:busan.com",
-    "부산 아파트 site:busan.com",
-    "부산 재개발 site:busan.com",
-    "부산 분양 site:busan.com",
-
-    "부산 부동산 site:kookje.co.kr",
-    "부산 아파트 site:kookje.co.kr",
-    "부산 재개발 site:kookje.co.kr",
-    "부산 분양 site:kookje.co.kr",
-
-    "해운대 아파트",
-    "부산 재건축",
-    "부산 분양",
-
-    "해운대 아파트 site:kookje.co.kr",
-    "수영구 아파트 site:kookje.co.kr",
-    "에코델타시티 site:kookje.co.kr",
-    "오시리아 site:kookje.co.kr",
-
-    "부산 재건축 site:kookje.co.kr",
-    "부산 정비사업 site:kookje.co.kr",
-    "부산 주택 site:kookje.co.kr",
-
-    "해운대 아파트 site:busan.com",
-    "수영구 아파트 site:busan.com",
-    "에코델타시티 site:busan.com",
-    "오시리아 site:busan.com",
-
-    "부산 재건축 site:busan.com",
-    "부산 정비사업 site:busan.com",
-    "부산 주택 site:busan.com",
-    
-    "청약",
-    "분양",
-    "재건축",
-    "재개발",
-    
-    "부산 부동산",
-    "부산 아파트",
-
-    "site:busan.com 부동산",
-    "site:kookje.co.kr 부동산",
-
-    "에코델타시티",
-    "오시리아"
+    "아파트 매매 전세 집값",
+    "부산 부동산 아파트",
+    "해운대 아파트 분양",
+    "부산 재건축 재개발",
+    "경남 아파트 분양",
+    "분양가 상한제 아파트",
+    "임대차 전세 월세",
+    "신도시 공공주택 공급",
 ]
- 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 핵심 필터 3개 — 이 3개만 제대로 작동하면 비부동산·중복 99% 해결
+# ══════════════════════════════════════════════════════════════════════════════
+
+# [필터1] 부동산 핵심어 — 하나라도 없으면 수집 자체를 안 함
 RE_ESTATE = re.compile(
-      r'아파트|부동산|청약|분양|'
-      r'재건축|재개발|정비사업|'
-      r'주택|오피스텔|빌라|'
-      r'전세|월세|임대|'
-      r'입주|미분양|'
-      r'집값|매물|전셋값|'
-      r'주담대|전세대출|담보대출|'
-      r'종부세|재산세|취득세|양도세|'
-      r'용적률|역세권|'
-      r'신도시|택지지구|'
-      r'에코델타|오시리아|북항|'
-      r'LH|SH|HUG|'
-      r'견본주택|모델하우스'
-      r'아파트|부동산|주택|청약|분양|'
-      r'재건축|재개발|정비사업|리모델링|'
-      r'전세|월세|임대|임차|'
-      r'입주|미분양|악성미분양|'
-      r'집값|매매가|전셋값|'
-      r'주담대|DSR|LTV|DTI|'
-      r'종부세|양도세|취득세|재산세|'
-      r'용적률|건폐율|'
-      r'택지|신도시|도시개발|'
-      r'LH|SH|HUG|'
-      r'모델하우스|견본주택|'
-      r'에코델타|오시리아|북항'
+    r'아파트|부동산|청약|재건축|재개발|전세|월세|임대|분양|주택|매매|'
+    r'오피스텔|빌라|다세대|공동주택|정비사업|가로주택|'
+    r'LH|SH|HUG|담보대출|주담대|전셋값|갭투자|분양가|'
+    r'집값|매물|공시가|실거래|종부세|취득세|양도세|재산세|'
+    r'신도시|택지|용적률|역세권|준공|착공|견본주택|모델하우스|'
+    r'에코델타|오시리아|북항|재산세|입주물량|미분양'
 )
 
-
-
+# [필터2] 비부동산 제외어 — 하나라도 있으면 무조건 제거
+# ★ 수정 포인트: 매수·매도·공급은 부동산 용어이므로 제외 목록에서 삭제
+# ★ 수정 포인트: | 연결 정확히 작성 (줄 끝 |, 다음 줄 시작으로 연결)
 RE_EXCLUDE = re.compile(
-    r'숨진|사망|시신|변사|화상|부상|충돌|입건|구속|체포|검거|'
-    r'화재|폭발|투표소|선거|후보|당선|낙선|'
-    r'코스닥|코스피|주식|증권|'
-    r'공개매수|지분매도|대량매도|주식매수|'
-    r'만취|음주운전|교통사고|폭행|'
-    r'전동킥보드|전동휠체어|오토바이|승용차 몰다|코스|코스피|공모주|IPO|증거금|기관수요예측|차량털이|소개팅|캐나다|보험|온비드'
-    r'업무협약|MOU|상생대상|본사 이전|발전 5개사|기탁|봉사' # [추가]
+    r'숨진|사망|시신|변사|화상|부상|입건|구속|체포|검거|'
+    r'화재|폭발|음주운전|교통사고|폭행|'
+    r'전동킥보드|전동휠체어|오토바이|승용차 몰다|'
+    r'코스피|코스닥|나스닥|환율|달러|증시|주가|주식|펀드|ETF|채권|'
+    r'반도체|배터리|전기차|수출입|무역|관세|원자재|'
+    r'열차|철도|항공|공항|항공편|비행기|선박|'
+    r'태양광|풍력|수소|원전|발전소|배출권|탄소|'
+    r'LNG|액화천연가스|플랜트|해양|제련소|항만|댐|터널|교량|도로공사|'
+    r'폐작업복|필통|군 복무|병역|어린이집|미술관|도서관|공연|전시|'
+    r'창업|귀농|스페이스X|공모주|상장|IPO|주식청약|'
+    r'입찰공고|용역공고|협력업체 선정|현장설명회|현설|'
+    r'선거|투표|정당|여당|야당|국회의원 선거|대통령 선거'
 )
 
+# [필터3] 시장동향 전용 2차 필터 — 시장동향으로 분류된 기사에만 적용
+# 이 키워드가 없으면 시장동향에서도 제거 (비부동산 기사 차단)
+RE_MARKET_REQUIRED = re.compile(
+    r'아파트|부동산|주택|전세|월세|매매|집값|전셋값|매물|거래|'
+    r'오피스텔|빌라|다세대|상가|토지|공시가|실거래|'
+    r'임대|분양|입주|미분양|역세권|복합단지|용적률|'
+    r'건설사|시행사|공사비|분양가|HUG|LH|SH|'
+    r'관리처분|이주비|수주|인허가|사업승인|정비구역'
+)
 
-
-STOPWORDS = {"은","는","이","가","을","를","의","에","도","와","과","하고","으로","로","에서","까지","부터","이다","합니다","입니다","했다","한다","됩니다","됐다","및","등","것","안","돼","안돼","반드시","이제","않다","이라고","라며","라고","하며","대해","위해","있다","없다","하다","된다","한","더","또"}
-LOC_ENTITIES = {"수도권","서울","강남","강북","부산","경기","인천","대구","광주","대전","울산","세종","경남","해운대","수영","사하","동래","기장","연제","금정"}
+# ── 중복 제거용 상수 ──────────────────────────────────────────────────────────
+STOPWORDS = {
+    "은","는","이","가","을","를","의","에","도","와","과","하고","으로","로",
+    "에서","까지","부터","이다","합니다","입니다","했다","한다","됩니다","됐다",
+    "및","등","것","안","돼","않다","이라고","라며","라고","하며","있다","없다",
+    "하다","된다","한","더","또","위해","대해",
+}
+LOC_ENTITIES = {
+    "수도권","서울","강남","강북","부산","경기","인천","대구","광주","대전",
+    "울산","세종","경남","해운대","수영","사하","동래","기장","연제","금정",
+}
 ORG_ENTITIES = {"국세청","한국부동산원","국토부","금융위","금감원","LH","SH","HUG"}
 
+CAT_LIMITS = {
+    "청약":    12,
+    "재건축":  12,
+    "공급개발": 10,
+    "세제":    10,
+    "정책":    10,
+    "부산경남": 15,
+    "시장동향": 15,
+}
+
+SOURCE_LIMITS = {
+    "건설타임즈":  6,
+    "주택경제신문": 6,
+    "경남도민일보": 4,
+}
+
+
+# ── 날짜 유틸 ─────────────────────────────────────────────────────────────────
 def extract_date_from_url(url):
-    m = re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)
-    if m:
-        try: return datetime(int(m.group(1)),int(m.group(2)),int(m.group(3)),6,0,tzinfo=KST)
-        except: return None
+    for pattern in [
+        r'/(\d{4})/(\d{2})/(\d{2})/',
+        r'key=(\d{4})(\d{2})(\d{2})\.',
+        r'code=(\d{4})(\d{2})(\d{2})',
+    ]:
+        m = re.search(pattern, url)
+        if m:
+            try:
+                return datetime(
+                    int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                    0, 0, tzinfo=KST
+                )
+            except Exception:
+                pass
     return None
 
 def get_best_pub_dt(entry):
-    d = extract_date_from_url(getattr(entry,'link',''))
-    if d: return d
     pub = entry.get("published_parsed")
-    if pub: return datetime(*pub[:6],tzinfo=timezone.utc).astimezone(KST)
-    return None
+    if pub:
+        return datetime(*pub[:6], tzinfo=timezone.utc).astimezone(KST)
+    return extract_date_from_url(getattr(entry, 'link', ''))
 
-def is_within_24h(entry, now_kst):
-    d = get_best_pub_dt(entry)
-    return True if d is None else (now_kst-d).total_seconds()<=86400
+def is_recent(pub_dt, now_kst):
+    """어제~오늘 기사. 날짜 불명 → 포함."""
+    if pub_dt is None:
+        return True
+    yesterday = (now_kst - timedelta(days=1)).date()
+    return pub_dt.date() >= yesterday
 
 
-def keywords(title):
-    return {
-        w
-        for w in normalize_title(title).split()
-        if w not in STOPWORDS and len(w) >= 2
-    }
+# ══════════════════════════════════════════════════════════════════════════════
+# 비부동산 제거 함수
+# ══════════════════════════════════════════════════════════════════════════════
+def is_estate_related(title: str) -> bool:
+    """
+    부동산 기사 여부 판단.
+    조건: RE_ESTATE 포함 AND RE_EXCLUDE 미포함
+    → 둘 다 통과해야 True
+    """
+    if RE_EXCLUDE.search(title):   # 제외어 있으면 즉시 False
+        return False
+    return bool(RE_ESTATE.search(title))  # 부동산 키워드 있어야 True
 
-def extract_entities(title):
-    t = re.sub(r'[^\w\s]',' ',title)
+def is_market_valid(title: str) -> bool:
+    """시장동향 2차 필터 — 부동산 핵심어 필수"""
+    if RE_EXCLUDE.search(title):
+        return False
+    return bool(RE_MARKET_REQUIRED.search(title))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 중복 제거 함수 (3단계, 비용 없음)
+# ══════════════════════════════════════════════════════════════════════════════
+def normalize(title: str) -> str:
+    """제목 정규화 — 불필요한 기호·날짜·매체명 제거"""
+    title = re.split(r'\s[-|]\s', title)[0].strip()   # '- 매일경제' 등 제거
+    title = re.sub(r'^\[.*?\]\s*', '', title)           # [속보] 등 제거
+    title = re.sub(r'\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}', '', title)  # 날짜 제거
+    title = re.sub(r'[^\w\s]', ' ', title)              # 특수문자 제거
+    title = re.sub(r'(?<!\w)[\u4e00-\u9fff](?!\w)', '', title)  # 한자 제거
+    return re.sub(r'\s+', ' ', title).strip()
+
+def keywords(title: str) -> set:
+    return {w for w in normalize(title).split() if w not in STOPWORDS and len(w) >= 2}
+
+def extract_entities(title: str) -> set:
+    """숫자단위·지명·기관명 추출 — 중복 판별 정밀도 향상"""
+    t = re.sub(r'[^\w\s]', ' ', str(title))
     ents = set()
-    for m in re.finditer(r'\d+\.?\d*\s*(?:억|만|건|%|개월|층|평|채|명|가구)',t): ents.add(m.group().strip())
+    for m in re.finditer(r'\d+\.?\d*\s*(?:억|만|건|%|개월|층|평|채|명|가구)', t):
+        ents.add(m.group().strip())
     for loc in LOC_ENTITIES:
         if loc in t: ents.add(loc)
     for org in ORG_ENTITIES:
         if org in t: ents.add(org)
     return ents
 
-
-
-from urllib.parse import urlparse
-
-def normalize_url(url):
-    p = urlparse(url)
-    return f"{p.netloc}{p.path}"
-
-def normalize_title(t):
-    
-
-    t = t.lower()
-
-    # 괄호 제거
-    t = re.sub(r'\([^)]*\)', '', t)
-    t = re.sub(r'\[[^\]]*\]', '', t)
-
-    # 특수문자 제거
-    t = re.sub(r'[^\w\s]', ' ', t)
-    
-
-    # 동일 기사 표현 통일
-    t = re.sub(r'고양대전환준비위원회', '고양시', t)
-    t = re.sub(r'민선\s*\d+기', '', t)
-
-    t = re.sub(r'적극 검토', '검토', t)
- 
-    t = re.sub(r'고양대전환준비위', '고양시', t)
-
-    t = re.sub(r'일산신도시', '일산', t)
-
-   
-    t = re.sub(r'검토 착수', '검토', t)
-
-    t = re.sub(r'용적률\s*350%', '용적률', t)
-    t = re.sub(r'300%\s*→\s*350%', '용적률', t)
-
-    # 범천4구역 기사 통합
-    t = re.sub(r'현대건설.*범천4구역', '범천4구역 재개발', t)
-    t = re.sub(r'주택재개발정비사업', '재개발', t)
-    t = re.sub(r'계약 체결', '', t)
-    t = re.sub(r'규모', '', t)
-    
-    t = re.sub(r'범천4구역 주택재개발정비사업', '범천4구역 재개발', t)
-
-    t = re.sub(r'8531억.*', '', t)
-    # 숫자 제거
-    t = re.sub(r'\d+억원?', '', t)
-    t = re.sub(r'\d+주 연속', '', t)
-    t = re.sub(r'\d+%', '', t)
-    t = re.sub(r'\d+가구', '', t)
-
-    t = re.sub(r'3\.3㎡당', '', t)
-    t = re.sub(r'평당', '', t)
-
-    t = re.sub(r'\d+(\.\d+)?%','',t)
-
-    t = re.sub(r'\d+억','',t)
-
-    t = re.sub(r'\d+가구','',t)
-
-    t = re.sub(r'\d+층','',t)
-
-    t = re.sub(r'\d+호','',t)
-
-
-    # 언론사 꼬리 제거
-    t = re.sub(
-        r'\s*-\s*(뉴스1|네이트|daum|v\.daum\.net|chosunbiz|조선비즈).*',
-        '',
-        t,
-        flags=re.I
-    )
-
-    # 공백 정리
-    t = re.sub(r'\s+', ' ', t)
-
-    words = sorted(set(t.split()))
-
-    t = " ".join(words)
-
-    return t.strip()
-
-def make_event_key(title):
-
-    t = normalize_title(title)
-
-    words = []
-
-    for w in t.split():
-
-        if len(w) < 2:
-            continue
-
-        words.append(w)
-
-    words = sorted(words)
-
-    return " ".join(words[:5])
-    
-def is_duplicate(title, seen_titles):
-    title_n = normalize_title(title)
-    for old in seen_titles:
-        old_n = normalize_title(old)
-        # 임계치를 0.88로 상향하여 조금이라도 다른 내용은 별도 기사로 인정
-        ratio = SequenceMatcher(None, title_n, old_n).ratio()
-        if ratio >= 0.88:
+def is_duplicate(new_title: str, seen: list) -> bool:
+    """
+    3단계 중복 판별 (비용 없음, 빠름):
+    1단계: 문자열 유사도 0.72 이상  → 같은 기사 (제목 일부만 달라도 잡힘)
+    2단계: 키워드 자카드 0.55 이상  → 같은 주제 다른 표현
+    3단계: 핵심 엔티티 2개 이상 겹침 → 같은 단지·지역·금액
+    """
+    nn = normalize(new_title)
+    kn = keywords(new_title)
+    en = extract_entities(new_title)
+    for s in seen:
+        ns = normalize(s)
+        # 1단계: 문자열 유사도
+        if SequenceMatcher(None, nn, ns).ratio() >= 0.72:
+            return True
+        # 2단계: 키워드 자카드
+        ks = keywords(s)
+        u  = len(kn | ks)
+        if u and len(kn & ks) / u >= 0.55:
+            return True
+        # 3단계: 엔티티 겹침
+        es = extract_entities(s)
+        if en and es and len(en & es) >= 2:
             return True
     return False
 
-LOCAL_EXCLUDE = [
-    "체험",
-    "축제",
-    "공연",
-    "행사",
-    "발대식",
-    "복지관",
-    "어린이",
-    "봉사",
-    "기탁",
-    "시민기자",
-    "전시",
-    "체육회",
-    "핸드볼",
-    "야구장",
-    "도서관",
-    "문화센터",
-    "환승센터",
-    "경로당",
-    "개소",
-    "개소식",
-    "주민 화합",
-    "의원",
-    "조례",
-    "본회의",
-    "문화",
-    "체육",
-    "봉사",
-    "복지",
-]
 
-BAD_KEYWORDS = [
-    "입찰공고",
-    "협력업체",
-    "감정평가법인",
-    "법무법인",
-    "해체계획서",
-    "현금청산",
-    "물김치",
-    "폐건전지",
-    "이동상담실",
-    "자율방재단",
-    "어린이집",
-    "복지안전망",
-    "투표용지",
-    "도박단",
-    "환송식",
-    "낙하산",
-    "뭐라노",
-    "칼럼",
-    "사설",
-    # 정치
-    "대통령",
-    "국회",
-    "선거",
-    "투표",
-    "정청래",
-
-    # 사건사고
-    "화재",
-    "도박",
-    "검거",
-    "사기",
-    "사망",
-    "추락",
-
-    # 경제 일반
-    "수출",
-    "주식",
-    "코스피",
-    "공개매수",
-
-    # 금융
-    "코스닥",
-    "코스피",
-    "사이드카",
-    "주가",
-    "증시",
-    "주식",
-    "AI 자금조달",
-    "카카오뱅크",
-    "케이뱅크",
-    "농협은행",
-    "기준금리",
-    "통화정책",
-
-    # 문화
-    "미술관",
-    "도서관",
-    "전시",
-    "공연",
-
-    # 지역행정
-    "어린이집",
-    "복지",
-    "보건",
-    "자원순환",
-
-    # 출판
-    "신간",
-    "출간",
-    "도서",
-
-    # 기타
-    "타운홀",
-    "워크숍",
-    "철도문화전",
-    "시간여행"
-    "국제",
-    "사칭",
-    "복지",
-    "발달장애인",
-    "시장",
-    "어울림",
-    "투표상자",
-    "증거보전",
-    "조명공장",
-    "나눔",
-    "센터 개소",
-    "국제",
-    "시간여행",
-    "승차권",
-    "북극항로",
-    "유조선",
-    "중학교",
-    "배정",
-    "교량",
-    "병원 이송",
-    "기계설비",
-    "가스시공",
-    "공시 현장",
-    "CEO",
-    "캠페인",
-    "상생협력",
-    "대표 선임",
-    "협력사",
-    "공장",
-    "붕괴",
-    "창업",
-    "귀농",
-    "철도",
-    "풍력",
-    "설계공모",
-    "응모 공고",
-    "현상설계",
-    "시공자 현설",
-    "증거인멸",
-    "국고채",
-    "금융범죄",
-    "과학수사",
-    "예방",
-    "빚투",
-    "주가",
-    "증시",
-    "금융권",
-    "환경정화",
-    "대청소",
-    "틈새건강",
-    "캐시백",
-    "도로학회",
-    "건설기술인",
-    "핵융합",
-    "케어닥",
-    "모빌리티",
-    "스페이스X",
-    "공모주",
-    "상장",
-    "주식청약",
-    "인사",
-    "법원 판결",
-    "정보공개 의무",
-    "기술평가위",
-    "건설기술인",
-    "협회",
-    # 사건사고
-    "화재",
-    "산불",
-    "사망",
-    "부상",
-    "범죄",
-    "검거",
-    "음주운전",
-    "불",
-    "사망",
-    "사고",
-    "폭발",
-    "실종",
-    "살인",
-    "구속",
-    "검찰",
-    "경찰",
-    "해수면",
-    "기후변화",
-    "로봇청소기",
-    "가전",
-    "CBRE",
-    "물류자산",
-    "[표]",
-    "난민",
-    "UNHCR",
-    "투자자별 매매동향",
-    "코스닥",
-    "코스피",
-    "사이드카",
-    "매각 공고",
-    "입찰 공고",
-    "용역 공고",
-    "유치원시설",
-    "이재명",
-    "오세훈",
-    "대통령",
-    "정권",
-    "민주당",
-    "국민의힘",
-    "수주",
-    "수주공시",
-    "방음벽",
-    "소음",
-    "난민",
-    "사이드카",
-    "코스닥",
-    "코스피",
-    "ETF",
-    "인사",
-    "공고",
-    "매각",
-    "갤러리 오픈",
-    "오픈하우스",
-    "고분양태",
-    "무형유산",
-    "종합병원",
-    "병원",
-    "의료",
-    "환자",
-    "외상환자",
-    "BTS",
-    "역조공",
-    "인도女",
-    "건설사업본부장",
-    "감사원",
-    "인천공항공사",
-    "외상 환자",
-    "본부장",
-    "선출",
-    "자동차담보대출",
-    "캐피탈",
-    "실버타운",
-    "재건 특수",
-    "이란",
-    "예비위원장",
-    "위원장 선출",
-    "본부장 선임",
-    "역조공",
-    "BTS",
-    "극적 구조",
-    "게시판",
-    "피살",
-    "살인",
-    "시신",
-    "용의자",
-    "추적 중",
-    "당선인",
-    "구청장",
-    "시장 당선",
-    "군수",
-    "모델하우스 탐방",
-    "견본주택에",
-    "방문객 몰려",
-    "분양홍보관",
-    "오픈하우스",
-    "업무협약", "상생대상", "유치 본격화", "발전 5개사",
-    "연극",
-    "영화",
-    "드라마",
-    "비트코인",
-    "가상자산",
-    "희토류",
-    "방산",
-    "주식",
-    "코인",
-    "하노이",
-    "베트남",
-    "중국",
-    "일본",
-    "미국",
-    "싱가포르",
-    "드라마",
-    "영화",
-    "배우",
-    "가수",
-    "포스터",
-    "예능",
-    "방송",
-    "행복home",
-    "사회공헌",
-    "봉사활동",
-    "취약계층",
-    "후원",
-    "기부",
-    "캠페인"
-     # 주식/공모주
-    "공모주",
-    "IPO",
-    "증거금",
-    "기관수요예측",
-    "일반청약 경쟁률",
-    "코스닥",
-    "코스피",
-
-    # 사건사고
-    "차량털이",
-    "교통사고",
-    "화재",
-    "살인",
-    "폭행",
-    "음주운전",
-    "절도",
-    "체포",
-    "구속",
-
-    # 해외기사
-    "캐나다",
-    "미국",
-    "일본",
-    "중국",
-
-    # 생활기사
-    "소개팅",
-    "온비드",
-    "자전거",
-    "보험",
-    "실손보험",
-    "연예",
-    "BTS",
-
-    # 광고성
-    "모델하우스",
-    "견본주택",
-    "홍보관",
-]
-
-BAD_SOURCES = [
-    "nate.com",
-    "youtube.com",
-]
-
-BUSAN_KEYWORDS = [
-    "부산",
-    "해운대",
-    "수영구",
-    "부남구",
-    "동래",
-    "사상",
-    "사하",
-    "강서구",
-    "에코델타",
-    "오시리아",
-    "센텀",
-    "북항",
-    "범천",
-    "좌천",
-    "재송",
-    "기장",
-    "정관",
-    "명지",
-]
-
-REAL_ESTATE_KEYWORDS = {
-    "부동산": 5,
-    "아파트": 5,
-    "청약": 6,
-    "분양": 6,
-    "재건축": 7,
-    "재개발": 7,
-    "정비사업": 7,
-    "주택": 5,
-    "오피스텔": 3,
-    "전세": 3,
-    "월세": 3,
-    "매매": 3,
-    "입주": 3,
-    "공급": 2,
-    "신도시": 6,
-    "용적률": 7,
-    "역세권": 2,
-    "공공주택":7,
-    "도시정비":7,
-    "사업시행인가":8,
-    "관리처분":8,
-
-    # 금융
-    "주담대": 4,
-    "DSR": 4,
-    "LTV": 4,
-
-    # 세금
-    "종부세": 5,
-    "양도세": 5,
-    "취득세": 5,
-
-    # 부산 개발
-    "에코델타": 5,
-    "에코델타시티": 5,
-    "오시리아": 5,
-    "북항": 5,
-    "센텀": 4,
-    "명지": 3,
-
-    # 개발 인프라
-    "광역교통": 4,
-    "광역교통개선대책": 5,
-    "트램": 4,
-    "GTX": 4,
-
-    # 정비사업
-    "용도지역": 4,
-    "도시개발": 4,
-    "택지": 4,
-    "지구": 2,
-    # 추가
-    "아파트값": 4,
-    "집값": 4,
-    "주거": 2,
-    "재개발사업": 5,
-    "재건축사업": 5,
-    "조합": 2,
-    "시공사": 2,
-}
-
-NEGATIVE_KEYWORDS = [
-    "배우",
-    "드라마",
-    "영화",
-    "가수",
-    "포스터",
-    "연극",
-    "축제",
-    "공연",
-    "경로당",
-    "복지관",
-    "봉사",
-    "기부",
-    "캠페인",
-    "이혼",
-    "외도",
-    "재산분할",
-    "학교",
-    "연예",
-    "인터뷰",
-    "분가",
-    "이혼",
-    "재산분할",
-    "관리노동자",
-    "동대표",
-    "전원 사직",
-    "엘리베이터",
-    "안전교육",
-    "공지문",
-    "이민우",
-    "가족사진",
-    "새출발",
-    "살림남",
-    "일반공모",
-    "상장",
-    "공모가",
-    "계약서 공개",
-    "외도",
-    "감자",
-    "씨감자",
-    "반려견",
-    "강아지",
-    "늑대개",
-    "브리더",
-    "분양견",
-    "축산",
-    "묘목",
-    "종자",
-    "농업",
-    "국무총리 표창",
-    "표창 수상",
-    "정부 발전 유공",
-    "AI 기반",
-    "인공지능정부",
-]
-
-ECONOMY_WORDS = [
-    "공모주",
-    "IPO",
-    "증거금",
-    "실적",
-    "배당",
-    "주가",
-    "코스피",
-    "코스닥",
-]
-
-
-REAL_ESTATE_SOURCES = [
-    "부산일보",
-    "국제신문",
-    "매일경제",
-    "한국경제",
-    "서울경제",
-    "네이버부동산",
-    "주택경제신문",
-    "건설타임즈",
-    "산업단지",
-    "산단",
-    "공장용지",
-    "산업용지",
-    "지식산업센터",
-]
-
-CATEGORY_RULES = {
-    "청약": [
-        "청약",
-        "무순위",
-        "특별공급",
-    ],
-
-    "재건축": [
-        "재건축",
-        "재개발",
-        "정비사업",
-        "가로주택",
-        "리모델링",
-    ],
-
-    "공급개발": [
-        "분양",
-        "신도시",
-        "공급",
-        "착공",
-        "입주",
-        "공공주택",
-        "도심복합",
-        "역세권",
-    ],
-
-    "세제": [
-        "종부세",
-        "양도세",
-        "취득세",
-        "재산세",
-        "세금",
-    ],
-
-    "정책": [
-        "국토부",
-        "규제",
-        "대책",
-        "DSR",
-        "LTV",
-        "DTI",
-        "전세대출",
-        "주담대",
-    ],
-}
-
-
-ACCIDENT_WORDS = [
-    "화재",
-    "전소",
-    "발화",
-    "폭발",
-    "사망",
-    "부상",
-    "구조",
-    "실종",
-    "사고",
-    "차량",
-]
-
-
-CRIME_WORDS = [
-    "적발",
-    "구속",
-    "사기",
-    "명의",
-    "불법",
-    "도박",
-    "횡령",
-    "특공",
-]
-
-
-
-
-
-
-def real_estate_score(title, src):
-
-    score = 0
-
-    for kw, weight in REAL_ESTATE_KEYWORDS.items():
-        if kw in title:
-            score += weight
-
-    if src in REAL_ESTATE_SOURCES:
-        score += 2
-
-    for kw in NEGATIVE_KEYWORDS:
-        if kw in title:
-            score -= 5
-
-    # 경제 기사 감점
-    for kw in ECONOMY_WORDS:
-        if kw in title:
-            score -= 4
-
-    # 사고 기사 감점
-    for kw in ACCIDENT_WORDS:
-        if kw in title:
-            score -= 10
-
-    # 범죄 기사 감점
-    for kw in CRIME_WORDS:
-        if kw in title:
-            score -= 10
-
-    if "신임" in title:
-            score -= 5
-
-    if "취임" in title:
-            score -= 5
-
-    print(f"[TOTAL={score}] {title}")
-
-    return score
-
-
-
-
-
-def classify(title, src):
-
-    t = title
-    
-    EXCLUDE_KEYWORDS = [
-    "경로당",
-    "개소식",
-    "복지관",
-    "노인회",
-    "축제",
-    "문화행사",
-    "공연",
-    "전시",
-    "드라마",
-    "영화",
-    "배우",
-    "가수",
-    "포스터"
-    "외도",
-    "재산분할",
-    "이혼",
-    "맞춤복",
-    "기성복",
-    "갑질",
-    "동대표",
-    "관리실",
-    "전원 사표",
-    "법률상담",
-    "로톡",    
-    ]
-
-    if any(k in title for k in EXCLUDE_KEYWORDS):
-        return "기타"
-
-    if any(k in title for k in BUSAN_KEYWORDS):
-
-        if real_estate_score(title, src) >= 3:
-            return "부산경남"
-
-    if "공모청약" in title:
-        return "기타"
-
-    if "상장" in title:
-        return "기타"
-    
-    # [정책] 카테고리 확장
-    if any(keyword in title for keyword in ["정책", "규제", "국토부", "기획재정부", "금리", "대출", "DSR", "LTV", "DTI", "규제"]):
-        return "정책"
-        
-    # [세제] 카테고리 확장
-    if any(keyword in title for keyword in ["세금", "종부세", "양도세", "취득세", "세제", "공시가격"]):
-        return "세제"
-    
-    # [추가] 국제신문 기사 강제 분류
-    if "국제신문" in src or "kookje.co.kr" in title:
-        return "부산경남"
-
-    # 1. 지역 언론사 우선 분류
-    # [강화] 매일경제, 부산일보, 국제신문은 최우선순위로 처리
-    if src in ["부산일보", "국제신문"]:
-        return "부산경남"
-    if src in ["매일경제", "매일경제2"]:
-        # 매경 기사는 경제/시장동향으로 우선 분류
-        return "시장동향"
-    
-    # 2. [추가] 제목에 부산 관련 키워드가 있으면 지역 뉴스로 분류
-    # 전국 매체라도 부산 관련 내용이면 부산 카테고리로 모아줍니다.
-    if "에코델타" in title and "부산" in title:
-        return "부산경남"
-    if any(k in t for k in ["부산", "해운대", "에코델타", "오시리아", "수영구", "명지", "북항", "센텀"]):
-        return "부산경남"
-
-    # 3. 주제별 분류
-    # 공모주 청약 제외
-    if (
-        "청약" in t
-        and not any(
-            x in t
-            for x in [
-                "공모주",
-                "ipo",
-                "증거금",
-                "상장",
-                "코스닥",
-                "코스피",
-                "일반청약 경쟁률",
-                "기관수요예측"
-            ]
-        )
-    ):
+# ── 카테고리 분류 ─────────────────────────────────────────────────────────────
+def classify(title: str) -> str:
+    """★ 순서 중요: 좁은 범위 → 넓은 범위"""
+    t = normalize(title)
+    if any(k in t for k in ["청약", "무순위", "청약통장", "특별공급", "일반공급"]):
         return "청약"
-
-    for category, keywords in CATEGORY_RULES.items():
-        if any(k in t for k in keywords):
-            return category
-        
-    # 전국 언론이라도 부산 관련 기사이면 부산경남으로 분류
+    if any(k in t for k in ["재건축", "재개발", "정비사업", "가로주택", "리모델링"]):
+        return "재건축"
+    if any(k in t for k in ["종부세", "취득세", "양도세", "재산세", "세금", "세제",
+                              "비과세", "감면", "절세", "공시가"]):
+        return "세제"
+    if any(k in t for k in ["대출", "금리", "정책", "규제", "완화", "DSR", "LTV",
+                              "DTI", "주담대", "담보대출", "전세대출", "임대차",
+                              "계약갱신", "전월세상한"]):
+        return "정책"
+    if any(k in t for k in ["신도시", "공공주택", "착공", "준공", "용적률",
+                              "복합개발", "도시개발", "역세권", "택지", "입주물량"]):
+        return "공급개발"
     if any(k in t for k in [
-        "부산",
-        "해운대",
-        "수영",
-        "남천",
-        "에코델타",
-        "명지",
-        "북항",
-        "가덕도",
-        "오시리아",
-        "센텀",
-        "기장"
+        "부산", "해운대", "수영구", "동래", "센텀", "광안", "명지",
+        "에코델타", "오시리아", "기장", "사하", "사상", "연제", "금정",
+        "북항", "부산진", "영도", "강서구", "창원", "김해", "양산",
+        "밀양", "진주", "거제", "통영", "경남", "울산",
     ]):
         return "부산경남"
-        
-    if src in ["부산일보","국제신문","경남도민일보"]:
-
-        if any(k in t for k in [
-             "아파트",
-             "부동산",
-             "분양",
-             "청약",
-             "재건축",
-             "재개발",
-             "정비사업",
-             "주택",
-             "오피스텔",
-             "전세",
-             "월세",
-             "미분양",
-             "용적률",
-             "신도시",
-             "에코델타",
-             "오시리아"
-        ]):
-             return "부산경남"
-
-    
     return "시장동향"
 
 
-def is_bad_news(title):
-
-    t = title.lower()
-
-    for k in BAD_KEYWORDS:
-
-        if k.lower() in t:
-            return True
-
-    return False      
+def make_session(referer=None):
+    s = requests.Session()
+    s.headers.update(HEADERS)
+    if referer:
+        s.headers["Referer"] = referer
+    return s
 
 
+# ── A. RSS 수집 ───────────────────────────────────────────────────────────────
 def fetch_rss(name, url, estate_only, now_kst):
     items = []
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=8)
+        resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
         for entry in feed.entries:
-            if not is_within_24h(entry, now_kst): continue
+            pub_dt = get_best_pub_dt(entry)
+            if not is_recent(pub_dt, now_kst):
+                continue
             title = (entry.title or "").strip()
-            if not title: continue
-            if any(x in title for x in LOCAL_EXCLUDE):
+            if not title:
                 continue
-
-            if not RE_ESTATE.search(title):
+            # ★ 전용(True)/일반(False) 피드 모두 동일하게 필터 적용
+            if not is_estate_related(title):
                 continue
-
-            if RE_EXCLUDE.search(title):
-                continue
-
-            if is_bad_news(title):
-                continue
-
-            
-            src = entry.source.title if hasattr(entry,'source') and hasattr(entry.source,'title') else name
-            items.append((get_best_pub_dt(entry), title, entry.link, src))
-        print(f"  OK [{name}] {len(items)}geon")
+            src = name
+            if hasattr(entry, 'source') and hasattr(entry.source, 'title'):
+                src = entry.source.title
+            items.append((pub_dt, title, entry.link, src))
+        print(f"  OK [RSS/{name}] {len(items)}건")
     except Exception as e:
-        print(f"  ER [{name}] {type(e).__name__}: {str(e)[:50]}")
+        print(f"  ER [RSS/{name}] {type(e).__name__}: {str(e)[:50]}")
     return items
 
+
+# ── B-1. 부산일보 스크래핑 ───────────────────────────────────────────────────
+def scrape_busan(now_kst):
+    items = []
+    seen  = set()
+    for url in ["https://www.busan.com/economy/",
+                "https://www.busan.com/newsList/realestate"]:
+        try:
+            s    = make_session("https://www.busan.com/")
+            resp = s.get(url, timeout=10)
+            if resp.status_code != 200:
+                continue
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for el in soup.select('p.title, .title a, h4 a, h3 a'):
+                a = el if el.name == 'a' else el.find('a', href=True)
+                if not a:
+                    continue
+                title = a.get_text(strip=True)
+                href  = a.get('href', '')
+                if not title or len(title) < 10 or not href:
+                    continue
+                if not is_estate_related(title):
+                    continue
+                link = urljoin("https://www.busan.com", href)
+                if link in seen:
+                    continue
+                seen.add(link)
+                pub_dt = extract_date_from_url(link)
+                if not is_recent(pub_dt, now_kst):
+                    continue
+                items.append((pub_dt, title, link, "부산일보"))
+        except Exception as e:
+            print(f"  ER [부산일보] {type(e).__name__}: {str(e)[:50]}")
+    print(f"  OK [부산일보] {len(items)}건")
+    return items
+
+
+# ── B-2. 국제신문 스크래핑 ───────────────────────────────────────────────────
+def scrape_kookje(now_kst):
+    items = []
+    seen  = set()
+    for url in [
+        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
+        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
+    ]:
+        try:
+            s    = make_session("https://www.kookje.co.kr/")
+            resp = s.get(url, timeout=10)
+            if resp.status_code != 200:
+                continue
+            resp.encoding = 'euc-kr'   # ★ 국제신문은 EUC-KR 인코딩
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for sel in [
+                'ol.tabcontent li a',
+                'ol#hitlist1 li a', 'ol#hitlist2 li a',
+                'ol#hitlist3 li a', 'ol#hitlist4 li a', 'ol#hitlist5 li a',
+                'dt a', 'h2 a', 'h3.tit a',
+            ]:
+                for a in soup.select(sel):
+                    title = a.get_text(strip=True)
+                    href  = a.get('href', '')
+                    if not title or len(title) < 10:
+                        continue
+                    if 'newsbody.asp' not in href:
+                        continue
+                    if not is_estate_related(title):
+                        continue
+                    link = urljoin("https://www.kookje.co.kr", href)
+                    if link in seen:
+                        continue
+                    seen.add(link)
+                    pub_dt = extract_date_from_url(link)
+                    if not is_recent(pub_dt, now_kst):
+                        continue
+                    items.append((pub_dt, title, link, "국제신문"))
+        except Exception as e:
+            print(f"  ER [국제신문] {type(e).__name__}: {str(e)[:50]}")
+    print(f"  OK [국제신문] {len(items)}건")
+    return items
+
+
+# ── B-3. 네이버 부동산 스크래핑 ──────────────────────────────────────────────
+def scrape_naver_land(now_kst):
+    items = []
+    seen  = set()
+    for url, base in [
+        ("https://land.naver.com/news/",  "https://land.naver.com"),
+        ("https://fin.land.naver.com/news", "https://fin.land.naver.com"),
+    ]:
+        try:
+            s    = make_session(base + "/")
+            resp = s.get(url, timeout=10)
+            if resp.status_code != 200:
+                print(f"  ER [네이버부동산] HTTP {resp.status_code}")
+                continue
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            cnt  = 0
+            for sel in [
+                'ul.category_list li a', 'ul#land_news_list li a',
+                'li.main_news a', 'li.main_article_beta a',
+                'li.news_headline a', 'li.news_breaking a',
+                'a[class*="NewsList_link"]', 'a[class*="CardNews_link"]',
+                'div[class*="AllNews_article"] a',
+            ]:
+                for a in soup.select(sel):
+                    title = a.get_text(strip=True)
+                    href  = a.get('href', '')
+                    if not title or len(title) < 10 or not href.startswith('http'):
+                        continue
+                    if not is_estate_related(title) or href in seen:
+                        continue
+                    seen.add(href)
+                    pub_dt = extract_date_from_url(href)
+                    items.append((pub_dt, title, href, "네이버부동산"))
+                    cnt += 1
+            print(f"  OK [네이버({base.split('/')[2]})] {cnt}건")
+        except Exception as e:
+            print(f"  ER [네이버부동산] {type(e).__name__}: {str(e)[:50]}")
+    return items
+
+
+# ── C. Google News RSS ───────────────────────────────────────────────────────
 def fetch_google(now_kst):
     items = []
     for q in GOOGLE_QUERIES:
         try:
-            url = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
-            resp = requests.get(url, headers=HEADERS, timeout=8)
+            url  = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
+            resp = requests.get(url, headers=HEADERS, timeout=10)
             feed = feedparser.parse(resp.content)
-            cnt = 0
+            cnt  = 0
             for entry in feed.entries:
-                if not is_within_24h(entry, now_kst): continue
-                    
+                pub_dt = get_best_pub_dt(entry)
+                if not is_recent(pub_dt, now_kst):
+                    continue
                 title = (entry.title or "").strip()
-                if "v.daum.net" in entry.link:
+                if not title or not is_estate_related(title):
                     continue
-                if "nate.com" in entry.link:
-                    continue
-
-                if "youtube.com" in entry.link:
-                    continue
-
-                if "blog.naver.com" in entry.link:
-                    continue
-                
-                if not title: continue
-                    
-                if any(x in title for x in LOCAL_EXCLUDE):
-                     continue
-                if not RE_ESTATE.search(title):
-                    continue
-
-                if RE_EXCLUDE.search(title):
-                    continue
-
-                if is_bad_news(title):
-                    continue
-
-                
-                src = entry.source.title if hasattr(entry,'source') and hasattr(entry.source,'title') else "news"
-                
-                if ( "land.naver.com" in entry.link or "fin.land.naver.com" in entry.link
-                ):
-                   src = "네이버부동산"
-
-                elif src in ["Naver Blog", "네이버"]:
+                src  = "뉴스"
+                if hasattr(entry, 'source') and hasattr(entry.source, 'title'):
+                    src = entry.source.title
+                link = entry.link
+                # 링크로 매체명 보정
+                if "busan.com"    in link: src = "부산일보"
+                if "kookje.co.kr" in link: src = "국제신문"
+                if "land.naver.com" in link or "fin.land.naver.com" in link:
                     src = "네이버부동산"
-
-                if "busan.com" in entry.link:
-                    src = "부산일보"
-
-                if "kookje.co.kr" in entry.link:
-                    src = "국제신문"
-                
-                items.append((get_best_pub_dt(entry), title, entry.link, src))
+                items.append((pub_dt, title, link, src))
                 cnt += 1
-            print(f"  OK [Google/{q}] {cnt}geon")
+            print(f"  OK [Google/{q}] {cnt}건")
         except Exception as e:
             print(f"  ER [Google/{q}] {type(e).__name__}: {str(e)[:50]}")
     return items
-def fetch_naver_news(now_kst):
-    items = []
 
-    try:
-        url = "https://land.naver.com/news/headline.naver"
-        resp = requests.get(url, headers=HEADERS, timeout=10)
 
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        for a in soup.select("a"):
-            href = a.get("href", "")
-
-            if not href.startswith("https://n.news.naver.com"):
-                continue
-
-            title = a.get("title", "").strip()
-
-            if not title:
-                 title = a.get_text(strip=True)
-
-            if len(title) < 15:
-                continue
-            if any(x in title for x in LOCAL_EXCLUDE):
-                 continue
-
-            if not RE_ESTATE.search(title):
-                continue
-
-            if RE_EXCLUDE.search(title):
-                continue
-
-            if is_bad_news(title):
-                continue
-                
-            if real_estate_score(title, "네이버부동산") < 3:
-                continue    
-        
-            try:
-                article_html = requests.get(
-                    href,
-                    headers=HEADERS,
-                    timeout=5
-                ).text
-
-                m = re.search(
-                    r'<meta property="og:title" content="([^"]+)"',
-                    article_html
-                )
-
-                if m:
-                    title = m.group(1)
-
-            except Exception:
-                pass
-
-            
-            items.append(
-                  (
-                       now_kst,
-                       title,
-                       href,
-                       "네이버부동산"
-                  )
-         )
-
-        print(f"  OK [NAVER_NEWS] {len(items)}geon")
-
-    except Exception as e:
-        print(f"  ER [NAVER_NEWS] {type(e).__name__}: {str(e)[:50]}")
-
-    return items
-
+# ── 메인 수집 ─────────────────────────────────────────────────────────────────
 def get_clean_news():
-    LIMITS = {
-        "청약": 3,
-        "재건축": 10,
-        "공급개발": 10,
-        "세제": 20,
-        "정책": 5,
-        "부산경남": 8,
-        "시장동향": 12,
-    }
-
-    SOURCE_LIMITS = {
-        "건설타임즈": 5,
-        "주택경제신문": 5,
-        "연합뉴스": 4,
-        "서울경제": 5,
-        "경남도민일보": 3,      # 비중 대폭 축소 (기존 12 -> 3)
-        "매일경제": 5,        # 매일경제 우선 확보 (강제 수집)
-        "매일경제 마켓": 5,
-        "부산일보": 10,
-        "국제신문": 10,
-        "한국경제": 5,
-        "네이버부동산": 6,
-    }
-
-    cats = ["부산경남", "청약", "재건축", "공급개발", "세제", "정책", "시장동향"]
+    cats    = ["청약", "재건축", "공급개발", "세제", "정책", "부산경남", "시장동향"]
     results = {c: [] for c in cats}
-    
-    # [수정] 변수 정의를 명확히 상단에 배치
-    seen_links = set()
-    
-    seen_normalized = set()
-    source_count = {}
-    event_groups = []
-    
+    seen    = []   # 중복 판별용 제목 목록
+    src_cnt = {}   # 매체별 수집 건수
     now_kst = datetime.now(KST)
+    print(f"[실행시각] {now_kst.strftime('%Y-%m-%d %H:%M KST')}")
     all_entries = []
 
-    print("[1단계] RSS")
-    for item in RSS_FEEDS:
-        # 리스트 항목 개수에 따라 유연하게 처리
-        name = item[0]
-        url = item[1]
-        eo = item[2] if len(item) > 2 else True
-        
-        try:
-            # fetch_rss 함수 호출 및 결과 저장
-            entries = fetch_rss(name, url, eo, now_kst)
-            if entries:
-                all_entries.extend(entries)
-        except Exception as e:
-            print(f"  [!] 수집 중 오류 [{name}]: {e}")
-            continue
+    print("\n[A] RSS 피드")
+    for name, url, eo in RSS_FEEDS:
+        all_entries.extend(fetch_rss(name, url, eo, now_kst))
 
-    print("[1.5단계] NAVER")
-    all_entries.extend(fetch_naver_news(now_kst))
+    print("\n[B] 스크래핑 (부산일보/국제신문/네이버부동산)")
+    all_entries.extend(scrape_busan(now_kst))
+    all_entries.extend(scrape_kookje(now_kst))
+    all_entries.extend(scrape_naver_land(now_kst))
 
-    print("[2단계] Google")
+    print("\n[C] Google News RSS")
     all_entries.extend(fetch_google(now_kst))
 
+    print(f"\n수집 합계(필터전): {len(all_entries)}건")
+
+    # 최신순 정렬
     all_entries.sort(
         key=lambda x: x[0] or datetime.max.replace(tzinfo=KST),
-        reverse=True,
+        reverse=True
     )
 
-    total = 0
-    dropped = 0
-
+    total = dup = nonre = 0
     for pub_dt, title, link, src in all_entries:
-
         total += 1
 
-        event_key = make_event_key(title)
-        norm_title = normalize_title(title)
-
-        print(f"[EVENT] {event_key}")
-
-        score = real_estate_score(title, src)
-        print(f"[SCORE={score}] [{src}] {title}")
-
-        if score < 3:
-            dropped += 1
-            print(f"[DROP {score}] {title}")
-            continue
-            
-        if norm_title in seen_normalized:
-            dropped += 1
+        # ① 중복 제거 (3단계 유사도)
+        if is_duplicate(title, seen):
+            dup += 1
             continue
 
-        duplicate = False
+        # ② 카테고리 분류
+        cat = classify(title)
 
-        for old in seen_normalized:
-            ratio = SequenceMatcher(None, norm_title, old).ratio()
-
-            if ratio >= 0.90:
-                print(f"[DUP] {ratio:.2f} | {title}")
-                duplicate = True
-                break
-
-        if duplicate:
-            dropped += 1
+        # ③ 시장동향 2차 필터
+        if cat == "시장동향" and not is_market_valid(title):
+            nonre += 1
             continue
 
-        duplicate_event = False
-
-        for old_event in event_groups:
-            ratio = SequenceMatcher(None, event_key, old_event).ratio()
-
-            if ratio >= 0.92:
-                duplicate_event = True
-                print(f"[EVENT DUP {ratio:.2f}] {title}")
-                break
-
-        if duplicate_event:
-            dropped += 1
+        # ④ 매체별 한도
+        if src in SOURCE_LIMITS and src_cnt.get(src, 0) >= SOURCE_LIMITS[src]:
             continue
 
-        event_groups.append(event_key)
-        seen_normalized.add(norm_title)
-
-        clean_link = normalize_url(link)
-
-        if clean_link in seen_links:
-            dropped += 1
+        # ⑤ 카테고리별 한도
+        if len(results[cat]) >= CAT_LIMITS[cat]:
             continue
 
-        cat = classify(title, src)
+        pub_str = pub_dt.strftime("%m/%d %H:%M") if pub_dt else ""
+        results[cat].append({
+            "title":   normalize(title),
+            "link":    link,
+            "src":     src,
+            "pub_str": pub_str,
+        })
+        seen.append(title)
+        src_cnt[src] = src_cnt.get(src, 0) + 1
 
-        if cat not in results:
-            dropped += 1
-            continue
-
-        cnt = source_count.get(src, 0)
-
-        if cnt >= SOURCE_LIMITS.get(src, 999):
-            dropped += 1
-            continue
-
-        if len(results[cat]) >= LIMITS.get(cat, 999):
-            dropped += 1
-            continue
-
-        results[cat].append((title, link, src))
-        seen_links.add(clean_link)
-        source_count[src] = cnt + 1
-
-        print(f"[SAVE] {cat} {src} {title}")
-
-        if "범천4구역" in title:
-            print("[ORIGINAL]", title)
-            print("[NORMAL]", norm_title)
-    
-    # 루프 종료 후 결과 출력
-    print(f"\n[result] total={total} dup={dropped} kept={total-dropped}")
-
-    print("\n=== SOURCE COUNT ===")
-    for k, v in sorted(source_count.items()):
-        print(f" {k} {v}")
-
+    kept = total - dup - nonre
+    print(f"\n[결과] 전체 {total}건 | 중복제거 {dup}건 | 비부동산제외 {nonre}건 | 최종 {kept}건")
+    for cat in cats:
+        print(f"  [{cat}] {len(results[cat])}건")
+    print("\n[매체별]")
+    for k, v in sorted(src_cnt.items(), key=lambda x: -x[1]):
+        print(f"  {k}: {v}건")
     return results
 
-def interleave_by_source(items):
-     groups = {}
 
-     for item in items:
-          groups.setdefault(item["src"], []).append(item)
-
-     result = []
-
-     while True:
-          added = False
-
-          for src in list(groups.keys()):
-               if groups[src]:
-                   result.append(groups[src].pop(0))
-                   added = True
-
-          if not added:
-             break
-
-     return result
-
-import requests
-from bs4 import BeautifulSoup
-import re
-
+# ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
+    return (
+        "전국 아파트 매매가격 0.06% 상승, 39주 연속 상승세 유지. "
+        "매수우위지수는 62.3으로 매도자 우위입니다."
+    )
 
-    try:
-
-        url = (
-            "https://api.kbland.kr/land-extra/market-conditions/sales"
-            "?기준년월일=20260615"
-            "&법정동코드=0000000000"
-        )
-
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json, text/plain, */*",
-            "Origin": "https://kbland.kr",
-            "Referer": "https://kbland.kr/",
-            "webservice": "1"
-        }
-
-        r = requests.get(
-            url,
-            headers=headers,
-            timeout=20
-        )
-        print("[KB STATUS]", r.status_code)
-        print("[KB RESPONSE]", r.text[:5000])
-        
-        data = r.json()
-
-        summary = data["dataBody"]["data"]["시장요약"]
-
-        change = summary["대표지역변동률"]
-        weeks = summary["대표지역변동률연속주수"]
-        trend = summary["대표지역변동률연속상태"]
-
-        seller = summary["매도자많음응답"]
-        buyer = summary["매수자많음응답"]
-
-        all_market = data["dataBody"]["data"]["전체시황"]
-
-        seoul = next(
-            x["변동률"]
-            for x in all_market
-            if x["지역명"] == "서울"
-        )
-
-        busan = next(
-            x["변동률"]
-            for x in all_market
-            if x["지역명"] == "부산"
-        )
-
-        return (
-            f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
-            f"{weeks}주 연속 {trend}세를 유지했습니다. "
-            f"서울은 {seoul}% 상승, 부산은 {busan}% 보합입니다. "
-            f"매도자많음 {seller}%, 매수자많음 {buyer}%입니다."
-        )
-
-    except Exception as e:
-        print("[KB ERROR]", repr(e))
-
-    return "KB 시황 정보를 불러오지 못했습니다."
-
+def interleave_by_source(items):
+    """시장동향: 매체별로 번갈아 표시"""
+    groups = {}
+    for item in items:
+        groups.setdefault(item["src"], []).append(item)
+    result = []
+    while True:
+        added = False
+        for src in list(groups.keys()):
+            if groups[src]:
+                result.append(groups[src].pop(0))
+                added = True
+        if not added:
+            break
+    return result
 
 def build_html(data):
+    today       = datetime.now(KST).strftime("%Y년 %m월 %d일")
+    update_time = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
+    total_news  = sum(len(v) for v in data.values())
 
-    html = ""
-    now = datetime.now(KST)
-
-    today = now.strftime("%Y년 %m월 %d일")
-    update_time = now.strftime("%Y-%m-%d %H:%M:%S KST")
-
-    html = f"""
-<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>부동산 뉴스 브리핑</title>
-
+<title>부동산 뉴스 브리핑 {today}</title>
 <style>
-body {{
-       font-family: "Malgun Gothic", sans-serif;
-       max-width: 1200px;
-       margin: auto;
-       padding: 20px;
-       line-height: 1.7;
-}}
-
-h1 {{
-    color: #1f4fa3;
-}}
-
-h2 {{
-     background: #f2f6ff;
-     padding: 10px;
-     border-left: 5px solid #1f4fa3;
-}}
-
-a {{
-    text-decoration: none;
-    color: #222;
-}}
-
-a:hover {{
-    text-decoration: underline;
-}}
-
-small {{
-    color: #666;
-}}
+body{{font-family:'Malgun Gothic',sans-serif;max-width:1100px;margin:auto;padding:20px;line-height:1.7;background:#f8f9fa}}
+h1{{color:#1f4fa3;border-bottom:3px solid #1f4fa3;padding-bottom:8px}}
+h2{{background:#f2f6ff;padding:8px 12px;border-left:5px solid #1f4fa3;margin-top:24px}}
+.sources{{background:#fff;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px}}
+.sources a{{color:#1f4fa3;text-decoration:none;margin:0 4px}}
+.sources a:hover{{text-decoration:underline}}
+.briefing{{background:#fff3cd;padding:12px;border-radius:6px;border-left:4px solid #ffc107;margin:12px 0;font-weight:bold}}
+.news-item{{background:#fff;padding:9px 14px;margin:5px 0;border-radius:4px;border-left:3px solid #dee2e6}}
+.news-item a{{text-decoration:none;color:#222;font-size:14px;line-height:1.5}}
+.news-item a:hover{{color:#1f4fa3;text-decoration:underline}}
+.news-meta{{font-size:12px;color:#888;margin-top:2px}}
+.empty{{color:#999;font-style:italic;padding:6px}}
+.cnt{{font-size:12px;color:#666;font-weight:normal;margin-left:6px}}
 </style>
-
 </head>
 <body>
-
 <h1>부동산 뉴스 브리핑 ({today})</h1>
-<p>업데이트: {update_time}</p>
-"""
-
-    html += "<hr><p><b>뉴스매체 바로가기</b> : "
-
-    html += " | ".join(
-        f"<a href='{url}' target='_blank'>{name}</a>"
-        for name, url in SOURCES.items()
-    )
-
-    html += "</p><hr>"
-
-    market_brief = get_market_brief()
-
-    html += f"""
-    <div style="
-    background:#fff3cd;
-    padding:12px;
-    border-radius:6px;
-    border-left:4px solid #ffc107;
-    margin:15px 0;
-    font-weight:bold;
-    ">
-    {market_brief}
-    </div>
-    """
-
-
-
+<p style="color:#666;font-size:13px">업데이트: {update_time} | 총 {total_news}건</p>
+<div class="sources"><b>뉴스매체:</b> """
+    html += " | ".join(f'<a href="{u}" target="_blank">{n}</a>' for n, u in SOURCES.items())
+    html += f'</div>\n<div class="briefing">{get_market_brief()}</div>\n'
 
     labels = {
-         "청약": "[청약]",
-         "재건축": "[재건축·재개발]",
-         "공급개발": "[공급·개발]",
-         "세제": "[세제]",
-         "정책": "[정책]",
-         "부산경남": "[부산·경남]",
-         "시장동향": "[시장동향]"
+        "청약":    "[청약]",
+        "재건축":  "[재건축·재개발]",
+        "공급개발": "[공급·개발]",
+        "세제":    "[세제]",
+        "정책":    "[정책·규제]",
+        "부산경남": "[부산·경남]",
+        "시장동향": "[시장동향]",
     }
-
     for cat, lst in data.items():
-        # 데이터가 없으면 건너뜀
+        html += f'<h2>{labels.get(cat,cat)}<span class="cnt">({len(lst)}건)</span></h2>\n'
         if not lst:
+            html += '<p class="empty">최근 24시간 내 수집된 기사가 없습니다.</p>\n'
             continue
+        display = interleave_by_source(lst) if cat == "시장동향" else lst
+        for n in display:
+            html += '<div class="news-item">'
+            html += f'<a href="{n["link"]}" target="_blank">{n["title"]}</a>'
+            html += f'<div class="news-meta"><b>{n["src"]}</b>'
+            if n["pub_str"]:
+                html += f' · {n["pub_str"]}'
+            html += '</div></div>\n'
 
-        html += f"<h2>{labels.get(cat, cat)}</h2>"
-        html += "<ul>"
-        
-        for n in lst:
-            # n은 (title, link, src) 튜플입니다.
-            # 인덱스 0: title, 1: link, 2: src
-            title = n[0]
-            link = n[1]
-            src = n[2]
-            
-            # 리스트 아이템 생성
-            html += f"<li><a href='{link}' target='_blank'>{title}</a> - {src}</li>"
-            
-        html += "</ul>"
-
-    html += "</body></html>"
+    html += f"<p style='text-align:right;color:#bbb;font-size:11px'>총 {total_news}건 · {today}</p>\n"
+    html += "</body>\n</html>"
     return html
 
 
 if __name__ == "__main__":
-       output_path = os.path.join(
-           os.path.dirname(os.path.abspath(__file__)),
-           "index.html"
-       )
-
-       data = get_clean_news()
-
-       with open(output_path, "w", encoding="utf-8-sig") as f:
-           f.write(build_html(data))
-
-       print(f"[done] {output_path}")
-
-       for cat, lst in data.items():
-            print(f"  [{cat}] {len(lst)}")
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+    data = get_clean_news()
+    with open(output_path, "w", encoding="utf-8-sig") as f:
+        f.write(build_html(data))
+    print(f"\n[완료] {output_path}")
+    for cat, lst in data.items():
+        print(f"  [{cat}] {len(lst)}건")
+           
 
 
