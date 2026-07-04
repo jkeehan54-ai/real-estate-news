@@ -541,25 +541,58 @@ def get_clean_news():
         print(f"  {k}: {v}건")
     return results
 
+def get_latest_kb_date():
+
+    url = (
+        "https://api.kbland.kr/land-extra/market-conditions/sales"
+        "?법정동코드=0000000000"
+    )
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://kbland.kr",
+        "Referer": "https://kbland.kr/",
+        "webservice": "1",
+    }
+
+    r = requests.get(url, headers=headers, timeout=20)
+    r.raise_for_status()
+
+    data = r.json()
+
+    return data["dataBody"]["data"]["시장요약"]["기준년월일"]
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
 
     try:
 
-        url = (
-            "https://api.kbland.kr/land-extra/market-conditions/sales"
-            "?기준년월일=20260615"
-            "&법정동코드=0000000000"
-        )
+        latest_date = get_latest_kb_date()
 
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json, text/plain, */*",
-            "Origin": "https://kbland.kr",
-            "Referer": "https://kbland.kr/",
-            "webservice": "1"
-        }
+print("[KB 최신 기준일]", latest_date)
+
+url = (
+    "https://api.kbland.kr/land-extra/market-conditions/sales"
+    f"?기준년월일={latest_date}"
+    "&법정동코드=0000000000"
+)
+
+def market_text(v):
+
+    v = float(v)
+
+    if v > 0:
+        return f"{v:.2f}% 상승"
+
+    elif v < 0:
+        return f"{abs(v):.2f}% 하락"
+
+    return "0.00% 보합"
+
+
+
+    
 
         r = requests.get(
             url,
@@ -597,7 +630,7 @@ def get_market_brief():
         return (
             f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
             f"{weeks}주 연속 {trend}세를 유지했습니다. "
-            f"서울은 {seoul}% 상승, 부산은 {busan}% 보합입니다. "
+            f"서울은 {market_text(seoul)}, 부산은 {market_text(busan)}입니다."
             f"매도자많음 {seller}%, 매수자많음 {buyer}%입니다."
         )
 
