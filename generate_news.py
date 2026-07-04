@@ -544,26 +544,67 @@ def get_clean_news():
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
-    return (
-        "전국 아파트 매매가격 0.06% 상승, 39주 연속 상승세 유지. "
-        "매수우위지수는 62.3으로 매도자 우위입니다."
-    )
 
-def interleave_by_source(items):
-    """시장동향: 매체별로 번갈아 표시"""
-    groups = {}
-    for item in items:
-        groups.setdefault(item["src"], []).append(item)
-    result = []
-    while True:
-        added = False
-        for src in list(groups.keys()):
-            if groups[src]:
-                result.append(groups[src].pop(0))
-                added = True
-        if not added:
-            break
-    return result
+    try:
+
+        url = (
+            "https://api.kbland.kr/land-extra/market-conditions/sales"
+            "?기준년월일=20260615"
+            "&법정동코드=0000000000"
+        )
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://kbland.kr",
+            "Referer": "https://kbland.kr/",
+            "webservice": "1"
+        }
+
+        r = requests.get(
+            url,
+            headers=headers,
+            timeout=20
+        )
+        print("[KB STATUS]", r.status_code)
+        print("[KB RESPONSE]", r.text[:5000])
+        
+        data = r.json()
+
+        summary = data["dataBody"]["data"]["시장요약"]
+
+        change = summary["대표지역변동률"]
+        weeks = summary["대표지역변동률연속주수"]
+        trend = summary["대표지역변동률연속상태"]
+
+        seller = summary["매도자많음응답"]
+        buyer = summary["매수자많음응답"]
+
+        all_market = data["dataBody"]["data"]["전체시황"]
+
+        seoul = next(
+            x["변동률"]
+            for x in all_market
+            if x["지역명"] == "서울"
+        )
+
+        busan = next(
+            x["변동률"]
+            for x in all_market
+            if x["지역명"] == "부산"
+        )
+
+        return (
+            f"전국 아파트 매매가격은 {change}% {trend}했습니다. "
+            f"{weeks}주 연속 {trend}세를 유지했습니다. "
+            f"서울은 {seoul}% 상승, 부산은 {busan}% 보합입니다. "
+            f"매도자많음 {seller}%, 매수자많음 {buyer}%입니다."
+        )
+
+    except Exception as e:
+        print("[KB ERROR]", repr(e))
+
+    return "KB 시황 정보를 불러오지 못했습니다."
 
 def build_html(data):
     today       = datetime.now(KST).strftime("%Y년 %m월 %d일")
