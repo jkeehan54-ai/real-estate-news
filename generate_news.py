@@ -1054,8 +1054,8 @@ def classify(title, src):
         return "청약"
 
     for category, keywords in CATEGORY_RULES.items():
-    if any(k in t for k in keywords):
-        return category
+        if any(k in t for k in keywords):
+            return category
         
     # 전국 언론이라도 부산 관련 기사이면 부산경남으로 분류
     elif any(k in t for k in [
