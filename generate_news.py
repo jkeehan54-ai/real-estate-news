@@ -544,8 +544,8 @@ def get_clean_news():
 def get_latest_kb_date():
 
     url = (
-        "https://api.kbland.kr/land-extra/market-conditions/sales"
-        "?법정동코드=0000000000"
+        "https://api.kbland.kr/land-extra/market-conditions/ref-date"
+        "?거래유형=1&주기=1"
     )
 
     headers = {
@@ -553,7 +553,7 @@ def get_latest_kb_date():
         "Accept": "application/json, text/plain, */*",
         "Origin": "https://kbland.kr",
         "Referer": "https://kbland.kr/",
-        "webservice": "1",
+        "webservice": "1"
     }
 
     r = requests.get(url, headers=headers, timeout=20)
@@ -561,22 +561,24 @@ def get_latest_kb_date():
 
     data = r.json()
 
-    return data["dataBody"]["data"]["시장요약"]["기준년월일"]
+    latest = data["dataBody"]["data"][0]
+
+    print("[KB 최신 기준일]", latest)
+
+    return latest
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
 
     try:
 
-        latest_date = get_latest_kb_date()
+        latest = get_latest_kb_date()
 
-print("[KB 최신 기준일]", latest_date)
-
-url = (
-    "https://api.kbland.kr/land-extra/market-conditions/sales"
-    f"?기준년월일={latest_date}"
-    "&법정동코드=0000000000"
-)
+        url = (
+            "https://api.kbland.kr/land-extra/market-conditions/sales"
+            f"?기준년월일={latest}"
+            "&법정동코드=0000000000"
+        )
 
 def market_text(v):
 
