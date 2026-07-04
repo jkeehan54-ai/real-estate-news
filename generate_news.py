@@ -674,6 +674,7 @@ h2{{background:#f2f6ff;padding:8px 12px;border-left:5px solid #1f4fa3;margin-top
             continue
         display = interleave_by_source(lst) if cat == "시장동향" else lst
         for n in display:
+            print(n)
             html += '<div class="news-item">'
             html += f'<a href="{n["link"]}" target="_blank">{n["title"]}</a>'
             html += f'<div class="news-meta"><b>{n["src"]}</b>'
