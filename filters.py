@@ -1,4 +1,5 @@
 """
+from duplicate import normalize
 filters.py
 -----------------------------------------
 부동산 기사 필터 및 카테고리 분류
@@ -81,7 +82,7 @@ def is_market_valid(title: str) -> bool:
 
 def classify(title: str) -> str:
 
-    t = title
+    t = normalize(title)
 
     if any(k in t for k in [
         "청약","무순위","청약통장","특별공급","일반공급"
