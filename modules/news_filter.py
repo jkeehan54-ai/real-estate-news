@@ -45,3 +45,17 @@ def normalize(title: str) -> str:
 
 def keywords(title: str) -> set:
     return {w for w in normalize(title).split() if w not in STOPWORDS and len(w) >= 2}
+
+
+def extract_entities(title: str) -> set:
+    """숫자단위·지명·기관명 추출 — 중복 판별 정밀도 향상"""
+    t = re.sub(r'[^\w\s]', ' ', str(title))
+    ents = set()
+    for m in re.finditer(r'\d+\.?\d*\s*(?:억|만|건|%|개월|층|평|채|명|가구)', t):
+        ents.add(m.group().strip())
+    for loc in LOC_ENTITIES:
+        if loc in t: ents.add(loc)
+    for org in ORG_ENTITIES:
+        if org in t: ents.add(org)
+    return ents
+
