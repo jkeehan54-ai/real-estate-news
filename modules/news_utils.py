@@ -29,3 +29,10 @@ def is_recent(pub_dt, now_kst):
         return True
     yesterday = (now_kst - timedelta(days=1)).date()
     return pub_dt.date() >= yesterday
+
+def make_session(referer=None):
+    s = requests.Session()
+    s.headers.update(HEADERS)
+    if referer:
+        s.headers["Referer"] = referer
+    return s
