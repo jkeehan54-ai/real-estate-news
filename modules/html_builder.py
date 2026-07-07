@@ -80,12 +80,4 @@ h2{{background:#f2f6ff;padding:8px 12px;border-left:5px solid #1f4fa3;margin-top
     return html
 
 
-if __name__ == "__main__":
-    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
-    data = get_clean_news()
-    with open(output_path, "w", encoding="utf-8-sig") as f:
-        f.write(build_html(data))
-    print(f"\n[완료] {output_path}")
-    for cat, lst in data.items():
-        print(f"  [{cat}] {len(lst)}건")
-           
+
