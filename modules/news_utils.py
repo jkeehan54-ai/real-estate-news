@@ -48,3 +48,22 @@ def market_text(value):
         return f"{abs(value):.2f}% 하락"
 
     return "0.00% 보합"
+
+def interleave_by_source(items):
+
+    groups = {}
+
+    for item in items:
+        groups.setdefault(item["src"], []).append(item)
+
+    result = []
+
+    while groups:
+        for src in list(groups.keys()):
+            result.append(groups[src].pop(0))
+
+            if not groups[src]:
+                del groups[src]
+
+    return result
+
