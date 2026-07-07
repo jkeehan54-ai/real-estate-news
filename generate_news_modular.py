@@ -26,6 +26,7 @@ from modules.crawler_engine import *
 from modules.google_engine import *
 from modules.kb_market import *
 from modules.html_builder import *
+from modules.news_pipeline import get_clean_news
 
 
 
