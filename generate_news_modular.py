@@ -6,6 +6,8 @@
 중복 제거: 문자열유사도 + 키워드자카드 + 엔티티겹침 3단계
 날짜: datetime.now(KST) 명시 → GitHub Actions UTC 환경에서도 정확
 """
+print("=== generate_news_modular.py 실행 ===")
+
 import sys, io
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
