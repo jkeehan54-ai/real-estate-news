@@ -26,6 +26,7 @@ from modules.crawler_engine import *
 from modules.google_engine import *
 from modules.kb_market import *
 from modules.html_builder import *
+from modules.news_config import SOURCE_LIMITS, CAT_LIMITS
 
 
 
