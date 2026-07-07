@@ -36,3 +36,15 @@ def make_session(referer=None):
     if referer:
         s.headers["Referer"] = referer
     return s
+
+def market_text(value):
+
+    value = float(value)
+
+    if value > 0:
+        return f"{value:.2f}% 상승"
+
+    elif value < 0:
+        return f"{abs(value):.2f}% 하락"
+
+    return "0.00% 보합"
