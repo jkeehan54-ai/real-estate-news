@@ -1,4 +1,18 @@
 # news_utils.py
+import re
+import requests
+
+from datetime import (
+    datetime,
+    timezone,
+    timedelta,
+)
+
+from modules.news_config import (
+    HEADERS,
+    KST,
+)
+
 # ── 날짜 유틸 ─────────────────────────────────────────────────────────────────
 def extract_date_from_url(url):
     for pattern in [
