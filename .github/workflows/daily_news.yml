@@ -31,7 +31,7 @@ jobs:
           playwright install chromium
           
       - name: Generate news
-        run: python generate_news.py
+        run: python generate_news_modular.py
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
