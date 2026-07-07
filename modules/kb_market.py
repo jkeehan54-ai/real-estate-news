@@ -4,6 +4,38 @@ import requests
 
 from modules.news_utils import market_text
 
+
+def get_latest_kb_date():
+
+    url = (
+        "https://api.kbland.kr/land-extra/market-conditions/ref-date"
+        "?거래유형=1&주기=1"
+    )
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://kbland.kr",
+        "Referer": "https://kbland.kr/",
+        "webservice": "1",
+    }
+
+    r = requests.get(
+        url,
+        headers=headers,
+        timeout=20
+    )
+
+    r.raise_for_status()
+
+    data = r.json()
+
+    latest = data["dataBody"]["data"][0]
+
+    print("[KB 최신 기준일]", latest)
+
+    return latest
+
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
 
