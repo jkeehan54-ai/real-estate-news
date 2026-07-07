@@ -81,3 +81,29 @@ def interleave_by_source(items):
 
     return result
 
+
+def is_duplicate(new_title: str, seen: list) -> bool:
+    """
+    3단계 중복 판별 (비용 없음, 빠름):
+    1단계: 문자열 유사도 0.72 이상  → 같은 기사 (제목 일부만 달라도 잡힘)
+    2단계: 키워드 자카드 0.55 이상  → 같은 주제 다른 표현
+    3단계: 핵심 엔티티 2개 이상 겹침 → 같은 단지·지역·금액
+    """
+    nn = normalize(new_title)
+    kn = keywords(new_title)
+    en = extract_entities(new_title)
+    for s in seen:
+        ns = normalize(s)
+        # 1단계: 문자열 유사도
+        if SequenceMatcher(None, nn, ns).ratio() >= 0.72:
+            return True
+        # 2단계: 키워드 자카드
+        ks = keywords(s)
+        u  = len(kn | ks)
+        if u and len(kn & ks) / u >= 0.55:
+            return True
+        # 3단계: 엔티티 겹침
+        es = extract_entities(s)
+        if en and es and len(en & es) >= 2:
+            return True
+    return False
