@@ -6,7 +6,6 @@
 중복 제거: 문자열유사도 + 키워드자카드 + 엔티티겹침 3단계
 날짜: datetime.now(KST) 명시 → GitHub Actions UTC 환경에서도 정확
 """
-print("=== generate_news_modular.py 실행 ===")
 
 import sys
 import io
