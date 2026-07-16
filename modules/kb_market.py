@@ -1,5 +1,3 @@
-# kb_market.py
-
 import requests
 
 from modules.news_utils import market_text
@@ -23,7 +21,7 @@ def get_latest_kb_date():
     r = requests.get(
         url,
         headers=headers,
-        timeout=20
+        timeout=20,
     )
 
     r.raise_for_status()
@@ -35,6 +33,7 @@ def get_latest_kb_date():
     print("[KB 최신 기준일]", latest)
 
     return latest
+
 
 # ── HTML 생성 ─────────────────────────────────────────────────────────────────
 def get_market_brief():
@@ -60,8 +59,11 @@ def get_market_brief():
         r = requests.get(
             url,
             headers=headers,
-            timeout=20
+            timeout=20,
         )
+
+        # ★ HTTP 오류 확인 추가
+        r.raise_for_status()
 
         print("[KB STATUS]", r.status_code)
 
@@ -69,12 +71,14 @@ def get_market_brief():
 
         print(
             "[KB DATA DATE]",
-            data["dataBody"]["data"]["기준년월일"]
+            data["dataBody"]["data"]["기준년월일"],
         )
 
         summary = data["dataBody"]["data"]["시장요약"]
+
         print("[KB SUMMARY]")
         print(summary)
+
         change = summary["대표지역변동률"]
         weeks = summary["대표지역변동률연속주수"]
         trend = summary["대표지역변동률연속상태"]
@@ -84,16 +88,24 @@ def get_market_brief():
 
         all_market = data["dataBody"]["data"]["전체시황"]
 
+        # ★ 기본값 추가
         seoul = next(
-            x["변동률"]
-            for x in all_market
-            if x["지역명"] == "서울"
+            (
+                x["변동률"]
+                for x in all_market
+                if x["지역명"] == "서울"
+            ),
+            0,
         )
 
+        # ★ 기본값 추가
         busan = next(
-            x["변동률"]
-            for x in all_market
-            if x["지역명"] == "부산"
+            (
+                x["변동률"]
+                for x in all_market
+                if x["지역명"] == "부산"
+            ),
+            0,
         )
 
         return (
