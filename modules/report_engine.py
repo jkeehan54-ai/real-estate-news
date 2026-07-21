@@ -38,7 +38,7 @@ class ReportEngine:
             dashboard,
         )
 
-        report = {
+        return {
             "created_at": datetime.now().strftime(
                 "%Y-%m-%d %H:%M"
             ),
@@ -50,8 +50,6 @@ class ReportEngine:
             ),
         }
 
-        return report
-
     def summary(
         self,
         dashboard: dict,
@@ -59,10 +57,13 @@ class ReportEngine:
     ) -> str:
 
         return (
-            f"{dashboard['region']} 시장은 "
-            f"{signals['market']} 상태입니다. "
-            f"선행지표는 "
-            f"{signals['leading']}이며 "
-            f"위험도는 "
-            f"{signals['risk']}입니다."
+            f"[{dashboard['region']}]\n"
+            f"BRN Index : {dashboard['brn_index']:.1f} "
+            f"({dashboard['brn_grade']})\n"
+            f"시장상태 : {signals['market']}\n"
+            f"Health : {dashboard['health']:.1f}\n"
+            f"Leading : {dashboard['leading']:.1f}\n"
+            f"Risk : {dashboard['risk']:.1f}\n"
+            f"전망 : {signals['leading']}\n"
+            f"위험 : {signals['risk']}"
         )
