@@ -8,6 +8,7 @@ Indicator Engine
 Market Health Engine
 Leading Engine
 Risk Engine
+BRN Index Engine
 
 결과를 하나의 Dashboard 객체로 생성한다.
 """
@@ -19,6 +20,7 @@ from datetime import datetime
 from modules.market_health_engine import MarketHealthEngine
 from modules.leading_engine import LeadingEngine
 from modules.risk_engine import RiskEngine
+from modules.brn_index_engine import BRNIndexEngine
 
 
 class DashboardEngine:
@@ -31,6 +33,7 @@ class DashboardEngine:
         self.health_engine = MarketHealthEngine()
         self.leading_engine = LeadingEngine()
         self.risk_engine = RiskEngine()
+        self.index_engine = BRNIndexEngine()
 
     def build(
         self,
@@ -70,6 +73,14 @@ class DashboardEngine:
             "risk_detail": risk,
         }
 
+        brn = self.index_engine.calculate(dashboard)
+
+        dashboard["brn_index"] = brn["index"]
+        dashboard["brn_grade"] = brn["grade"]
+        dashboard["brn_color"] = brn["color"]
+        dashboard["brn_trend"] = brn["trend"]
+        dashboard["brn_detail"] = brn
+
         return dashboard
 
     def summary(
@@ -79,8 +90,9 @@ class DashboardEngine:
 
         return (
             f"[{dashboard['region']}] "
-            f"Health {dashboard['health']:.1f} "
-            f"({dashboard['health_grade']}), "
+            f"BRN {dashboard['brn_index']:.1f} "
+            f"({dashboard['brn_grade']}), "
+            f"Health {dashboard['health']:.1f}, "
             f"Leading {dashboard['leading']:.1f}, "
             f"Risk {dashboard['risk']:.1f}"
         )
