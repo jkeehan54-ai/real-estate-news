@@ -14,6 +14,7 @@ from datetime import datetime
 
 from modules.dashboard_engine import DashboardEngine
 from modules.market_signal_engine import MarketSignalEngine
+from modules.history_engine import HistoryEngine
 
 
 class ReportEngine:
@@ -22,6 +23,7 @@ class ReportEngine:
 
         self.dashboard_engine = DashboardEngine()
         self.signal_engine = MarketSignalEngine()
+        self.history_engine = HistoryEngine()
 
     def build(
         self,
@@ -38,7 +40,7 @@ class ReportEngine:
             dashboard,
         )
 
-        return {
+        report = {
             "created_at": datetime.now().strftime(
                 "%Y-%m-%d %H:%M"
             ),
@@ -49,6 +51,10 @@ class ReportEngine:
                 signals,
             ),
         }
+
+        self.history_engine.save_report(report)
+
+        return report
 
     def summary(
         self,
