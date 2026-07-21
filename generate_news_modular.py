@@ -27,6 +27,16 @@ def main():
 
     data = get_clean_news()
 
+    from modules.market_data_engine import MarketDataEngine
+
+    engine = MarketDataEngine()
+    engine.load_reb_json("(월) 매매가격지수_주택종합.json")
+
+    print(engine.build())
+
+
+    
+
     with open(output_path, "w", encoding="utf-8-sig") as f:
         f.write(build_html(data))
 
