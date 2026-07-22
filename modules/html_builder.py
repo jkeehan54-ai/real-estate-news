@@ -17,7 +17,7 @@ index.html
 from collections import defaultdict
 from datetime import datetime
 
-from templates import (
+from .templates import (
     html_header,
     html_footer,
     section_header,
