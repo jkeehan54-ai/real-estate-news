@@ -3,36 +3,49 @@ REB Market Engine
 
 한국부동산원(R-ONE) 시장지수
 
-현재는 JSON 구조를 기준으로 작성되었으며
-향후 OpenAPI와 동일한 형태로 사용할 수 있다.
+JSON 파일을 읽어 지역별 최신 매매가격지수를 반환한다.
 """
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 
 class REBMarket:
+    """한국부동산원 시장지수"""
 
     def __init__(self):
 
         self.data = None
 
-    def load_json(self, filename):
+    def load_json(self, filename: str | Path):
+
+        filename = Path(filename)
+
+        if not filename.exists():
+            raise FileNotFoundError(filename)
 
         with open(filename, encoding="utf-8") as f:
             self.data = json.load(f)
 
         return self.data
 
-    def latest(self):
+    def latest(self) -> dict[str, float]:
 
         if self.data is None:
-            raise RuntimeError("JSON이 로드되지 않았습니다.")
+            raise RuntimeError(
+                "JSON이 로드되지 않았습니다."
+            )
 
-        rows = self.data["sheet"]["1"]["data"]
+        rows = (
+            self.data
+            .get("sheet", {})
+            .get("1", {})
+            .get("data", {})
+        )
 
-        result = {}
+        result: dict[str, float] = {}
 
         for row in rows.values():
 
@@ -41,7 +54,7 @@ class REBMarket:
 
             region = row.get("1")
 
-            if region is None:
+            if not region:
                 continue
 
             value = row.get("14")
@@ -50,8 +63,10 @@ class REBMarket:
                 continue
 
             try:
-                value = float(value)
-            except Exception:
+                value = float(
+                    str(value).replace(",", "")
+                )
+            except (ValueError, TypeError):
                 continue
 
             result[region] = value
