@@ -1,1 +1,66 @@
-#
+price:
+
+  - id: PRICE_INDEX
+    name: 전국 매매가격지수
+    source: REB
+    weight: 1.0
+
+  - id: SEOUL_PRICE_INDEX
+    name: 서울 매매가격지수
+    source: REB
+    weight: 1.0
+
+  - id: BUSAN_PRICE_INDEX
+    name: 부산 매매가격지수
+    source: REB
+    weight: 1.0
+
+demand:
+
+  - id: DEMAND_VOLUME
+    name: 거래량
+    source: MOLIT
+    weight: 1.0
+
+  - id: DEMAND_JEONSE
+    name: 전세수급지수
+    source: KB
+    weight: 1.0
+
+  - id: DEMAND_AUCTION
+    name: 경매낙찰가율
+    source: COURT
+    weight: 1.0
+
+supply:
+
+  - id: SUPPLY_UNSOLD
+    name: 미분양
+    source: MOLIT
+    weight: 1.0
+
+  - id: SUPPLY_PERMIT
+    name: 인허가
+    source: MOLIT
+    weight: 1.0
+
+finance:
+
+  - id: FINANCE_RATE
+    name: 기준금리
+    source: BOK
+    weight: 1.0
+
+policy:
+
+  - id: POLICY_SCORE
+    name: 정책지수
+    source: BRN
+    weight: 1.0
+
+risk:
+
+  - id: RISK_PF
+    name: PF위험
+    source: BRN
+    weight: 1.0
