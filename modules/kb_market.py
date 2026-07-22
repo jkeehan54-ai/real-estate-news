@@ -35,7 +35,9 @@ def get_latest_kb_date():
     return latest
 
 
-# ── HTML 생성 ─────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# HTML 뉴스 브리핑용
+# ─────────────────────────────────────────────────────────────
 def get_market_brief():
 
     try:
@@ -62,7 +64,6 @@ def get_market_brief():
             timeout=20,
         )
 
-        # ★ HTTP 오류 확인 추가
         r.raise_for_status()
 
         print("[KB STATUS]", r.status_code)
@@ -88,7 +89,6 @@ def get_market_brief():
 
         all_market = data["dataBody"]["data"]["전체시황"]
 
-        # ★ 기본값 추가
         seoul = next(
             (
                 x["변동률"]
@@ -98,7 +98,6 @@ def get_market_brief():
             0,
         )
 
-        # ★ 기본값 추가
         busan = next(
             (
                 x["변동률"]
@@ -122,3 +121,84 @@ def get_market_brief():
         print("[KB ERROR]", repr(e))
 
         return "KB 시황 정보를 불러오지 못했습니다."
+
+
+# ─────────────────────────────────────────────────────────────
+# BRN 계산용
+# ─────────────────────────────────────────────────────────────
+def get_market_data():
+
+    try:
+
+        latest = get_latest_kb_date()
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://kbland.kr",
+            "Referer": "https://kbland.kr/",
+            "webservice": "1",
+        }
+
+        url = (
+            "https://api.kbland.kr/land-extra/market-conditions/sales"
+            f"?기준년월일={latest}"
+            "&법정동코드=0000000000"
+        )
+
+        r = requests.get(
+            url,
+            headers=headers,
+            timeout=20,
+        )
+
+        r.raise_for_status()
+
+        data = r.json()
+
+        summary = data["dataBody"]["data"]["시장요약"]
+        all_market = data["dataBody"]["data"]["전체시황"]
+
+        seoul = next(
+            (
+                float(x["변동률"])
+                for x in all_market
+                if x["지역명"] == "서울"
+            ),
+            0.0,
+        )
+
+        busan = next(
+            (
+                float(x["변동률"])
+                for x in all_market
+                if x["지역명"] == "부산"
+            ),
+            0.0,
+        )
+
+        return {
+            "date": latest,
+            "nation_change": float(summary["대표지역변동률"]),
+            "weeks": int(summary["대표지역변동률연속주수"]),
+            "trend": summary["대표지역변동률연속상태"],
+            "seller": float(summary["매도자많음응답"]),
+            "buyer": float(summary["매수자많음응답"]),
+            "seoul_change": seoul,
+            "busan_change": busan,
+        }
+
+    except Exception as e:
+
+        print("[KB DATA ERROR]", repr(e))
+
+        return {
+            "date": "",
+            "nation_change": 0.0,
+            "weeks": 0,
+            "trend": "",
+            "seller": 0.0,
+            "buyer": 0.0,
+            "seoul_change": 0.0,
+            "busan_change": 0.0,
+        }
