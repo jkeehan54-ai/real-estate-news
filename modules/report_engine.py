@@ -7,7 +7,7 @@ BRN Report Engine
 Dashboard 결과를 이용하여
 일일 시장 리포트를 생성한다.
 """
-from modules.html_builder import save_html
+
 from __future__ import annotations
 
 from datetime import datetime
