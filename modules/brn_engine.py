@@ -16,9 +16,7 @@ from modules.forecast_engine import ForecastEngine
 
 class BRNEngine:
     """
-    BRN 통합 엔진
-
-    처리 순서
+    BRN 통합 실행 엔진
 
         MarketDataEngine
                 │
@@ -26,7 +24,7 @@ class BRNEngine:
         IndicatorEngine
                 │
                 ▼
-         ReportEngine
+        ReportEngine
                 │
                 ▼
         ForecastEngine
@@ -44,43 +42,42 @@ class BRNEngine:
         region: str = "전국",
     ) -> dict:
 
-        # -------------------------------------------------
+        # --------------------------------------------
         # Indicator 생성
-        # -------------------------------------------------
+        # --------------------------------------------
 
         indicators = self.indicator_engine.create_many(
             values=values,
             region=region,
         )
 
-        # -------------------------------------------------
-        # Dashboard / Signal / Summary 생성
-        # -------------------------------------------------
+        # --------------------------------------------
+        # Report 생성
+        # --------------------------------------------
 
         report = self.report_engine.build(
             indicators=indicators,
             region=region,
         )
 
-        # -------------------------------------------------
+        # --------------------------------------------
         # Forecast 생성
-        # (향후 BRN 지표를 활용할 수 있도록 indicators 전달)
-        # -------------------------------------------------
+        # (현재 ForecastEngine 인터페이스 유지)
+        # --------------------------------------------
 
         forecast = self.forecast_engine.build(
-            indicators=indicators,
             region=region,
         )
 
-        # -------------------------------------------------
+        # --------------------------------------------
         # 최종 결과
-        # -------------------------------------------------
+        # --------------------------------------------
 
         return {
             "region": region,
             "indicators": indicators,
-            "dashboard": report.get("dashboard", {}),
-            "signals": report.get("signals", []),
-            "summary": report.get("summary", ""),
+            "dashboard": report["dashboard"],
+            "signals": report["signals"],
+            "summary": report["summary"],
             "forecast": forecast,
         }
