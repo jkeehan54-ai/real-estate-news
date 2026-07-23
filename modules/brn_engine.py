@@ -2,39 +2,16 @@
 
 
 """
-BRN Engine
+BRN Engine v2
 
-BRN 전체 실행 엔진
+MarketDataEngine에서 생성한 값을 이용하여
+BRN 요약을 생성한다.
 """
 
 from __future__ import annotations
 
-from modules.indicator_engine import IndicatorEngine
-from modules.report_engine import ReportEngine
-from modules.forecast_engine import ForecastEngine
-
 
 class BRNEngine:
-    """
-    BRN 통합 실행 엔진
-
-        MarketDataEngine
-                │
-                ▼
-        IndicatorEngine
-                │
-                ▼
-        ReportEngine
-                │
-                ▼
-        ForecastEngine
-    """
-
-    def __init__(self):
-
-        self.indicator_engine = IndicatorEngine()
-        self.report_engine = ReportEngine()
-        self.forecast_engine = ForecastEngine()
 
     def build(
         self,
@@ -42,42 +19,135 @@ class BRNEngine:
         region: str = "전국",
     ) -> dict:
 
-        # --------------------------------------------
-        # Indicator 생성
-        # --------------------------------------------
+        nation = values.get("KB_NATION_CHANGE", 0)
+        seoul = values.get("KB_SEOUL_CHANGE", 0)
+        busan = values.get("KB_BUSAN_CHANGE", 0)
 
-        indicators = self.indicator_engine.create_many(
-            values=values,
-            region=region,
+        buyer = values.get("KB_BUYER", 0)
+        seller = values.get("KB_SELLER", 0)
+
+        weeks = values.get("KB_WEEKS", 0)
+        trend = values.get("KB_TREND", "")
+
+        market = values.get("KB_MARKET", {})
+
+        summary = self.make_summary(
+            nation,
+            seoul,
+            busan,
+            buyer,
+            seller,
+            weeks,
+            trend,
         )
-
-        # --------------------------------------------
-        # Report 생성
-        # --------------------------------------------
-
-        report = self.report_engine.build(
-            indicators=indicators,
-            region=region,
-        )
-
-        # --------------------------------------------
-        # Forecast 생성
-        # (현재 ForecastEngine 인터페이스 유지)
-        # --------------------------------------------
-
-        forecast = self.forecast_engine.build(
-            region=region,
-        )
-
-        # --------------------------------------------
-        # 최종 결과
-        # --------------------------------------------
 
         return {
+
             "region": region,
-            "indicators": indicators,
-            "dashboard": report["dashboard"],
-            "signals": report["signals"],
-            "summary": report["summary"],
-            "forecast": forecast,
+
+            "summary": summary,
+
+            "market": market,
+
+            "dashboard": {
+
+                "nation": nation,
+                "seoul": seoul,
+                "busan": busan,
+                "buyer": buyer,
+                "seller": seller,
+                "weeks": weeks,
+                "trend": trend,
+
+            },
+
+            "signals": self.make_signals(
+                nation,
+                buyer,
+                seller,
+            ),
+
+            "forecast": self.make_forecast(
+                nation,
+                trend,
+            ),
+
+        }
+
+    def make_summary(
+        self,
+        nation,
+        seoul,
+        busan,
+        buyer,
+        seller,
+        weeks,
+        trend,
+    ):
+
+        return (
+            f"전국 아파트 매매가격은 {nation}% "
+            f"{trend}했습니다. "
+            f"{weeks}주 연속 {trend}세입니다. "
+            f"서울 {seoul}%, "
+            f"부산 {busan}%, "
+            f"매수우위 {buyer}%, "
+            f"매도우위 {seller}%입니다."
+        )
+
+    def make_signals(
+        self,
+        nation,
+        buyer,
+        seller,
+    ):
+
+        if nation > 0.15:
+            market = "강세"
+
+        elif nation > 0:
+            market = "보합"
+
+        else:
+            market = "약세"
+
+        if buyer > seller:
+            demand = "매수우위"
+
+        elif seller > buyer:
+            demand = "매도우위"
+
+        else:
+            demand = "균형"
+
+        return {
+
+            "market": market,
+            "demand": demand,
+
+        }
+
+    def make_forecast(
+        self,
+        nation,
+        trend,
+    ):
+
+        if nation > 0.2:
+
+            text = "상승세 지속 가능성이 있습니다."
+
+        elif nation > 0:
+
+            text = "완만한 상승 흐름이 예상됩니다."
+
+        else:
+
+            text = "당분간 관망세가 예상됩니다."
+
+        return {
+
+            "comment": text,
+            "trend": trend,
+
         }
