@@ -27,14 +27,13 @@ jobs:
           DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
           BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
         run: |
-          # 중첩된 폴더 구조를 고려하여 현재 경로에서 파이썬 실행
-          if [ -f "real_estate_cloud_auto.py" ]; then
-            python real_estate_cloud_auto.py
-          elif [ -f "real-estate-news/real_estate_cloud_auto.py" ]; then
-            python real-estate-news/real_estate_cloud_auto.py
+          # 실제 파일명인 real_estate_perfect_auto.py 실행
+          if [ -f "real_estate_perfect_auto.py" ]; then
+            python real_estate_perfect_auto.py
+          elif [ -f "real-estate-news/real_estate_perfect_auto.py" ]; then
+            python real-estate-news/real_estate_perfect_auto.py
           else
-            # 상위/하위 어디에 있든 찾아내어 실행
-            python $(find . -name "real_estate_cloud_auto.py" | head -n 1)
+            python $(find . -name "real_estate_perfect_auto.py" | head -n 1)
           fi
 
       - name: Upload Generated Chart Artifact
