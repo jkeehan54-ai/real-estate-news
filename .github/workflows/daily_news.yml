@@ -1,32 +1,46 @@
 name: daily news update
+
 on:
-  push:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 22 * * *' # 매일 00:00(UTC) 자동 실행
+  workflow_dispatch:     # 수동 실행 버튼 활성화
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run news generator
-        run: python generate_news.py
-
-      - name: Commit and push changes
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          # 파일이 변경되었는지 확인하고 커밋
-          git add index.html
-          git commit -m "Update index.html by GitHub Actions" || echo "No changes to commit"
-          git push
+          python -m pip install --upgrade pip
+          pip install feedparser requests beautifulsoup4
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+          
+      - name: Generate news
+        run: python generate_news_modular.py
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
