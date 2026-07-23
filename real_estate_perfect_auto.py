@@ -22,7 +22,7 @@ class RealEstateCloudAutoEngine:
             "30110": "Seo-gu(Daejeon)",
             "29140": "Seo-gu(Gwangju)"
         }
-
+        }
     def _get_target_ymd(self):
         """현재 시점 기준 비교 대상 연월 계산 (예: 전월 대비 비교)"""
         now = datetime.now()
