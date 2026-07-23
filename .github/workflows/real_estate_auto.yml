@@ -30,7 +30,7 @@ jobs:
           python real_estate_cloud_auto.py
 
       - name: Upload Generated Chart Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: market-analysis-chart
           path: cloud_automated_market_analysis.png
