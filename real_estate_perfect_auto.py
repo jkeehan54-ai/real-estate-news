@@ -119,7 +119,7 @@ class RealEstateCloudAutoEngine:
 
         # 2. 전문적인 시각화 디자인 적용 (2분할 서브플롯)
         fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-        fig.suptitle(f"Real Estate Market Intelligence Report ({datetime.now().strftime('%Y-%m')})", fontsize=16, fontweight='bold', pad=20)
+        fig.suptitle(f"Real Estate Market Intelligence Report ({datetime.now().strftime('%Y-%m')})", fontsize=16, fontweight='bold', y=0.95)
 
         # [좌측 차트] 권역별 거래량 비교 바차트
         ax1 = axes[0]
