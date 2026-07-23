@@ -36,13 +36,62 @@ jobs:
         run: |
           python generate_news_modular.py
 
-      - name: Show generated index.html
+      - name: Verify generated HTML
         run: |
-          echo "========== index.html =========="
+          echo "========================================"
+          echo "Generated index.html"
+          echo "========================================"
+
+          pwd
           ls -lh index.html
+
           echo ""
-          echo "========== HEAD =========="
+          echo "========== HEAD (처음 30줄) =========="
           head -30 index.html
+
+          echo ""
+          echo "========== BRN =========="
+          grep -n "BRN" index.html || true
+
+          echo ""
+          echo "========== 오늘의 뉴스 통계 =========="
+          grep -n "오늘의 뉴스 통계" index.html || true
+
+          echo ""
+          echo "========== 언론사별 기사수 =========="
+          grep -n "언론사별 기사수" index.html || true
+
+          echo ""
+          echo "========== 시장동향 =========="
+          grep -n "시장동향" index.html || true
+
+          echo ""
+          echo "========== 정책 =========="
+          grep -n "정책" index.html || true
+
+          echo ""
+          echo "========== 청약 =========="
+          grep -n "청약" index.html || true
+
+          echo ""
+          echo "========== 공급개발 =========="
+          grep -n "공급개발" index.html || true
+
+          echo ""
+          echo "========== 재건축 =========="
+          grep -n "재건축" index.html || true
+
+          echo ""
+          echo "========== 세제 =========="
+          grep -n "세제" index.html || true
+
+          echo ""
+          echo "========== 부산경남 =========="
+          grep -n "부산경남" index.html || true
+
+          echo ""
+          echo "========== 마지막 30줄 =========="
+          tail -30 index.html
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
