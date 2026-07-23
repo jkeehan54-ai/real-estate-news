@@ -136,13 +136,14 @@ def get_clean_news():
 
         src_cnt[src] = src_cnt.get(src, 0) + 1
 
-    kept = total - dup - nonre
+    saved = sum(len(v) for v in results.values())
 
     print(
-        f"\n[결과] 전체 {total}건 | "
+        f"\n[결과] "
+        f"수집 {total}건 | "
         f"중복제거 {dup}건 | "
-        f"비부동산제외 {nonre}건 | "
-        f"최종 {kept}건"
+        f"시장필터 {nonre}건 | "
+        f"HTML 저장 {saved}건"
     )
 
     for cat in cats:
