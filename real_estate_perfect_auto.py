@@ -82,31 +82,37 @@ class RealEstateCloudAutoEngine:
             return 0
 
    def fetch_automated_market_data(self):
-        curr_ym, prev_ym = self._get_target_ymd()
-        print(f"[클라우드 자동화] 국토교통부 실거래가 API 자동 조회 (비교 구간: {prev_ym} vs {curr_ym})")
+        """국토교통부 실거래가 API 자동 조회"""
+        try:
+            curr_ym, prev_ym = self._get_target_ymd()
+            print(f"[클라우드 자동화] 국토교통부 실거래가 API 자동 조회 (비교 구간: {prev_ym} vs {curr_ym})")
 
-        counts_curr, counts_prev = {}, {}
-        for code in self.regions.keys():
-            counts_curr[code] = self._fetch_rtms_data(code, curr_ym)
-            counts_prev[code] = self._fetch_rtms_data(code, prev_ym)
+            counts_curr, counts_prev = {}, {}
+            for code in self.regions.keys():
+                counts_curr[code] = self._fetch_rtms_data(code, curr_ym)
+                counts_prev[code] = self._fetch_rtms_data(code, prev_ym)
 
-        total_weighted_growth = 0.0
-        total_valid_regions = 0
-        
-        # --- [추가] 각 지역별 거래 건수 비교 및 변동률 계산 루프 (또는 기존 집계 로직) ---
-        for code in self.regions.keys():
-            curr_cnt = counts_curr.get(code, 0)
-            prev_cnt = counts_prev.get(code, 0)
-            print(f"  ㄴ [{code}] {prev_ym}: {prev_cnt}건 -> {curr_ym}: {curr_cnt}건")
+            total_weighted_growth = 0.0
+            total_valid_regions = 0
             
-            if prev_cnt > 0:
-                growth = ((curr_cnt - prev_cnt) / prev_cnt) * 100
-                total_weighted_growth += growth
-                total_valid_regions += 1
+            for code in self.regions.keys():
+                curr_cnt = counts_curr.get(code, 0)
+                prev_cnt = counts_prev.get(code, 0)
+                print(f"  ㄴ [{code}] {prev_ym}: {prev_cnt}건 -> {curr_ym}: {curr_cnt}건")
+                
+                if prev_cnt > 0:
+                    growth = ((curr_cnt - prev_cnt) / prev_cnt) * 100
+                    total_weighted_growth += growth
+                    total_valid_regions += 1
 
-        # --- [핵심 수정] 유효한 데이터가 없을 때 ValueError 대신 기본값(0.0) 반환 ---
-        if total_valid_regions == 0:
-            print("[경고] 유효한 실거래가 비교 데이터가 없어 0.0%로 기본 처리합니다.")
+            if total_valid_regions == 0:
+                print("[경고] 유효한 실거래가 비교 데이터가 없어 0.0%로 기본 처리합니다.")
+                return 0.0
+
+            return total_weighted_growth / total_valid_regions
+            
+        except Exception as e:
+            print(f"[오류 발생] 실거래가 API 연동 중 문제 발생: {e}")
             return 0.0
 
         return total_weighted_growth / total_valid_regions
