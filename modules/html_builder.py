@@ -99,40 +99,93 @@ def build_brn(brn):
     if not brn:
         return ""
 
-    summary = safe(brn.get("summary"))
+    summary = safe(brn.get("summary", ""))
+
+    dashboard = brn.get("dashboard", {})
+    signals = brn.get("signals", {})
+    forecast = brn.get("forecast", {})
 
     html = []
 
     html.append("<div class='summary'>")
-
-    html.append("<h2>BRN 시장 브리핑</h2>")
+    html.append("<h2>📊 BRN 시장 브리핑</h2>")
 
     if summary:
+        html.append(f"<p>{summary}</p>")
 
-        html.append(
-            f"<p>{summary}</p>"
-        )
+    ###################################################################
+    # Dashboard
+    ###################################################################
 
-    html.append("<ul>")
+    if isinstance(dashboard, dict) and dashboard:
 
-    for key, value in brn.items():
+        labels = {
+            "nation": "전국",
+            "seoul": "서울",
+            "busan": "부산",
+            "buyer": "매수우위",
+            "seller": "매도우위",
+            "weeks": "연속주수",
+            "trend": "추세",
+        }
 
-        if key == "summary":
-            continue
+        html.append("<table>")
+        html.append("<tr><th>항목</th><th>값</th></tr>")
 
-        html.append(
-            "<li>"
-            f"<b>{safe(key)}</b> : "
-            f"{safe(value)}"
-            "</li>"
-        )
+        for key in (
+            "nation",
+            "seoul",
+            "busan",
+            "buyer",
+            "seller",
+            "weeks",
+            "trend",
+        ):
 
-    html.append("</ul>")
+            if key in dashboard:
+
+                html.append(
+                    f"<tr>"
+                    f"<td>{labels[key]}</td>"
+                    f"<td>{safe(dashboard[key])}</td>"
+                    f"</tr>"
+                )
+
+        html.append("</table>")
+
+    ###################################################################
+    # Signals
+    ###################################################################
+
+    if isinstance(signals, dict) and signals:
+
+        html.append("<h3>시장 신호</h3>")
+        html.append("<ul>")
+
+        for key, value in signals.items():
+
+            html.append(
+                f"<li><b>{safe(key)}</b> : {safe(value)}</li>"
+            )
+
+        html.append("</ul>")
+
+    ###################################################################
+    # Forecast
+    ###################################################################
+
+    if isinstance(forecast, dict):
+
+        comment = forecast.get("comment")
+
+        if comment:
+
+            html.append("<h3>전망</h3>")
+            html.append(f"<p>{safe(comment)}</p>")
 
     html.append("</div>")
 
     return "\n".join(html)
-
 
 ###############################################################################
 # 통계
