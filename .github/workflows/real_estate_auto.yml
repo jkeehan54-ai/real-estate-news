@@ -44,3 +44,4 @@ jobs:
           path: |
             cloud_automated_market_analysis.png
             **/cloud_automated_market_analysis.png
+            */**/cloud_automated_market_analysis.png
