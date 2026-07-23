@@ -9,9 +9,10 @@ from urllib.parse import unquote
 plt.rcParams['axes.unicode_minus'] = False
 
 class RealEstateCloudAutoEngine:
-    def __init__(self, data_portal_key, ecos_key):
-        self.service_key = unquote(data_portal_key.strip())
-        self.ecos_key = ecos_key.strip()
+    def __init__(self):
+        # 환경 변수로부터 API 키 안전하게 가져오기
+        self.bok_key = os.environ.get("BOK_ECOS_KEY", "")
+        self.data_portal_key = os.environ.get("DATA_PORTAL_KEY", "")
         
         # 주요 법정동 코드 (서울 강남구, 분당구, 해운대구 등)
         self.regions = {
@@ -80,7 +81,7 @@ class RealEstateCloudAutoEngine:
         except Exception:
             return 0
 
-    def fetch_automated_market_data(self):
+   def fetch_automated_market_data(self):
         curr_ym, prev_ym = self._get_target_ymd()
         print(f"[클라우드 자동화] 국토교통부 실거래가 API 자동 조회 (비교 구간: {prev_ym} vs {curr_ym})")
 
@@ -91,6 +92,24 @@ class RealEstateCloudAutoEngine:
 
         total_weighted_growth = 0.0
         total_valid_regions = 0
+        
+        # --- [추가] 각 지역별 거래 건수 비교 및 변동률 계산 루프 (또는 기존 집계 로직) ---
+        for code in self.regions.keys():
+            curr_cnt = counts_curr.get(code, 0)
+            prev_cnt = counts_prev.get(code, 0)
+            print(f"  ㄴ [{code}] {prev_ym}: {prev_cnt}건 -> {curr_ym}: {curr_cnt}건")
+            
+            if prev_cnt > 0:
+                growth = ((curr_cnt - prev_cnt) / prev_cnt) * 100
+                total_weighted_growth += growth
+                total_valid_regions += 1
+
+        # --- [핵심 수정] 유효한 데이터가 없을 때 ValueError 대신 기본값(0.0) 반환 ---
+        if total_valid_regions == 0:
+            print("[경고] 유효한 실거래가 비교 데이터가 없어 0.0%로 기본 처리합니다.")
+            return 0.0
+
+        return total_weighted_growth / total_valid_regions
 
         print(f"\n■ 권역별 실거래 자동 집계 현황 ({prev_ym} vs {curr_ym})")
         for code, info in self.regions.items():
