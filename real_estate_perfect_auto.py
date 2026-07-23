@@ -14,12 +14,13 @@ class RealEstateCloudAutoEngine:
         self.bok_key = os.environ.get("BOK_ECOS_KEY", "")
         self.data_portal_key = os.environ.get("DATA_PORTAL_KEY", "")
         self.regions = {
-            "11680": "서울 강남",
-            "41135": "경기 분당",
-            "26140": "부산 해운대",
-            "27110": "대구 수성",
-            "30110": "대전 서구",
-            "29140": "광주 서구"
+            self.regions = {
+            "11680": "Gangnam",
+            "41135": "Bundang",
+            "26140": "Haeundae",
+            "27110": "Suseong",
+            "30110": "Seo-gu(Daejeon)",
+            "29140": "Seo-gu(Gwangju)"
         }
 
     def _get_target_ymd(self):
