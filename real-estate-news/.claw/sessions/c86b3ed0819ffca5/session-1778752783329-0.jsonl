@@ -1,0 +1,3 @@
+{"created_at_ms":1778752783329,"session_id":"session-1778752783329-0","type":"session_meta","updated_at_ms":1778752803338,"version":1}
+{"message":{"blocks":[{"text":"requirements.txt 파일 만들어줘. flask와 feedparser를 넣어줘.","type":"text"}],"role":"user"},"type":"message"}
+{"message":{"blocks":[{"text":"```json\n{\"name\": \"write_file\", \"arguments\": {\"path\": \"requirements.txt\", \"content\": \"Flask==2.2.2\\nfeedparser==6.0.8\"}}\n```","type":"text"}],"role":"assistant","usage":{"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"input_tokens":3485,"output_tokens":44}},"type":"message"}

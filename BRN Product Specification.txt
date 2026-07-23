@@ -1,0 +1,366 @@
+# BRN Product Specification
+
+Version : 2.0
+
+Project
+BRN (Briefing Real-estate Navigator)
+
+Status
+Draft
+
+---
+
+# Mission
+
+대한민국 부동산 시장을
+1분 안에 이해하도록 돕는다.
+
+---
+
+# Vision
+
+대한민국 최고의
+Data Driven Real Estate Intelligence Platform
+
+---
+
+# BRN이 해결하는 문제
+
+현재 부동산 정보는
+
+- KB
+- 한국부동산원
+- 국토부
+- 청약홈
+- 뉴스
+- 유튜브
+
+등으로 분산되어 있다.
+
+BRN은
+
+데이터
+
+↓
+
+시장
+
+↓
+
+뉴스
+
+↓
+
+AI 해설
+
+순서로 정보를 제공한다.
+
+---
+
+# Core Principles
+
+① 데이터 우선
+
+② 시장 중심
+
+③ 투자 판단 지원
+
+④ Explainable AI
+
+⑤ 지역 맞춤 분석
+
+---
+
+# 핵심 기능
+
+- Dashboard
+- Market Health
+- Leading Indicators
+- Cycle Engine
+- Investment Radar
+- 관심지역
+- AI Summary
+
+
+
+
+# Data Source Catalog
+
+| 기관 | 데이터 | 발표 | API | 수집 |
+|------|--------|------|------|------|
+| KB | 매매지수 | 주간 | 검토 | API |
+| KB | 전세지수 | 주간 | 검토 | API |
+| 한국부동산원 | 매매지수 | 주간 | Open API | API |
+| 한국부동산원 | 수급지수 | 주간 | Open API | API |
+| 국토부 | 실거래 | 상시 | Open API | API |
+| 국토부 | 미분양 | 월 | Open API | API |
+| 국토부 | 인허가 | 월 | Open API | API |
+| 청약홈 | 청약 | 수시 | 없음 | 크롤링 |
+| 법원경매 | 낙찰률 | 월 | 없음 | 크롤링 |
+| 한국은행 | CSI | 월 | ECOS API | API |
+| 한국은행 | 기준금리 | 수시 | ECOS API | API |
+| 국토연구원 | 소비심리지수 | 월 | PDF | 파싱 |
+| 주택금융공사 | HAI | 월 | CSV | 다운로드 |
+
+
+# Leading Indicator Engine
+
+목적
+
+시장보다 먼저 움직이는 데이터를 분석한다.
+
+---
+
+Indicator Groups
+
+Demand
+
+Supply
+
+Finance
+
+Sentiment
+
+Construction
+
+Risk
+
+---
+
+Lead Time
+
+Immediate
+
+0~1개월
+
+Short
+
+1~3개월
+
+Medium
+
+3~12개월
+
+Long
+
+12~24개월
+
+Very Long
+
+24개월 이상
+
+---
+
+Priority
+
+★★★★★
+
+전세가율
+
+경매낙찰률
+
+인허가
+
+거래량
+
+미분양
+
+CSI
+
+HAI
+
+★★★★☆
+
+공실률
+
+공가율
+
+건설인력
+
+건축자재
+
+
+# Cycle Engine
+
+부동산 시장은
+
+침체
+
+↓
+
+회복
+
+↓
+
+상승
+
+↓
+
+과열
+
+↓
+
+조정
+
+↓
+
+침체
+
+를 반복한다.
+
+---
+
+판단 기준
+
+거래량
+
+전세가율
+
+미분양
+
+공급
+
+경매
+
+CSI
+
+금리
+
+---
+
+Cycle
+
+Recovery
+
+Expansion
+
+Overheated
+
+Correction
+
+Recession
+
+---
+
+출력
+
+현재 단계
+
+확률
+
+상승요인
+
+하락요인
+
+
+# Investment Radar
+
+지역별 투자환경 분석
+
+---
+
+Signal
+
+🔥 상승 탄력
+
+🌱 회복
+
+🏗 공급 증가
+
+⚠ 공급 과잉
+
+⭐ 관심지역
+
+---
+
+Output
+
+지역
+
+Health
+
+Leading
+
+Risk
+
+Cycle
+
+Comment
+
+
+# Roadmap
+
+Release 2.0
+
+프로젝트 구조
+
+모듈화
+
+Dashboard
+
+KB
+
+GitHub Actions
+
+---
+
+Release 2.1
+
+Leading Indicators
+
+Market Health
+
+Cycle
+
+---
+
+Release 2.2
+
+Investment Radar
+
+지역분석
+
+관심지역
+
+---
+
+Release 2.3
+
+AI Analysis
+
+AI Summary
+
+---
+
+Release 3.0
+
+PWA
+
+Mobile
+
+Notification
+
+지도
+
+개발호재
+
+
+
+docs/
+
+01_PROJECT_VISION.md
+02_PRODUCT_SPEC.md
+03_SYSTEM_ARCHITECTURE.md
+04_DATA_SOURCE_CATALOG.md
+05_INDICATOR_CATALOG.md
+06_MARKET_HEALTH_ENGINE.md
+07_LEADING_INDICATOR_ENGINE.md
+08_CYCLE_ENGINE.md
+09_INVESTMENT_RADAR.md
+10_AI_ANALYSIS_ENGINE.md
+11_DASHBOARD_UI.md
+12_API_DESIGN.md
+13_DATABASE_SCHEMA.md
+14_DEPLOYMENT.md
+15_ROADMAP.md
+

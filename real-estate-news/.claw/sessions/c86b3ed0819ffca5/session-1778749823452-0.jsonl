@@ -1,0 +1,3 @@
+{"created_at_ms":1778749823452,"session_id":"session-1778749823452-0","type":"session_meta","updated_at_ms":1778750135849,"version":1}
+{"message":{"blocks":[{"text":"app.py 만들어줘","type":"text"}],"role":"user"},"type":"message"}
+{"message":{"blocks":[{"text":"```python\n# app.py\n\ndef main():\n    print(\"Hello, world!\")\n\nif __name__ == \"__main__\":\n    main()\n```\n\nThis is a simple Python script that defines a `main` function which prints \"Hello, world!\" to the console. The script checks if it's being run as the main module and then calls the `main` function.","type":"text"}],"role":"assistant","usage":{"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"input_tokens":3473,"output_tokens":76}},"type":"message"}

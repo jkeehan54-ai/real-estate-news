@@ -1,0 +1,244 @@
+URL: https://news.naver.com/section/101
+HTTP: 200
+============================================================
+<!DOCTYPE html>
+<html data-useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" lang="ko">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <meta contents="always" name="referrer"/>
+  <meta content="600" http-equiv="refresh"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" name="viewport">
+   <meta content="경제 : 네이버 뉴스" property="og:title"/>
+   <meta content="website" property="og:type"/>
+   <meta content="https://news.naver.com/section/101" property="og:url"/>
+   <meta content="https://ssl.pstatic.net/static.news/image/news/ogtag/navernews_800x420_20221201.png" property="og:image"/>
+   <meta content="증권, 금융, 부동산, 기업, 국제 등 경제 분야 뉴스 제공" property="og:description"/>
+   <meta content="네이버" property="og:article:author"/>
+   <meta content="summary" name="twitter:card"/>
+   <meta content="경제 : 네이버 뉴스" name="twitter:title"/>
+   <meta content="네이버 뉴스" name="twitter:site"/>
+   <meta content="네이버 뉴스" name="twitter:creator"/>
+   <meta content="https://ssl.pstatic.net/static.news/image/news/ogtag/navernews_800x420_20221201.png" name="twitter:image"/>
+   <meta content="증권, 금융, 부동산, 기업, 국제 등 경제 분야 뉴스 제공" name="twitter:description"/>
+   <title>
+    경제 : 네이버 뉴스
+   </title>
+   <link href="https://static-nnews.pstatic.net/css/min/20260514/news.css" rel="stylesheet"/>
+   <link href="https://ssl.pstatic.net/static.news/image/news/m/2023/08/21/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="https://ssl.pstatic.net/static.news/image/news/m/2018/favicon/06/android_legacy_xxxhpdi_192x192.png" rel="apple-touch-icon-precomposed"/>
+    <link href="https://ssl.pstatic.net/static.news/image/news/m/2018/favicon/06/android_legacy_hdpi_72X72.png" rel="apple-touch-icon-precomposed" size="72x72"/>
+    <link href="https://ssl.pstatic.net/static.news/image/news/m/2018/favicon/06/android_legacy_xhdpi_96x96.png" rel="apple-touch-icon-precomposed" size="96x96"/>
+    <link href="https://ssl.pstatic.net/static.news/image/news/m/2018/favicon/06/android_legacy_xxhpdi_144x144.png" rel="apple-touch-icon-precomposed" size="144x144"/>
+    <link href="https://ssl.pstatic.net/static.news/image/news/m/2018/favicon/06/android_legacy_xxxhpdi_192x192.png" rel="apple-touch-icon-precomposed" size="192x192"/>
+    <script>
+     var bSupportedIntersectionObserver = "IntersectionObserver" in window;
+    </script>
+    <script async="" src="https://ssl.pstatic.net/tveta/libs/glad/prod/gfp-core.js">
+    </script>
+    <script>
+     var g_ssc = nsc = "news.v3_sec";
+			var g_default_area = "eco";
+
+			var svr = "one-service-r-20260521-260521-142659-764686b5f6-qdbt4";
+			var nelo = {
+				name : "one-front",
+				url : "https://kr-col-ext.nelo.navercorp.com/_store",
+				sampleNumber : 100,
+				maxCount : 100,
+				maxSendMessage : "로그 전송 최대치 도달"
+			};
+			var isGreendot = document.cookie.indexOf("MM_NEW=1") > -1;
+			var isNewGreendot = document.cookie.indexOf("MM_NEW=2") > -1;
+			var domain = "https://n.news.naver.com";
+			var ajaxDomain = "";
+			var newsDomain = "";
+			var layoutName = "section_home";
+			var layoutType = "section";
+			var isAvailableDarkMode = false;
+			var moduleLoadStatus = -1;
+
+			var article = {
+				
+				officeId: "",
+				articleId: "",
+				sectionId : "",
+				gdid: "",
+				type: "",
+				sectionInfo: {
+					firstSection: "",
+					secondSection: "",
+					thirdSection: ""
+				},
+				title: document.title
+			};
+
+
+
+			var office = {
+				isChannel: false,
+				isPressHome: false,
+				name : "",
+				category : ""
+			};
+
+			var searchQuery = (function() {
+				var referrerLink = document.createElement("a");
+				var emptySearch = "";
+
+				referrerLink.href = document.referrer || "";
+
+				if (referrerLink.host.indexOf("search.naver.com") === -1) {
+					return emptySearch;
+				}
+
+				return decodeURIComponent(
+					(
+						referrerLink.search.match(/(?:\?|&)query\=([^&]+)/) || [ null, emptySearch ]
+					)[1].replace(/\+/g, " ")
+				);
+			})();
+
+			var divIds = [];
+			var syncDivIds = [];
+			var syncDivIdsForNonArticle = [];
+
+			var unitIds = [];
+			var syncUnitIds = [];
+			var syncUnitIdsForNonArticle = [];
+
+			window.gladsdk = window.gladsdk || { cmd: [] };
+			gladsdk.cmd.push(function() {
+				gladsdk.setAdDeduplication("news_dedup");
+				gladsdk.setGlobalConfig({ enablePersistAd: true });
+
+				var adInfoList = [];
+
+				adInfoList.push({
+					seq: 1,
+					unitId: "p_news_newslist",
+					sync: true,
+					mobileOnly: false,
+					article: false,
+					directSalesPct: "",
+					calp: false,
+					hasSid1: true
+				});
+				adInfoList.push({
+					seq: 2,
+					unitId: "p_news_sidebox",
+					sync: true,
+					mobileOnly: false,
+					article: false,
+					directSalesPct: "",
+					calp: true,
+					hasSid1: false
+				});
+
+				var userAgent = navigator.userAgent.toLowerCase();
+
+				for (var i = 0; i < adInfoList.length; i++) {
+					var adInfo = adInfoList[i];
+
+					var divId = "nmap_c_" + article.officeId + "_" + article.articleId + "_" + article.sectionId + "_" + adInfo.seq;
+
+					var unitId = adInfo.unitId;
+					var mobileOnly = adInfo.mobileOnly;
+					var sync = adInfo.sync;
+					var isArticle = adInfo.article;
+					var directSalesPct = adInfo.directSalesPct;
+					var calp = adInfo.calp;
+					var hasSid1 = adInfo.hasSid1;
+
+					if (mobileOnly == true) {
+						if (/iphone|android|ipod/.test(userAgent) == false) {
+							continue;
+						}
+					}
+
+					var customParam = {
+						sid1: article.sectionId,
+						oid: article.officeId,
+						gdid: article.gdid,
+						pk: searchQuery,
+						directSalesPct: directSalesPct
+					};
+
+					if (window.abt && window.abt["variantName"]) {
+						customParam.abt = (window.abt["feature"] === "feed") ? "news-FEED" : "news";
+					}
+
+					if (calp == true) {
+						customParam.calp = "shome";
+					}
+					if (hasSid1 == true) {
+						customParam.sid1 = "101";
+					}
+
+					var adUnit = {
+						adUnitId: unitId,
+						adSlotElementId: divId,
+						customParam: customParam
+					};
+
+					if (sync == true) {
+						syncUnitIds.push(unitId);
+						syncDivIds.push(divId);
+
+						if (isArticle == false) {
+							syncUnitIdsForNonArticle.push(unitId);
+							syncDivIdsForNonArticle.push(divId);
+						}
+					} else {
+						unitIds.push(unitId);
+						divIds.push(divId);
+					}
+
+					gladsdk.defineAdSlot(adUnit);
+				}
+
+				gladsdk.setHostMeta("theme", "light");
+			});
+			window.__htExternalUrl = window.__htExternalUrl || {};
+			var abt = {
+				"experimentId": "",
+				"variantName": "",
+				"feature": ""
+			};
+    </script>
+    <script src="https://static-nnews.pstatic.net/js/min/20260521/common.min.js">
+    </script>
+   </link>
+  </meta>
+ </head>
+ <body class="n_news_mnews fs1 as_mp_layout as_section_home">
+  <div class="end_container">
+   <div class="u_skip">
+    <a href="#ct">
+     본문 바로가기
+    </a>
+   </div>
+   <header class="as_gnb_mnews as_type_section" role="banner">
+    <div class="header_inner">
+     <div class="Ngnb">
+      <div class="Ngnb_inner">
+       <div class="Ngnb_both">
+        <div class="Ngnb_left">
+         <span class="Ngnb_logo">
+          <a class="Nlogo_link _LINK" data-clk="gnb.naver" data-pc-url="https://www.naver.com/" data-url="https://m.naver.com/" href="https://m.naver.com/">
+           <span class="Nicon_logo">
+            NAVER
+           </span>
+          </a>
+         </span>
+         <div class="Ngnb_service">
+          <h1 class="Nservice_item">
+           <a class="_LINK" data-clk="gnb.news" data-pc-url="https://news.naver.com/" data-url="https://m.news.naver.com" href="https://m.news.naver.com">
+            <span class="Nicon_service">
+             뉴스
+            </span>
+           </a>
+          </h1>
+          <span class="Nservice_subitem">
+           <a class="_LINK" data-clk="gnb.entertain" data-pc-url="https://entertain.naver.com/home" data-url="https://m.entertain.naver.com" href="https://m.entertain.naver.com">
+            <span class="Nicon_family Nicon_entertain

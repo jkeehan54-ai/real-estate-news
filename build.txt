@@ -1,0 +1,118 @@
+     return result
+
+
+def build_html(data):
+     now = datetime.now(KST)
+
+     today = now.strftime("%Y년 %m월 %d일")
+     update_time = now.strftime("%Y-%m-%d %H:%M:%S KST")
+
+     html = f"""
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>부동산 뉴스 브리핑</title>
+
+<style>
+body {{
+       font-family: "Malgun Gothic", sans-serif;
+       max-width: 1200px;
+       margin: auto;
+       padding: 20px;
+       line-height: 1.7;
+}}
+
+h1 {{
+    color: #1f4fa3;
+}}
+
+h2 {{
+     background: #f2f6ff;
+     padding: 10px;
+     border-left: 5px solid #1f4fa3;
+}}
+
+a {{
+    text-decoration: none;
+    color: #222;
+}}
+
+a:hover {{
+    text-decoration: underline;
+}}
+
+small {{
+    color: #666;
+}}
+</style>
+
+</head>
+<body>
+
+<h1>부동산 뉴스 브리핑 ({today})</h1>
+<p>업데이트: {update_time}</p>
+"""
+
+     labels = {
+         "청약": "[청약]",
+         "재건축": "[재건축·재개발]",
+         "세제": "[세제]",
+         "정책": "[정책]",
+         "부산경남": "[부산·경남]",
+         "시장동향": "[시장동향]"
+     }
+
+       for cat, lst in data.items():
+
+          if cat == "시장동향":
+              lst = interleave_by_source(lst)
+
+          html += f"<h2>{labels.get(cat, cat)}</h2>"
+
+          if not lst:
+              html += "<p>최근 24시간 내 수집된 기사가 없습니다.</p>"
+              continue
+
+          for n in lst:
+
+              html += (
+                  f"<p>"
+                  f"<a href='{n['link']}' target='_blank'>"
+                  f"{n['title']}"
+                  f"</a> | "
+                  f"<b>{n['src']}</b>"
+              )
+
+              if n.get("pub_str"):
+                  html += f" <small>({n['pub_str']})</small>"
+ 
+              html += "</p>"
+
+     html += """
+</body>
+</html>
+"""
+
+    return html
+
+
+if __name__ == "__main__":
+       output_path = os.path.join(
+           os.path.dirname(os.path.abspath(__file__)),
+           "index.html"
+       )
+
+       data = get_clean_news()
+
+       with open(output_path, "w", encoding="utf-8-sig") as f:
+           f.write(build_html(data))
+
+       print(f"[done] {output_path}")
+
+       for cat, lst in data.items():
+            print(f"  [{cat}] {len(lst)}")
+
+       print(f"  [{cat}] {len(lst)}")

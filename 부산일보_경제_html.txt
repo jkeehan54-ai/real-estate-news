@@ -1,0 +1,136 @@
+URL: https://www.busan.com/economy/
+HTTP: 200
+============================================================
+<!DOCTYPE html>
+<html lang="ko">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <meta content="width=1570" name="viewport"/>
+  <meta content="yes" name="apple-mobile-web-app-capable"/>
+  <!--    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">-->
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-30960421-1">
+  </script>
+  <script>
+   window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-30960421-1');
+  </script>
+  <!-- Google Tag Manager -->
+  <script>
+   (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-KD3BCZM');
+  </script>
+  <!-- End Google Tag Manager -->
+  <title>
+   부산일보
+  </title>
+  <link href="https://www.busan.com/nas/wcms/public/pc/images/new/favicon.ico" rel="shortcut icon"/>
+  <meta content="부산일보" name="title">
+   <meta content="부산일보" name="author">
+    <meta content="부산,부산일보" name="keywords">
+     <meta content="" name="image">
+      <meta content="부산일보" name="description"/>
+      <meta content="부산일보" name="og:title"/>
+      <meta content="부산일보" name="og:author"/>
+      <meta content="부산,부산일보" name="og:keywords"/>
+      <meta content="" name="og:image"/>
+      <meta content="부산일보" name="og:description"/>
+      <link href="/nas/wcms/public/pc/css/new/reset.css?ver=1" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/font.css" rel="stylesheet" type="text/css"/>
+      <!--<link rel="stylesheet" type="text/css" href="/public/css/reset.css">-->
+      <link href="/nas/wcms/public/pc/css/jquery.bxslider.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/jquery-ui.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/jquery-ui-timepicker-addon.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/jquery.scrollbar.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/prettify.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/sliderstyle.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/slick.css" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/new/skin.css?ver=1" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/new/style.css?ver=1" rel="stylesheet" type="text/css"/>
+      <link href="/nas/wcms/public/pc/css/new/common.css?ver=1" rel="stylesheet" type="text/css"/>
+      <script src="/nas/wcms/public/pc/js/jquery-1.12.4.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/slider.jquery.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/jquery.totemticker.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/jquery.bxslider.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/jquery-ui.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/jquery-ui-timepicker-addon.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/ResizeSensor.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/theia-sticky-sidebar.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/prettify.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/jquery.scrollbar.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/dcalendar.picker.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/slick.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/frontPaging.js">
+      </script>
+      <script src="/nas/wcms/public/pc/js/busan.js?ver=2&amp;t=1780562071">
+      </script>
+      <script src="/nas/wcms/public/pc/js/new/common.js?ver=2&amp;t=1780562071">
+      </script>
+      <!--중앙일보 애드테크-->
+      <!-- script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1064089362295323"crossorigin="anonymous"></script -->
+      <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5572554041307890">
+      </script>
+      <script async="" src="//d1ap9gbbf77h85.cloudfront.net/js/busan_pb.js">
+      </script>
+      <script async="" src="https://securepubads.g.doubleclick.net/tag/js/gpt.js">
+      </script>
+      <script>
+       window.googletag = window.googletag || {cmd: []};
+			var adh_1,adh_2,adh_3,adh_4,adh_5,adh_6,adh_7,adh_8,adh_9,adh_10,adh_11;
+			
+			googletag.cmd.push(function() {
+				adh_1 = googletag.defineSlot('/17526318/PC_article/mid_300x600', [300, 600], 'div-gpt-ad-1641974219182-0').addService(googletag.pubads());
+				adh_2 = googletag.defineSlot('/17526318/PC_article/bottom_336x280(1)', [336, 280], 'div-gpt-ad-1641974267281-0').addService(googletag.pubads());
+				adh_3 = googletag.defineSlot('/17526318/PC_article/bottom_336x280(2)', [336, 280], 'div-gpt-ad-1641974282089-0').addService(googletag.pubads());
+				adh_4 = googletag.defineSlot('/17526318/PC_article/top_970x250', [970, 250], 'div-gpt-ad-1651122114017-0').addService(googletag.pubads());
+				//adh_5 = googletag.defineSlot('/17526318/PC_article/mid_640x360', [640, 360], 'div-gpt-ad-1651122629871-0').addService(googletag.pubads());
+				adh_5 = googletag.defineSlot('/17526318/PC_article/bottom_800x450', [800, 450], 'div-gpt-ad-1702955495322-0').addService(googletag.pubads());
+				adh_6 = googletag.defineSlot('/17526318/PC_article/left_160x600_fl', [160, 600], 'div-gpt-ad-1651122867625-0').addService(googletag.pubads());
+				adh_7 = googletag.defineSlot('/17526318/PC_article/bottom_300x600', [300, 600], 'div-gpt-ad-1665643520300-0').addService(googletag.pubads());
+				adh_8 = googletag.defineSlot('/17526318/PC_article/bottom_970x90', [970, 90], 'div-gpt-ad-1665643406991-0').addService(googletag.pubads());
+				adh_9 = googletag.defineSlot('/17526318/PC_article/bottom_image_728x90', [728, 90], 'div-gpt-ad-1702287093083-0').addService(googletag.pubads()); 
+				adh_10 = googletag.defineSlot('/36656269,17526318/busan_99_Prightbottom_300_600', [300, 600], 'busan_99_Prightbottom_300_600').addService(googletag.pubads().set("page_url", "busan.com"));
+				adh_11 = googletag.defineSlot('/17526318/PC_article/bottom_300x600', [300, 600], 'div-gpt-ad-1745311859296-0').addService(googletag.pubads());
+
+				googletag.pubads().addEventListener('slotRenderEnded', function (event) {
+					if (event.slot.getSlotElementId() == "busan_99_Prightbottom_300_600") {
+                        if (event.isEmpty) {
+                            var googleAds = document.getElementById(event.slot.getSlotElementId());
+                            var passback_ifr = document.createElement('iframe');
+                            passback_ifr.src = "//ad.ad4989.co.kr/cgi-bin/PelicanC.dll?impr?pageid=0FRi&grade=6&out=iframe";
+                            passback_ifr.setAttribute("width", "300px");
+                            passback_ifr.setAttribute("height", "600px");
+                            passback_ifr.setAttribute("allowTransparency", "true");
+                            passback_ifr.setAttribute("marginwidth", "0");
+                            passback_ifr.setAttribute("marginheight", "0");
+                            passback_ifr.setAttribute("frameborder", "0");
+                            passback_ifr.setAttribute("scrolling", "no");
+                            googleAds.innerHTML = "";
+                            googleAds.appendChild(passback_ifr);
+                        }
+				    }
+                });
+				googletag.pubads().disableInitialLoad();
+				googletag.pubads().enableSingleRequest();
+
+				googletag.enableServices();
+	
