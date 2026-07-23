@@ -30,12 +30,17 @@ jobs:
           pip install playwright
           playwright install chromium
           
-      - name: Generate news
-        run: python generate_news_modular.py
+            - name: Generate news
+              run: python generate_news_modular.py
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+            - name: Show generated file
+              run: |
+              
+                ls -lh index.html
+                head -30 index.html
 
+            - name: Setup Pages
+              uses: actions/configure-pages@v4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
