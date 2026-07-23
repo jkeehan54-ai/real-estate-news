@@ -24,10 +24,9 @@ jobs:
 
       - name: Run Automation Engine
         env:
-          DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
           BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
+          DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
         run: |
-          # 실제 파일명인 real_estate_perfect_auto.py 실행
           if [ -f "real_estate_perfect_auto.py" ]; then
             python real_estate_perfect_auto.py
           elif [ -f "real-estate-news/real_estate_perfect_auto.py" ]; then
