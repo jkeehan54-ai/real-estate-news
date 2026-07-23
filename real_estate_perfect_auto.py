@@ -115,7 +115,7 @@ class RealEstateCloudAutoEngine:
             print(f"[오류 발생] 실거래가 API 연동 중 문제 발생: {e}")
             return 0.0
 
-        return total_weighted_growth / total_valid_regions
+        
 
         print(f"\n■ 권역별 실거래 자동 집계 현황 ({prev_ym} vs {curr_ym})")
         for code, info in self.regions.items():
