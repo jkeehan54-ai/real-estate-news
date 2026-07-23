@@ -8,9 +8,6 @@ on:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -30,10 +27,20 @@ jobs:
           DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
           BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
         run: |
-          python real_estate_cloud_auto.py
+          # 중첩된 폴더 구조를 고려하여 현재 경로에서 파이썬 실행
+          if [ -f "real_estate_cloud_auto.py" ]; then
+            python real_estate_cloud_auto.py
+          elif [ -f "real-estate-news/real_estate_cloud_auto.py" ]; then
+            python real-estate-news/real_estate_cloud_auto.py
+          else
+            # 상위/하위 어디에 있든 찾아내어 실행
+            python $(find . -name "real_estate_cloud_auto.py" | head -n 1)
+          fi
 
       - name: Upload Generated Chart Artifact
         uses: actions/upload-artifact@v4
         with:
           name: market-analysis-chart
-          path: cloud_automated_market_analysis.png
+          path: |
+            cloud_automated_market_analysis.png
+            **/cloud_automated_market_analysis.png
