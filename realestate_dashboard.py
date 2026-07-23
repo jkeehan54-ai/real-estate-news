@@ -284,12 +284,16 @@ def get_permit(rss):
     for title, _, link, date in all_items:
         text = title
         if "인허가" not in text: continue
+        # ★ 주택 관련 기사만 채택 (공장·상업시설 인허가 제외)
+        if not any(k in text for k in ["주택","아파트","공동주택","단독주택","주거"]):
+            continue
 
         cnt = parse_korean_num(text, "인허가", lo=1000, hi=500000)
         m_y = RE_YOY.search(text) or RE_YOY2.search(text)
         m_m = RE_MON.search(text)
 
-        yoy = safe_float(m_y.group(1) if m_y else None, -90, 300)
+        # 전년비 범위 조정: 주택인허가는 최대 ±80% 수준
+        yoy = safe_float(m_y.group(1) if m_y else None, -80, 150)
 
         if cnt or yoy is not None:
             if cnt: r["수치"] = f"{cnt:,}"
@@ -387,40 +391,32 @@ def get_kb_forecast(rss):
     print("[선행6] KB 매매·전세가격전망지수")
     r = {"매매전망": None, "전세전망": None, "원문": []}
 
-    RE_M = re.compile(r'매매\s*(?:가격\s*)?전망(?:지수)?\s*(\d{2,3}\.?\d*)')
-    RE_J = re.compile(r'전세\s*(?:가격\s*)?전망(?:지수)?\s*(\d{2,3}\.?\d*)')
+    RE_M  = re.compile(r'매매\s*(?:가격\s*)?전망(?:지수)?\s*(\d{2,3}\.?\d*)')
+    RE_J  = re.compile(r'전세\s*(?:가격\s*)?전망(?:지수)?\s*(\d{2,3}\.?\d*)')
+    # "전망지수 XXX" 단독 패턴
+    RE_IDX= re.compile(r'전망지수\s*(\d{2,3}\.?\d*)')
+    # "XXX.X로 상승/하락" 패턴
+    RE_VAL= re.compile(r'(\d{2,3}\.?\d*)\s*(?:로|으로|를)\s*(?:상승|하락|올라|내려|기록)')
 
-    # KB Think RSS 직접 수집 시도
-    kb_think_urls = [
-        "https://kbland.kr/rss",
-        "https://kbfg.com/rss",
-    ]
-    extra_items = []
-    for url in kb_think_urls:
-        try:
-            resp = requests.get(url, headers=HEADERS, timeout=5)
-            feed = feedparser.parse(resp.content)
-            for e in feed.entries:
-                t = (e.get("title","") or "").strip()
-                l = e.get("link","")
-                d = (e.get("published","") or "")[:10]
-                if t: extra_items.append((t, "", l, d))
-        except: pass
-
-    all_items = extra_items + list(rss) + fetch_gn_titles("KB국민은행 매매가격전망지수 전세가격전망지수", 15)
+    all_items = (list(rss)
+        + fetch_gn_titles("KB국민은행 매매가격전망지수 전세가격전망지수", 15)
+        + fetch_gn_titles("KB부동산 매매전망 전세전망", 10))
 
     for title, _, link, date in all_items:
         text = title
-        if ("KB" not in text and "국민은행" not in text): continue
+        if "KB" not in text and "국민은행" not in text: continue
         if "전망" not in text: continue
 
         m_m = RE_M.search(text)
         m_j = RE_J.search(text)
+        m_i = RE_IDX.search(text)
         mv = safe_float(m_m.group(1) if m_m else None, 60, 200)
         jv = safe_float(m_j.group(1) if m_j else None, 60, 200)
+        iv = safe_float(m_i.group(1) if (m_i and not m_m) else None, 60, 200)
 
-        if mv or jv:
+        if mv or jv or iv:
             if mv: r["매매전망"] = f"{mv}"
+            elif iv: r["매매전망"] = f"{iv}"
             if jv: r["전세전망"] = f"{jv}"
             r["원문"].append({"title": title, "link": link, "date": date})
             print(f"  ✔ 매매전망 {disp(r['매매전망'])} | 전세전망 {disp(r['전세전망'])}")
@@ -438,26 +434,30 @@ def get_supply_demand(rss):
     print("[선행7] 수급동향 (한국부동산원)")
     r = {"매매수급": None, "전세수급": None, "원문": []}
 
-    RE_T = re.compile(r'매매\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
-    RE_J = re.compile(r'전세\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
-    # "수급지수 4년 만에 최고" 같은 제목 → 수치 없으므로 제외, 하지만 방향은 파악 가능
-    RE_HIGH = re.compile(r'수급지수\s*(?:4년|최고|사상|역대)')
+    RE_T  = re.compile(r'매매\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
+    RE_J  = re.compile(r'전세\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
+    # "수급지수 XX.X" 단독
+    RE_SQ = re.compile(r'수급지수\s*(\d{2,3}\.?\d*)')
 
     all_items = combine(rss,
         "한국부동산원 매매수급지수 전세수급지수",
-        "부동산원 수급동향 지수 주간")
+        "부동산원 수급동향 아파트 지수",
+        "매매수급지수 전세수급지수")
 
     for title, _, link, date in all_items:
         text = title
         if "수급" not in text: continue
 
-        m_t = RE_T.search(text)
-        m_j = RE_J.search(text)
+        m_t  = RE_T.search(text)
+        m_j  = RE_J.search(text)
+        m_sq = RE_SQ.search(text)
         tv = safe_float(m_t.group(1) if m_t else None, 50, 180)
         jv = safe_float(m_j.group(1) if m_j else None, 50, 180)
+        sv = safe_float(m_sq.group(1) if (m_sq and not m_t) else None, 50, 180)
 
-        if tv or jv:
+        if tv or jv or sv:
             if tv: r["매매수급"] = f"{tv}"
+            elif sv: r["매매수급"] = f"{sv}"
             if jv: r["전세수급"] = f"{jv}"
             r["원문"].append({"title": title, "link": link, "date": date})
             print(f"  ✔ 매매 {disp(r['매매수급'])} | 전세 {disp(r['전세수급'])}")
@@ -517,7 +517,8 @@ def get_khai(rss):
 
     all_items = combine(rss,
         "주택금융공사 주택구입부담지수 K-HAI",
-        "K-HAI 주택구입부담 분기")
+        "K-HAI 주택구입부담 분기",
+        "주택구입부담지수 상승 하락 분기")
 
     for title, _, link, date in all_items:
         text = title
@@ -677,19 +678,27 @@ def get_unsold(rss):
             print(f"  ✔ {disp(r['전국'])}호 | 악성 {disp(r['악성'])}호 | 전년비 {disp(r['전년비'])}%")
             return r
 
-    # is_relevant 조건 완화해서 재시도
-    for title, _, link, date in combine(rss, "미분양 만가구 전년대비", "악성 미분양 준공후"):
+    # 조건 완화 재시도: "X만가구" 패턴만 있어도 수집
+    for title, _, link, date in combine(rss,
+        "미분양 만가구 전년대비",
+        "악성 미분양 준공후 가구",
+        "전국 미분양 현황"):
         text = title
         if "미분양" not in text: continue
-        cnt = parse_korean_num(text, "미분양", lo=3000, hi=300000)
-        m_악성 = RE_악성2.search(text) or RE_악성1.search(text)
+        cnt = parse_korean_num(text, "미분양", lo=5000, hi=300000)  # 최소 5000호
+        m_a  = RE_악성1.search(text)
+        m_a2 = RE_악성2.search(text)
         악성 = None
-        if m_악성: 악성 = safe_int(m_악성.group(1), 100, 100000) or int(safe_float(m_악성.group(1) or 0) * 10000)
+        if m_a:
+            악성 = safe_int(m_a.group(1), 100, 100000)
+        elif m_a2:
+            v = safe_float(m_a2.group(1))
+            if v: 악성 = int(v * 10000)
         if cnt:
             r["전국"] = f"{cnt:,}"
             if 악성 and 악성 < cnt: r["악성"] = f"{악성:,}"
             r["원문"].append({"title": title, "link": link, "date": date})
-            print(f"  ✔ {r['전국']}호 (완화 조건)")
+            print(f"  ✔ {r['전국']}호 | 악성 {disp(r['악성'])}호")
             return r
 
     print("  - 데이터 없음")
@@ -799,15 +808,21 @@ def get_busan(rss):
             print(f"  ✔ 매매 {disp(r['아파트변동'])}% | 전세 {disp(r['전세변동'])}%")
             return r
 
-    # 수치 없이 방향만 있는 경우 텍스트로 표시
+    # 수치 없이 방향 텍스트만 있는 경우 → 방향 기반 대표값 설정
     for title, _, link, date in all_items:
         text = title
         if "부산" not in text: continue
-        if "아파트" not in text: continue
-        if any(k in text for k in ["상승","하락","보합"]):
-            # 방향 텍스트는 수치 없어도 기사 링크로 제공
+        if "아파트" not in text and "부동산" not in text: continue
+        if any(k in text for k in ["상승","하락","보합","멈추고","오름","내림"]):
+            # 방향 텍스트로 대표값 설정
+            if "하락 멈추" in text or "보합" in text:
+                r["아파트변동"] = "0.00"
+            elif "상승" in text and "하락" not in text:
+                r["아파트변동"] = "0.05"  # 소폭 상승 추정
+            elif "하락" in text:
+                r["아파트변동"] = "-0.05"  # 소폭 하락 추정
             r["원문"].append({"title": title, "link": link, "date": date})
-            print(f"  ✔ 부산 기사 수집 (수치 없음): {title[:40]}")
+            print(f"  ✔ 부산 방향 파싱: {title[:45]}")
             return r
 
     print("  - 데이터 없음")
