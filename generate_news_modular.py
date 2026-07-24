@@ -1,4 +1,5 @@
 # generate_news_modular.py
+
 """
 부동산 뉴스 브리핑 - 비용 없는 자동 필터링
 ============================================
@@ -25,7 +26,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 from modules.html_builder import build_html
 from modules.news_pipeline import get_clean_news
 
-from market_data_engine import MarketDataEngine
+from modules.market_data_engine import MarketDataEngine
 from modules.brn_engine import BRNEngine
 
 
@@ -98,5 +99,3 @@ if __name__ == "__main__":
     print("=== generate_news_modular.py 실행 ===")
 
     main()
-           
-
