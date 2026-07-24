@@ -2,7 +2,7 @@ name: daily news update
 
 on:
   schedule:
-    - cron: '0 22 * * *'   # 매일 07:00(KST)
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 permissions:
@@ -13,6 +13,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      REB_API_KEY: ${{ secrets.REB_API_KEY }}
+      BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
+      DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
 
     steps:
       - name: Checkout repository
@@ -32,7 +37,21 @@ jobs:
         run: |
           playwright install chromium
 
+      - name: Check Environment
+        run: |
+          python - <<'PY'
+          import os
+
+          print("REB_API_KEY :", "OK" if os.getenv("REB_API_KEY") else "MISSING")
+          print("BOK_ECOS_KEY :", "OK" if os.getenv("BOK_ECOS_KEY") else "MISSING")
+          print("DATA_PORTAL_KEY :", "OK" if os.getenv("DATA_PORTAL_KEY") else "MISSING")
+          PY
+
       - name: Generate news
+        env:
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+          BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
+          DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
         run: |
           python generate_news_modular.py
 
