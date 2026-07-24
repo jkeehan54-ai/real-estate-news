@@ -112,8 +112,7 @@ class REBMarket:
         cycle,
     ):
 
-        start,
-        end = self._current_period()
+        start, end = self._current_period()
 
         params = {
 
