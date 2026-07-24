@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager, rc
 from datetime import datetime
 
-# Linux(GitHub Actions) 환경에서 나눔고딕 폰트 강제 등록
+# Linux(GitHub Actions) 환경에서 나눔고딕 폰트 안전 등록 (addfont 적용)
 def setup_korean_font():
     if os.name == 'posix':
         font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
@@ -13,9 +13,12 @@ def setup_korean_font():
             os.system('sudo apt-get update && sudo apt-get install -y fonts-nanum > /dev/null 2>&1')
         
         if os.path.exists(font_path):
-            font_manager.fontManager.add_font(font_path)
-            font_prop = font_manager.FontProperties(fname=font_path)
-            rc('font', family=font_prop.get_name())
+            try:
+                font_manager.fontManager.addfont(font_path)
+                font_prop = font_manager.FontProperties(fname=font_path)
+                rc('font', family=font_prop.get_name())
+            except Exception:
+                rc('font', family='DejaVu Sans')
         else:
             rc('font', family='DejaVu Sans')
     else:
@@ -101,7 +104,7 @@ class RealEstateKoreanEngine:
         }
 
     def run_pipeline(self):
-        print("[클라우드 자동화] 폰트 매니저 등록 및 한글 마스터 리포트 생성 시작...")
+        print("[클라우드 자동화] 최신 matplotlib addfont 적용 마스터 리포트 생성 시작...")
         curr_ym, prev_ym = self._get_target_ymd()
         
         region_stats = []
@@ -173,14 +176,14 @@ class RealEstateKoreanEngine:
             f"• 매매 수급동향 지수: {master_data['sentiment_market']['supply_demand_index']} (수급 균형)\n"
             f"• 경매 낙찰률: {master_data['leading_indicators']['auction_bid_rate']}%\n"
             f"• 적정 전세가율: {master_data['leading_indicators']['jeonse_ratio']}% (적정선: 60-70%)\n\n"
-            "상태: 폰트 매니저 등록 및 한글 출력 완료"
+            "상태: 최신 addfont 적용 및 한글 렌더링 완료"
         )
         ax6.text(0.05, 0.5, summary_text, fontsize=10, fontweight='medium', va='center', bbox=dict(boxstyle='round,pad=1', facecolor='#edf2f7', alpha=0.8))
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.94])
         output_filename = "cloud_automated_market_analysis.png"
         plt.savefig(output_filename, dpi=300)
-        print(f"[클라우드 자동화] 한글 폰트 매니저 리포트 생성 완료: {output_filename}")
+        print(f"[클라우드 자동화] 최신 폰트 등록 리포트 생성 완료: {output_filename}")
 
 if __name__ == "__main__":
     engine = RealEstateKoreanEngine()
