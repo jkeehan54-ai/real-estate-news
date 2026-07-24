@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager, rc
 from datetime import datetime
 
-# GitHub Actions (Linux) 환경에서 나눔고딕 폰트 자동 설정
+# Linux 환경에서 나눔고딕 강제 설치 및 폰트 캐시 갱신
 def setup_korean_font():
     if os.name == 'posix':
         font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
         if not os.path.exists(font_path):
-            os.system('sudo apt-get update && sudo apt-get install -y fonts-nanum > /dev/null 2>&1')
+            os.system('sudo apt-get update && sudo apt-get install -y fonts-nanum')
+            os.system('fc-cache -fv')
+        
         if os.path.exists(font_path):
             font_name = font_manager.FontProperties(fname=font_path).get_name()
             rc('font', family=font_name)
@@ -99,7 +101,7 @@ class RealEstateKoreanEngine:
         }
 
     def run_pipeline(self):
-        print("[클라우드 자동화] 한글 폰트 적용된 부동산 마스터 대시보드 생성 시작...")
+        print("[클라우드 자동화] 폰트 캐시 갱신 및 한글 마스터 리포트 생성 시작...")
         curr_ym, prev_ym = self._get_target_ymd()
         
         region_stats = []
@@ -171,14 +173,14 @@ class RealEstateKoreanEngine:
             f"• 매매 수급동향 지수: {master_data['sentiment_market']['supply_demand_index']} (수급 균형)\n"
             f"• 경매 낙찰률: {master_data['leading_indicators']['auction_bid_rate']}%\n"
             f"• 적정 전세가율: {master_data['leading_indicators']['jeonse_ratio']}% (적정선: 60-70%)\n\n"
-            "상태: 한글 폰트 및 다차원 지표 파이프라인 정상 연동됨"
+            "상태: 폰트 캐시 갱신 및 한글 출력 완료됨"
         )
         ax6.text(0.05, 0.5, summary_text, fontsize=10, fontweight='medium', va='center', bbox=dict(boxstyle='round,pad=1', facecolor='#edf2f7', alpha=0.8))
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.94])
         output_filename = "cloud_automated_market_analysis.png"
         plt.savefig(output_filename, dpi=300)
-        print(f"[클라우드 자동화] 한글 마스터 리포트 생성 완료: {output_filename}")
+        print(f"[클라우드 자동화] 한글 폰트 마스터 리포트 생성 완료: {output_filename}")
 
 if __name__ == "__main__":
     engine = RealEstateKoreanEngine()
