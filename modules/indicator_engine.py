@@ -1,9 +1,5 @@
 # indicator_engine.py
 
-
-from textwrap import dedent
-
-content = dedent(r'''\
 """
 BRN Indicator Engine
 
@@ -58,6 +54,7 @@ class IndicatorEngine:
 
     def _find(self, indicator_id: str) -> dict:
         indicator_id = indicator_id.upper()
+
         for category, indicators in self.catalog.items():
             for indicator in indicators:
                 if indicator["id"].upper() == indicator_id:
@@ -68,11 +65,23 @@ class IndicatorEngine:
                         "source": indicator["source"],
                         "weight": indicator.get("weight", 1.0),
                     }
+
         raise KeyError(f"Indicator not found: {indicator_id}")
 
-    def create(self, indicator_id: str, value: float, region: str = "전국") -> dict:
+    def create(
+        self,
+        indicator_id: str,
+        value: float,
+        region: str = "전국",
+    ) -> dict:
+
         info = self._find(indicator_id)
-        score = NormalizationEngine.normalize(indicator_id, value)
+
+        score = NormalizationEngine.normalize(
+            indicator_id,
+            value,
+        )
+
         return {
             "id": info["id"],
             "name": info["name"],
@@ -85,21 +94,28 @@ class IndicatorEngine:
             "weighted_score": round(score * info["weight"], 2),
         }
 
-    def create_many(self, values: dict, region: str = "전국"):
-        return [self.create(k, v, region) for k, v in values.items()]
+    def create_many(
+        self,
+        values: dict,
+        region: str = "전국",
+    ):
+
+        return [
+            self.create(k, v, region)
+            for k, v in values.items()
+        ]
 
     def category(self, category: str):
         return self.catalog.get(category.lower(), [])
 
     def ids(self):
+
         result = []
+
         for items in self.catalog.values():
-            result.extend(item["id"] for item in items)
+            result.extend(
+                item["id"]
+                for item in items
+            )
+
         return sorted(result)
-''')
-
-path="/mnt/data/indicator_engine.py"
-with open(path,"w",encoding="utf-8") as f:
-    f.write(content)
-
-print(path)
