@@ -1,246 +1,460 @@
-# crawler_engine.py
+# modules/crawler_engine.py
+# ============================================================
+# BRN 2.0 Crawler Engine
+# Sprint 1-2
+# Part 1 / 3
+# ============================================================
+
+from __future__ import annotations
+
+from typing import Callable
 
 import requests
-
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 
-from modules.news_utils import (
-    make_session,
-    extract_date_from_url,
-    is_recent,
+from .config import (
+    HTTP_TIMEOUT,
+    USER_AGENT,
 )
+from .exceptions import CrawlerError
+from .logger import main_logger
+from .utils import clean_text
 
-from modules.news_filter import (
-    is_estate_related,
-)
+# ============================================================
+# BASE CRAWLER
+# ============================================================
 
+class CrawlerEngine:
+    """
+    BRN HTML Crawler
+    """
 
-# ── B-1. 부산일보 스크래핑 ───────────────────────────────────────────────────
-def scrape_busan(now_kst):
-    items = []
-    seen = set()
+    def __init__(self):
 
-    for url in [
-        "https://www.busan.com/economy/",
-        "https://www.busan.com/newsList/realestate",
-    ]:
-        try:
-            s = make_session("https://www.busan.com/")
-            resp = s.get(url, timeout=10)
+        self.session = requests.Session()
 
-            if resp.status_code != 200:
-                continue
+        self.session.headers.update({
 
-            soup = BeautifulSoup(resp.text, "html.parser")
+            "User-Agent": USER_AGENT,
 
-            for el in soup.select("p.title, .title a, h4 a, h3 a"):
+        })
 
-                a = el if el.name == "a" else el.find("a", href=True)
+    # --------------------------------------------------------
 
-                if not a:
-                    continue
-
-                title = a.get_text(strip=True)
-                href = a.get("href", "")
-
-                if not title or len(title) < 10 or not href:
-                    continue
-
-                if not is_estate_related(title):
-                    continue
-
-                link = urljoin("https://www.busan.com", href)
-
-                if link in seen:
-                    continue
-
-                seen.add(link)
-
-                pub_dt = extract_date_from_url(link)
-
-                if not is_recent(pub_dt, now_kst):
-                    continue
-
-                items.append(
-                    (
-                        pub_dt,
-                        title,
-                        link,
-                        "부산일보",
-                    )
-                )
-
-        except Exception as e:
-            print(f"  ER [부산일보] {type(e).__name__}: {str(e)[:50]}")
-
-    print(f"  OK [부산일보] {len(items)}건")
-
-    return items
-
-
-# ── B-2. 국제신문 스크래핑 ───────────────────────────────────────────────────
-def scrape_kookje(now_kst):
-
-    items = []
-    seen = set()
-
-    for url in [
-        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
-        "https://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0200",
-    ]:
+    def get(
+        self,
+        url: str,
+    ) -> BeautifulSoup:
 
         try:
 
-            s = make_session("https://www.kookje.co.kr/")
+            response = self.session.get(
 
-            resp = s.get(url, timeout=10)
+                url,
 
-            if resp.status_code != 200:
-                continue
+                timeout=HTTP_TIMEOUT,
 
-            resp.encoding = "euc-kr"
+            )
 
-            soup = BeautifulSoup(resp.text, "html.parser")
+            response.raise_for_status()
 
-            selectors = [
-                "ol.tabcontent li a",
-                "ol#hitlist1 li a",
-                "ol#hitlist2 li a",
-                "ol#hitlist3 li a",
-                "ol#hitlist4 li a",
-                "ol#hitlist5 li a",
-                "dt a",
-                "h2 a",
-                "h3.tit a",
-            ]
+        except Exception as exc:
 
-            for sel in selectors:
+            raise CrawlerError(
 
-                for a in soup.select(sel):
+                f"페이지 요청 실패 : {url}",
 
-                    title = a.get_text(strip=True)
-                    href = a.get("href", "")
+                cause=exc,
 
-                    if not title or len(title) < 10:
-                        continue
+            ) from exc
 
-                    if "newsbody.asp" not in href:
-                        continue
+        return BeautifulSoup(
 
-                    if not is_estate_related(title):
-                        continue
+            response.text,
 
-                    link = urljoin(
-                        "https://www.kookje.co.kr",
-                        href,
-                    )
+            "html.parser",
 
-                    if link in seen:
-                        continue
+        )
 
-                    seen.add(link)
+    # --------------------------------------------------------
 
-                    pub_dt = extract_date_from_url(link)
+    def crawl(
+        self,
+        url: str,
+        parser: Callable,
+    ) -> list[dict]:
 
-                    if not is_recent(pub_dt, now_kst):
-                        continue
+        soup = self.get(url)
 
-                    items.append(
-                        (
-                            pub_dt,
-                            title,
-                            link,
-                            "국제신문",
-                        )
-                    )
+        result = parser(soup)
 
-        except Exception as e:
-            print(f"  ER [국제신문] {type(e).__name__}: {str(e)[:50]}")
+        main_logger.info(
 
-    print(f"  OK [국제신문] {len(items)}건")
+            "[Crawler] %s -> %d",
 
-    return items
+            url,
+
+            len(result),
+
+        )
+
+        return result
+
+    # --------------------------------------------------------
+
+    @staticmethod
+    def article(
+        title: str,
+        link: str,
+        source: str,
+        summary: str = "",
+        category: str = "",
+    ) -> dict:
+
+        return {
+
+            "title": clean_text(title),
+
+            "summary": clean_text(summary),
+
+            "link": link,
+
+            "source": source,
+
+            "category": category,
+
+        }
 
 
-# ── B-3. 네이버 부동산 스크래핑 ──────────────────────────────────────────────
-def scrape_naver_land(now_kst):
+# ============================================================
+# BUSAN ILBO
+# ============================================================
 
-    items = []
-    seen = set()
+def parse_busan(
+    soup: BeautifulSoup,
+) -> list[dict]:
 
-    for url, base in [
-        ("https://land.naver.com/news/", "https://land.naver.com"),
-        ("https://fin.land.naver.com/news", "https://fin.land.naver.com"),
-    ]:
+    news = []
+
+    for tag in soup.select("a"):
+
+        title = clean_text(
+
+            tag.get_text()
+
+        )
+
+        href = tag.get("href")
+
+        if not title:
+
+            continue
+
+        if not href:
+
+            continue
+
+        if "/news/" not in href:
+
+            continue
+
+        if href.startswith("/"):
+
+            href = (
+
+                "https://www.busan.com"
+
+                + href
+
+            )
+
+        news.append(
+
+            CrawlerEngine.article(
+
+                title,
+
+                href,
+
+                "부산일보",
+
+                "",
+
+                "부산경남",
+
+            )
+
+        )
+
+    return news
+
+
+# ============================================================
+# modules/crawler_engine.py
+# BRN 2.0 Crawler Engine
+# Sprint 1-2
+# Part 2 / 3
+# ============================================================
+
+# ============================================================
+# KOOKJE SHINMUN
+# ============================================================
+
+def parse_kookje(
+    soup: BeautifulSoup,
+) -> list[dict]:
+
+    news = []
+
+    for tag in soup.select("a"):
+
+        title = clean_text(
+            tag.get_text()
+        )
+
+        href = tag.get("href")
+
+        if not title:
+            continue
+
+        if not href:
+            continue
+
+        if "/news" not in href:
+            continue
+
+        if href.startswith("/"):
+
+            href = (
+                "https://www.kookje.co.kr"
+                + href
+            )
+
+        news.append(
+
+            CrawlerEngine.article(
+
+                title,
+
+                href,
+
+                "국제신문",
+
+                "",
+
+                "부산경남",
+
+            )
+
+        )
+
+    return news
+
+
+# ============================================================
+# NAVER LAND
+# ============================================================
+
+def parse_naver_land(
+    soup: BeautifulSoup,
+) -> list[dict]:
+
+    news = []
+
+    for tag in soup.select("a"):
+
+        title = clean_text(
+            tag.get_text()
+        )
+
+        href = tag.get("href")
+
+        if not title:
+            continue
+
+        if not href:
+            continue
+
+        if "land.naver.com" not in href:
+            continue
+
+        news.append(
+
+            CrawlerEngine.article(
+
+                title,
+
+                href,
+
+                "네이버부동산",
+
+                "",
+
+                "시장동향",
+
+            )
+
+        )
+
+    return news
+
+
+# ============================================================
+# SCRAPER
+# ============================================================
+
+_engine = CrawlerEngine()
+
+
+def scrape_busan() -> list[dict]:
+
+    url = (
+        "https://www.busan.com/"
+    )
+
+    return _engine.crawl(
+        url,
+        parse_busan,
+    )
+
+
+def scrape_kookje() -> list[dict]:
+
+    url = (
+        "https://www.kookje.co.kr/"
+    )
+
+    return _engine.crawl(
+        url,
+        parse_kookje,
+    )
+
+
+def scrape_naver_land() -> list[dict]:
+
+    url = (
+        "https://land.naver.com/"
+    )
+
+    return _engine.crawl(
+        url,
+        parse_naver_land,
+    )
+
+
+# ============================================================
+# modules/crawler_engine.py
+# BRN 2.0 Crawler Engine
+# Sprint 1-2
+# Part 3 / 3
+# ============================================================
+
+# ============================================================
+# RUN ALL
+# ============================================================
+
+def crawl_all() -> list[dict]:
+    """
+    모든 크롤러 실행
+    """
+
+    news = []
+
+    crawlers = (
+
+        scrape_busan,
+
+        scrape_kookje,
+
+        scrape_naver_land,
+
+    )
+
+    for crawler in crawlers:
 
         try:
 
-            s = make_session(base + "/")
+            news.extend(
+                crawler()
+            )
 
-            resp = s.get(url, timeout=10)
+        except Exception as exc:
 
-            if resp.status_code != 200:
-                print(f"  ER [네이버부동산] HTTP {resp.status_code}")
-                continue
+            main_logger.exception(
 
-            soup = BeautifulSoup(resp.text, "html.parser")
+                "[Crawler] %s",
 
-            cnt = 0
+                exc,
 
-            selectors = [
-                "ul.category_list li a",
-                "ul#land_news_list li a",
-                "li.main_news a",
-                "li.main_article_beta a",
-                "li.news_headline a",
-                "li.news_breaking a",
-                'a[class*="NewsList_link"]',
-                'a[class*="CardNews_link"]',
-                'div[class*="AllNews_article"] a',
-            ]
+            )
 
-            for sel in selectors:
+    return news
 
-                for a in soup.select(sel):
 
-                    title = a.get_text(strip=True)
-                    href = a.get("href", "")
+# ============================================================
+# HEALTH CHECK
+# ============================================================
 
-                    if not title or len(title) < 10:
-                        continue
+def health_check() -> dict:
 
-                    if not href.startswith("http"):
-                        continue
+    result = {}
 
-                    if not is_estate_related(title):
-                        continue
+    tests = {
 
-                    if href in seen:
-                        continue
+        "부산일보": scrape_busan,
 
-                    seen.add(href)
+        "국제신문": scrape_kookje,
 
-                    pub_dt = extract_date_from_url(href)
+        "네이버부동산": scrape_naver_land,
 
-                    # ★ 날짜 필터 추가
-                    if not is_recent(pub_dt, now_kst):
-                        continue
+    }
 
-                    items.append(
-                        (
-                            pub_dt,
-                            title,
-                            href,
-                            "네이버부동산",
-                        )
-                    )
+    for name, func in tests.items():
 
-                    cnt += 1
+        try:
 
-            print(f"  OK [네이버({base.split('/')[2]})] {cnt}건")
+            count = len(func())
 
-        except Exception as e:
-            print(f"  ER [네이버부동산] {type(e).__name__}: {str(e)[:50]}")
+            result[name] = {
 
-    return items
+                "success": True,
+
+                "count": count,
+
+            }
+
+        except Exception as exc:
+
+            result[name] = {
+
+                "success": False,
+
+                "count": 0,
+
+                "error": str(exc),
+
+            }
+
+    return result
+
+
+# ============================================================
+# EXPORT
+# ============================================================
+
+__all__ = [
+
+    "CrawlerEngine",
+
+    "crawl_all",
+
+    "health_check",
+
+    "scrape_busan",
+
+    "scrape_kookje",
+
+    "scrape_naver_land",
+
+]
+
