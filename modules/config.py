@@ -242,3 +242,481 @@ CATEGORY_LIMITS = {
     "부산경남": 20,
 
 }
+
+
+# ============================================================
+# modules/config.py
+# BRN 2.0 Configuration
+# Part 2 / 3
+# ============================================================
+
+# ============================================================
+# SOURCE LIMIT
+# ============================================================
+
+SOURCE_LIMITS = {
+
+    "연합뉴스": 10,
+    "뉴시스": 10,
+    "서울경제": 10,
+    "매일경제": 10,
+    "한국경제": 10,
+    "머니투데이": 10,
+    "파이낸셜뉴스": 10,
+    "헤럴드경제": 10,
+    "아시아경제": 10,
+    "이데일리": 10,
+    "부산일보": 15,
+    "국제신문": 15,
+    "네이버부동산": 20,
+
+}
+
+# ============================================================
+# DUPLICATE FILTER
+# ============================================================
+
+TITLE_SIMILARITY = 0.90
+
+EVENT_SIMILARITY = 0.85
+
+MIN_REAL_ESTATE_SCORE = 3
+
+REMOVE_DUPLICATE_LINK = True
+
+REMOVE_DUPLICATE_TITLE = True
+
+REMOVE_DUPLICATE_EVENT = True
+
+# ============================================================
+# CACHE
+# ============================================================
+
+CACHE_ENABLED = True
+
+CACHE_EXPIRE_HOURS = 12
+
+CACHE_MAX_ITEMS = 10000
+
+CACHE_COMPRESS = True
+
+# ============================================================
+# HTML
+# ============================================================
+
+HTML_TITLE = "부동산 뉴스 브리핑"
+
+HTML_LANGUAGE = "ko"
+
+HTML_ENCODING = "utf-8"
+
+HTML_THEME = "light"
+
+HTML_SHOW_SOURCE = True
+
+HTML_SHOW_DATE = True
+
+HTML_SHOW_CATEGORY = True
+
+HTML_SHOW_AI_SUMMARY = True
+
+HTML_SHOW_MARKET = True
+
+HTML_SHOW_FOOTER = True
+
+HTML_SHOW_VERSION = True
+
+HTML_AUTO_REFRESH = False
+
+HTML_REFRESH_SECONDS = 600
+
+# ============================================================
+# DASHBOARD
+# ============================================================
+
+DASHBOARD_ENABLE = True
+
+DASHBOARD_HISTORY_DAYS = 365
+
+DASHBOARD_DEFAULT_RANGE = 30
+
+DASHBOARD_SAVE_JSON = True
+
+DASHBOARD_SAVE_HTML = True
+
+DASHBOARD_SAVE_IMAGE = False
+
+# ============================================================
+# REPORT
+# ============================================================
+
+REPORT_ENABLE = True
+
+REPORT_SAVE_HTML = True
+
+REPORT_SAVE_JSON = True
+
+REPORT_SAVE_MD = True
+
+REPORT_SAVE_PDF = False
+
+REPORT_INCLUDE_NEWS = True
+
+REPORT_INCLUDE_MARKET = True
+
+REPORT_INCLUDE_AI = True
+
+REPORT_INCLUDE_FORECAST = True
+
+# ============================================================
+# HISTORY
+# ============================================================
+
+HISTORY_ENABLE = True
+
+HISTORY_SAVE_DAILY = True
+
+HISTORY_SAVE_MONTHLY = True
+
+HISTORY_RETENTION_DAYS = 3650
+
+HISTORY_DB_ENABLE = True
+
+# ============================================================
+# MARKET
+# ============================================================
+
+MARKET_ENABLE = True
+
+KB_ENABLE = True
+
+REB_ENABLE = True
+
+BANK_ENABLE = False
+
+MARKET_TIMEOUT = 20
+
+MARKET_CACHE_MINUTES = 180
+
+# ============================================================
+# AI
+# ============================================================
+
+AI_ENABLE = False
+
+AI_PROVIDER = "OpenAI"
+
+AI_MODEL = "gpt-5.5"
+
+AI_TEMPERATURE = 0.3
+
+AI_MAX_TOKENS = 4000
+
+AI_TIMEOUT = 120
+
+AI_RETRY = 2
+
+# ============================================================
+# LOGGING
+# ============================================================
+
+LOG_ENABLE = True
+
+LOG_LEVEL = "INFO"
+
+LOG_ROTATION = "10 MB"
+
+LOG_RETENTION = "30 days"
+
+LOG_ENCODING = "utf-8"
+
+LOG_CONSOLE = True
+
+LOG_FILE = True
+
+# ============================================================
+# SCHEDULER
+# ============================================================
+
+SCHEDULE_ENABLE = True
+
+RUN_HOUR = 7
+
+RUN_MINUTE = 0
+
+RUN_SECOND = 0
+
+RUN_TIMEZONE = "Asia/Seoul"
+
+# ============================================================
+# EXPORT
+# ============================================================
+
+EXPORT_HTML = True
+
+EXPORT_JSON = True
+
+EXPORT_CSV = True
+
+EXPORT_XLSX = False
+
+EXPORT_SQLITE = False
+
+# ============================================================
+# FEATURE FLAGS
+# ============================================================
+
+FEATURE_FLAGS = {
+
+    "dashboard": True,
+
+    "history": True,
+
+    "indicator": True,
+
+    "forecast": True,
+
+    "report": True,
+
+    "market": True,
+
+    "rss": True,
+
+    "google": True,
+
+    "crawler": True,
+
+    "duplicate_filter": True,
+
+    "html_builder": True,
+
+    "cache": True,
+
+    "logging": True,
+
+    "statistics": True,
+
+    "ranking": True,
+
+    "keyword_analysis": True,
+
+    "sentiment_analysis": False,
+
+    "ai_summary": False,
+
+    "telegram": False,
+
+    "slack": False,
+
+    "discord": False,
+
+    "email": False,
+
+}
+
+
+
+# ============================================================
+# modules/config.py
+# BRN 2.0 Configuration
+# Part 3 / 3
+# ============================================================
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+# ============================================================
+# CONFIG CLASS
+# ============================================================
+
+@dataclass(slots=True)
+class Config:
+    """
+    BRN Global Configuration
+    """
+
+    project_name: str = PROJECT_NAME
+    project_title: str = PROJECT_TITLE
+    version: str = PROJECT_VERSION
+
+    root_dir: Path = ROOT_DIR
+    module_dir: Path = MODULE_DIR
+    data_dir: Path = DATA_DIR
+    cache_dir: Path = CACHE_DIR
+    log_dir: Path = LOG_DIR
+    report_dir: Path = REPORT_DIR
+    history_dir: Path = HISTORY_DIR
+
+    debug: bool = DEBUG
+
+    timezone: Any = TIMEZONE
+
+    news_limit: int = NEWS_LIMIT
+    category_limit: int = CATEGORY_LIMIT
+    source_limit: int = SOURCE_LIMIT
+
+    rss_timeout: int = RSS_TIMEOUT
+    http_timeout: int = HTTP_TIMEOUT
+    playwright_timeout: int = PLAYWRIGHT_TIMEOUT
+
+    html_title: str = HTML_TITLE
+
+    ai_enable: bool = AI_ENABLE
+    ai_provider: str = AI_PROVIDER
+    ai_model: str = AI_MODEL
+
+    dashboard_enable: bool = DASHBOARD_ENABLE
+    report_enable: bool = REPORT_ENABLE
+    history_enable: bool = HISTORY_ENABLE
+
+    feature_flags: dict = field(
+        default_factory=lambda: FEATURE_FLAGS.copy()
+    )
+
+    category_order: list = field(
+        default_factory=lambda: CATEGORY_ORDER.copy()
+    )
+
+    category_limits: dict = field(
+        default_factory=lambda: CATEGORY_LIMITS.copy()
+    )
+
+    source_limits: dict = field(
+        default_factory=lambda: SOURCE_LIMITS.copy()
+    )
+
+    rss_feeds: dict = field(
+        default_factory=lambda: RSS_FEEDS.copy()
+    )
+
+    def ensure_directories(self) -> None:
+        """
+        프로젝트 디렉터리 생성
+        """
+
+        directories = [
+
+            self.cache_dir,
+            self.log_dir,
+            self.report_dir,
+            self.history_dir,
+            DATA_DIR,
+            HTML_DIR,
+            STATIC_DIR,
+            TEMPLATE_DIR,
+            RESOURCE_DIR,
+            BACKUP_DIR,
+            EXPORT_DIR,
+
+        ]
+
+        for directory in directories:
+            directory.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def openai_api_key(self) -> str:
+        return OPENAI_API_KEY
+
+    @property
+    def reb_api_key(self) -> str:
+        return REB_API_KEY
+
+    @property
+    def google_api_key(self) -> str:
+        return GOOGLE_API_KEY
+
+    @property
+    def google_cse_id(self) -> str:
+        return GOOGLE_CSE_ID
+
+    @property
+    def naver_client_id(self) -> str:
+        return NAVER_CLIENT_ID
+
+    @property
+    def naver_client_secret(self) -> str:
+        return NAVER_CLIENT_SECRET
+
+    @property
+    def slack_webhook(self) -> str:
+        return SLACK_WEBHOOK
+
+    @property
+    def discord_webhook(self) -> str:
+        return DISCORD_WEBHOOK
+
+    def is_feature_enabled(self, feature: str) -> bool:
+        return self.feature_flags.get(feature, False)
+
+    def enable_feature(self, feature: str) -> None:
+        self.feature_flags[feature] = True
+
+    def disable_feature(self, feature: str) -> None:
+        self.feature_flags[feature] = False
+
+    def to_dict(self) -> dict:
+
+        return {
+
+            "project_name": self.project_name,
+            "project_title": self.project_title,
+            "version": self.version,
+            "news_limit": self.news_limit,
+            "category_limit": self.category_limit,
+            "source_limit": self.source_limit,
+            "dashboard_enable": self.dashboard_enable,
+            "report_enable": self.report_enable,
+            "history_enable": self.history_enable,
+            "ai_enable": self.ai_enable,
+            "ai_provider": self.ai_provider,
+            "ai_model": self.ai_model,
+            "timezone": str(self.timezone),
+            "debug": self.debug,
+
+        }
+
+
+# ============================================================
+# SINGLETON
+# ============================================================
+
+config = Config()
+
+config.ensure_directories()
+
+
+# ============================================================
+# EXPORT
+# ============================================================
+
+__all__ = [
+
+    "Config",
+    "config",
+
+    "PROJECT_NAME",
+    "PROJECT_TITLE",
+    "PROJECT_VERSION",
+
+    "ROOT_DIR",
+    "MODULE_DIR",
+    "DATA_DIR",
+    "CACHE_DIR",
+    "LOG_DIR",
+    "REPORT_DIR",
+    "HISTORY_DIR",
+
+    "RSS_FEEDS",
+    "CATEGORY_ORDER",
+    "CATEGORY_LIMITS",
+    "SOURCE_LIMITS",
+
+    "FEATURE_FLAGS",
+
+    "INDEX_HTML",
+    "REPORT_JSON",
+    "REPORT_HTML",
+    "REPORT_MD",
+
+]
