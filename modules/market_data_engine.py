@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 
 from modules.reb_market import REBMarket
+from modules.kb_market import get_market_data
 
 
 class MarketDataEngine:
