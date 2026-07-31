@@ -53,7 +53,7 @@ jobs:
           BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
           DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
         run: |
-          python generate_news.py
+          python generate_news_modular.py
 
       - name: Verify generated HTML
         run: |
