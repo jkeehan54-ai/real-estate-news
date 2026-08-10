@@ -19,6 +19,17 @@ SOURCES = {
     "주택경제신문": "https://www.arunews.com/",
     "건설타임즈":  "https://www.constimes.co.kr/",
     "네이버부동산": "https://land.naver.com/news/",
+    "OBS경인TV": "https://www.obsnews.co.kr/",
+    "OhmyNews": "https://www.ohmynews.com/",
+    "ppss.kr": "https://ppss.kr/",
+    "경남도민일보": "https://www.idomin.com/",
+    "네이트": "https://news.nate.com/",
+    "뉴스후플러스": "https://www.newswhoplus.com/",
+    "신아일보": "https://www.shinailbo.co.kr/",
+    "아시아경제": "https://www.asiae.co.kr/",
+    "이투데이": "https://www.etoday.co.kr/",
+    "일간경기": "https://www.1gan.co.kr/",
+    "재경일보": "https://www.jknews.co.kr/",
 }
 
 HEADERS = {
