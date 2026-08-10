@@ -2,515 +2,623 @@
 # ============================================================
 # BRN 2.0 RSS Engine
 # Sprint 1-2
-# Part 1 / 3
+# 기존 news_pipeline.py 호환 버전
 # ============================================================
 
 from __future__ import annotations
 
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import feedparser
 import requests
 
-from .config import (
-    RSS_FEEDS,
+from modules.config import (
     RSS_TIMEOUT,
     USER_AGENT,
 )
-from .exceptions import RSSFetchError
-from .logger import rss_logger
-from .utils import clean_text
+
+from modules.logger import rss_logger
+
+from modules.exceptions import (
+    RSSFetchError,
+    RSSParseError,
+)
+
 
 # ============================================================
-# RSS ENGINE
+# SESSION
+# ============================================================
+
+_SESSION = requests.Session()
+
+_SESSION.headers.update(
+    {
+        "User-Agent": USER_AGENT,
+        "Accept": (
+            "application/rss+xml, "
+            "application/atom+xml, "
+            "application/xml, "
+            "text/xml, "
+            "*/*;q=0.8"
+        ),
+    }
+)
+
+
+# ============================================================
+# DATETIME
+# ============================================================
+
+def _parse_datetime(
+    entry: Any,
+    now_kst: datetime | None = None,
+) -> datetime | None:
+    """
+    RSS entry의 발행일을 datetime으로 변환한다.
+
+    우선순위:
+        published_parsed
+        updated_parsed
+        published
+        updated
+    """
+
+    # --------------------------------------------------------
+    # feedparser 구조화 시간
+    # --------------------------------------------------------
+
+    for field_name in (
+        "published_parsed",
+        "updated_parsed",
+        "created_parsed",
+    ):
+
+        value = getattr(
+            entry,
+            field_name,
+            None,
+        )
+
+        if value is None:
+            continue
+
+        try:
+
+            dt = datetime(
+                value.tm_year,
+                value.tm_mon,
+                value.tm_mday,
+                value.tm_hour,
+                value.tm_min,
+                value.tm_sec,
+            )
+
+            if dt.tzinfo is None:
+
+                if now_kst is not None:
+                    dt = dt.replace(
+                        tzinfo=now_kst.tzinfo
+                    )
+
+            return dt
+
+        except Exception:
+            continue
+
+    # --------------------------------------------------------
+    # 문자열 날짜
+    # --------------------------------------------------------
+
+    for field_name in (
+        "published",
+        "updated",
+        "created",
+    ):
+
+        value = getattr(
+            entry,
+            field_name,
+            None,
+        )
+
+        if not value:
+            continue
+
+        value = str(value).strip()
+
+        # RFC 822 / RFC 2822
+        try:
+
+            dt = parsedate_to_datetime(
+                value
+            )
+
+            if dt.tzinfo is None:
+
+                if now_kst is not None:
+                    dt = dt.replace(
+                        tzinfo=now_kst.tzinfo
+                    )
+
+            return dt
+
+        except Exception:
+            pass
+
+        # ISO 8601
+        try:
+
+            normalized = value.replace(
+                "Z",
+                "+00:00",
+            )
+
+            dt = datetime.fromisoformat(
+                normalized
+            )
+
+            if dt.tzinfo is None:
+
+                if now_kst is not None:
+                    dt = dt.replace(
+                        tzinfo=now_kst.tzinfo
+                    )
+
+            return dt
+
+        except Exception:
+            pass
+
+    return None
+
+
+# ============================================================
+# TEXT
+# ============================================================
+
+def _clean_text(
+    value: Any,
+) -> str:
+
+    if value is None:
+        return ""
+
+    text = str(value)
+
+    replacements = {
+        "\r": " ",
+        "\n": " ",
+        "\t": " ",
+        "&nbsp;": " ",
+        "&amp;": "&",
+        "&quot;": '"',
+        "&#39;": "'",
+    }
+
+    for old, new in replacements.items():
+
+        text = text.replace(
+            old,
+            new,
+        )
+
+    return " ".join(
+        text.split()
+    ).strip()
+
+
+# ============================================================
+# URL
+# ============================================================
+
+def _get_link(
+    entry: Any,
+) -> str:
+
+    link = getattr(
+        entry,
+        "link",
+        "",
+    )
+
+    if link:
+        return str(link).strip()
+
+    links = getattr(
+        entry,
+        "links",
+        [],
+    )
+
+    for item in links:
+
+        if not isinstance(
+            item,
+            dict,
+        ):
+            continue
+
+        href = item.get(
+            "href"
+        )
+
+        if href:
+            return str(
+                href
+            ).strip()
+
+    return ""
+
+
+# ============================================================
+# ENTRY PARSE
+# ============================================================
+
+def _parse_entry(
+    entry: Any,
+    source: str,
+    now_kst: datetime | None = None,
+) -> tuple[
+    datetime | None,
+    str,
+    str,
+    str,
+] | None:
+    """
+    BRN 기존 news_pipeline.py가 사용하는
+    다음 구조로 반환한다.
+
+        (
+            pub_dt,
+            title,
+            link,
+            source,
+        )
+    """
+
+    title = _clean_text(
+        getattr(
+            entry,
+            "title",
+            "",
+        )
+    )
+
+    if not title:
+        return None
+
+    link = _get_link(
+        entry
+    )
+
+    if not link:
+        return None
+
+    pub_dt = _parse_datetime(
+        entry,
+        now_kst,
+    )
+
+    return (
+        pub_dt,
+        title,
+        link,
+        source,
+    )
+
+
+# ============================================================
+# ENCODING
+# ============================================================
+
+def _decode_content(
+    response: requests.Response,
+    encoding_override: Any = None,
+) -> bytes:
+
+    content = response.content
+
+    if encoding_override:
+
+        encoding = str(
+            encoding_override
+        ).strip()
+
+        if encoding:
+
+            try:
+
+                text = content.decode(
+                    encoding,
+                    errors="replace",
+                )
+
+                return text.encode(
+                    "utf-8"
+                )
+
+            except Exception:
+
+                pass
+
+    return content
+
+
+# ============================================================
+# FETCH RSS
+# ============================================================
+
+def fetch_rss(
+    name: str,
+    url: str,
+    eo: Any = None,
+    now_kst: datetime | None = None,
+) -> list[
+    tuple[
+        datetime | None,
+        str,
+        str,
+        str,
+    ]
+]:
+    """
+    기존 news_pipeline.py 호환 RSS 수집 함수.
+
+    호출 형식:
+
+        fetch_rss(
+            name,
+            url,
+            eo,
+            now_kst,
+        )
+
+    반환:
+
+        [
+            (
+                pub_dt,
+                title,
+                link,
+                source,
+            ),
+            ...
+        ]
+    """
+
+    result = []
+
+    if not url:
+
+        rss_logger.warning(
+            "[RSS] %s : URL 없음",
+            name,
+        )
+
+        return result
+
+    rss_logger.info(
+        "[RSS] %s 시작",
+        name,
+    )
+
+    try:
+
+        response = _SESSION.get(
+            url,
+            timeout=RSS_TIMEOUT,
+        )
+
+        response.raise_for_status()
+
+    except Exception as exc:
+
+        rss_logger.error(
+            "[RSS] %s 요청 실패: %s",
+            name,
+            exc,
+        )
+
+        raise RSSFetchError(
+            f"{name} RSS 다운로드 실패",
+            cause=exc,
+        ) from exc
+
+    # --------------------------------------------------------
+    # RSS 파싱
+    # --------------------------------------------------------
+
+    try:
+
+        content = _decode_content(
+            response,
+            eo,
+        )
+
+        feed = feedparser.parse(
+            content
+        )
+
+    except Exception as exc:
+
+        rss_logger.error(
+            "[RSS] %s 파싱 실패: %s",
+            name,
+            exc,
+        )
+
+        raise RSSParseError(
+            f"{name} RSS 파싱 실패",
+            cause=exc,
+        ) from exc
+
+    # --------------------------------------------------------
+    # feedparser 오류 확인
+    # --------------------------------------------------------
+
+    bozo = getattr(
+        feed,
+        "bozo",
+        False,
+    )
+
+    if bozo:
+
+        bozo_exception = getattr(
+            feed,
+            "bozo_exception",
+            None,
+        )
+
+        rss_logger.warning(
+            "[RSS] %s 비정상 RSS: %s",
+            name,
+            bozo_exception,
+        )
+
+    # --------------------------------------------------------
+    # ENTRY
+    # --------------------------------------------------------
+
+    entries = getattr(
+        feed,
+        "entries",
+        [],
+    )
+
+    for entry in entries:
+
+        try:
+
+            item = _parse_entry(
+                entry,
+                name,
+                now_kst,
+            )
+
+            if item is None:
+                continue
+
+            result.append(
+                item
+            )
+
+        except Exception as exc:
+
+            rss_logger.warning(
+                "[RSS] %s 기사 파싱 실패: %s",
+                name,
+                exc,
+            )
+
+            continue
+
+    # --------------------------------------------------------
+    # 결과
+    # --------------------------------------------------------
+
+    rss_logger.info(
+        "[RSS] %s 완료: %d건",
+        name,
+        len(result),
+    )
+
+    return result
+
+
+# ============================================================
+# MULTI FETCH
+# ============================================================
+
+def fetch_many(
+    feeds: list,
+    now_kst: datetime | None = None,
+) -> list:
+
+    all_entries = []
+
+    for feed in feeds:
+
+        if not feed:
+            continue
+
+        try:
+
+            name = feed[0]
+
+            url = feed[1]
+
+            eo = (
+                feed[2]
+                if len(feed) > 2
+                else None
+            )
+
+            all_entries.extend(
+                fetch_rss(
+                    name,
+                    url,
+                    eo,
+                    now_kst,
+                )
+            )
+
+        except Exception as exc:
+
+            rss_logger.exception(
+                "[RSS] 피드 처리 실패: %s",
+                exc,
+            )
+
+    return all_entries
+
+
+# ============================================================
+# ENGINE
 # ============================================================
 
 class RSSEngine:
     """
-    RSS 수집 엔진
+    BRN RSS Engine
+
+    기존 BRN 1.x 인터페이스와
+    BRN 2.0 구조를 연결한다.
     """
-
-    def __init__(self):
-
-        self.session = requests.Session()
-
-        self.session.headers.update({
-
-            "User-Agent": USER_AGENT,
-
-        })
-
-    # --------------------------------------------------------
-
-    def fetch_all(self) -> list[dict]:
-
-        news = []
-
-        for source, url in RSS_FEEDS.items():
-
-            if not url:
-
-                continue
-
-            try:
-
-                items = self.fetch(source, url)
-
-                news.extend(items)
-
-            except Exception as exc:
-
-                rss_logger.exception(
-
-                    "%s : %s",
-
-                    source,
-
-                    exc,
-
-                )
-
-        return news
-
-    # --------------------------------------------------------
 
     def fetch(
         self,
-        source: str,
+        name: str,
         url: str,
-    ) -> list[dict]:
+        eo: Any = None,
+        now_kst: datetime | None = None,
+    ) -> list:
 
-        rss_logger.info(
-
-            "[RSS] %s",
-
-            source,
-
+        return fetch_rss(
+            name,
+            url,
+            eo,
+            now_kst,
         )
 
-        try:
-
-            response = self.session.get(
-
-                url,
-
-                timeout=RSS_TIMEOUT,
-
-            )
-
-            response.raise_for_status()
-
-        except Exception as exc:
-
-            raise RSSFetchError(
-
-                f"{source} RSS 다운로드 실패",
-
-                cause=exc,
-
-            ) from exc
-
-        feed = feedparser.parse(
-
-            response.content
-
-        )
-
-        result = []
-
-        for entry in feed.entries:
-
-            article = self._parse_entry(
-
-                source,
-
-                entry,
-
-            )
-
-            if article:
-
-                result.append(article)
-
-        rss_logger.info(
-
-            "%s : %d건",
-
-            source,
-
-            len(result),
-
-        )
-
-        return result
-
-    # --------------------------------------------------------
-
-    def _parse_entry(
+    def fetch_many(
         self,
-        source: str,
-        entry: Any,
-    ) -> dict | None:
-
-        title = clean_text(
-
-            getattr(entry, "title", "")
-
-        )
-
-        if not title:
-
-            return None
-
-        link = getattr(
-
-            entry,
-
-            "link",
-
-            "",
-
-        )
-
-        summary = clean_text(
-
-            getattr(
-
-                entry,
-
-                "summary",
-
-                "",
-
-            )
-
-        )
-
-        published = self._published(entry)
-
-        return {
-
-            "source": source,
-
-            "title": title,
-
-            "summary": summary,
-
-            "link": link,
-
-            "published": published,
-
-        }
-
-    # --------------------------------------------------------
-
-    def _published(
-        self,
-        entry: Any,
-    ) -> str:
-
-        value = getattr(
-
-            entry,
-
-            "published",
-
-            "",
-
-        )
-
-        if value:
-
-            return value
-
-        value = getattr(
-
-            entry,
-
-            "updated",
-
-            "",
-
-        )
-
-        if value:
-
-            return value
-
-        return datetime.now().isoformat()
-
-
-# ============================================================
-# modules/rss_engine.py
-# BRN 2.0 RSS Engine
-# Sprint 1-2
-# Part 2 / 3
-# ============================================================
-
-    # --------------------------------------------------------
-    # FETCH SELECTED SOURCES
-    # --------------------------------------------------------
-
-    def fetch_sources(
-        self,
-        sources: list[str],
-    ) -> list[dict]:
-
-        news: list[dict] = []
-
-        for source in sources:
-
-            url = RSS_FEEDS.get(source)
-
-            if not url:
-                continue
-
-            try:
-
-                news.extend(
-                    self.fetch(
-                        source,
-                        url,
-                    )
-                )
-
-            except Exception as exc:
-
-                rss_logger.exception(
-                    "[RSS] %s : %s",
-                    source,
-                    exc,
-                )
-
-        return news
-
-    # --------------------------------------------------------
-    # VALIDATION
-    # --------------------------------------------------------
-
-    def validate_article(
-        self,
-        article: dict,
-    ) -> bool:
-
-        if not article.get("title"):
-            return False
-
-        if not article.get("link"):
-            return False
-
-        return True
-
-    # --------------------------------------------------------
-    # NORMALIZE
-    # --------------------------------------------------------
-
-    def normalize(
-        self,
-        article: dict,
-    ) -> dict:
-
-        return {
-
-            "title": clean_text(
-                article.get("title", "")
-            ),
-
-            "summary": clean_text(
-                article.get("summary", "")
-            ),
-
-            "link": article.get(
-                "link",
-                "",
-            ),
-
-            "source": article.get(
-                "source",
-                "",
-            ),
-
-            "published": article.get(
-                "published",
-                "",
-            ),
-
-            "category": article.get(
-                "category",
-                "",
-            ),
-
-        }
-
-    # --------------------------------------------------------
-    # REMOVE DUPLICATE LINK
-    # --------------------------------------------------------
-
-    def remove_duplicates(
-        self,
-        news: list[dict],
-    ) -> list[dict]:
-
-        result = []
-
-        seen = set()
-
-        for item in news:
-
-            link = item.get("link")
-
-            if not link:
-                continue
-
-            if link in seen:
-                continue
-
-            seen.add(link)
-
-            result.append(item)
-
-        return result
-
-    # --------------------------------------------------------
-    # SORT
-    # --------------------------------------------------------
-
-    def sort(
-        self,
-        news: list[dict],
-    ) -> list[dict]:
-
-        return sorted(
-
-            news,
-
-            key=lambda x: (
-                x.get("published", ""),
-                x.get("title", ""),
-            ),
-
-            reverse=True,
-
-        )
-
-    # --------------------------------------------------------
-    # PROCESS
-    # --------------------------------------------------------
-
-    def process(
-        self,
-        news: list[dict],
-    ) -> list[dict]:
-
-        result = []
-
-        for article in news:
-
-            if not self.validate_article(article):
-                continue
-
-            result.append(
-                self.normalize(article)
-            )
-
-        result = self.remove_duplicates(result)
-
-        result = self.sort(result)
-
-        rss_logger.info(
-            "[RSS] Total : %d",
-            len(result),
-        )
-
-        return result
-
-
-# ============================================================
-# modules/rss_engine.py
-# BRN 2.0 RSS Engine
-# Sprint 1-2
-# Part 3 / 3
-# ============================================================
-
-    # --------------------------------------------------------
-    # RUN
-    # --------------------------------------------------------
-
-    def run(self) -> list[dict]:
-        """
-        RSS 전체 실행
-        """
-
-        news = self.fetch_all()
-
-        news = self.process(news)
-
-        return news
-
-    # --------------------------------------------------------
-    # ITERATOR
-    # --------------------------------------------------------
-
-    def __iter__(self):
-
-        return iter(self.fetch_all())
-
-    # --------------------------------------------------------
-    # LENGTH
-    # --------------------------------------------------------
-
-    def __len__(self):
-
-        return len(self.fetch_all())
-
-    # --------------------------------------------------------
-    # STRING
-    # --------------------------------------------------------
-
-    def __repr__(self):
-
-        return (
-            f"RSSEngine("
-            f"sources={len(RSS_FEEDS)})"
+        feeds: list,
+        now_kst: datetime | None = None,
+    ) -> list:
+
+        return fetch_many(
+            feeds,
+            now_kst,
         )
 
 
 # ============================================================
-# CONVENIENCE FUNCTIONS
+# SINGLETON
 # ============================================================
 
 _engine = RSSEngine()
-
-
-def fetch_rss() -> list[dict]:
-    """
-    전체 RSS 수집
-    """
-    return _engine.run()
-
-
-def fetch_source(source: str) -> list[dict]:
-    """
-    단일 RSS 수집
-    """
-
-    url = RSS_FEEDS.get(source)
-
-    if not url:
-        return []
-
-    return _engine.fetch(source, url)
-
-
-def fetch_sources(
-    sources: list[str],
-) -> list[dict]:
-    """
-    지정 RSS 수집
-    """
-
-    return _engine.fetch_sources(sources)
 
 
 # ============================================================
@@ -518,15 +626,7 @@ def fetch_sources(
 # ============================================================
 
 __all__ = [
-
     "RSSEngine",
-
     "fetch_rss",
-
-    "fetch_source",
-
-    "fetch_sources",
-
+    "fetch_many",
 ]
-
-
