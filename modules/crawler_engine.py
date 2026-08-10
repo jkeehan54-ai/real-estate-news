@@ -375,6 +375,14 @@ class CrawlerEngine:
 
         self.timeout = timeout
 
+# ============================================================
+# CRAWLER ENGINE INSTANCE
+# ============================================================
+
+_engine = CrawlerEngine()
+
+
+
     def get(
         self,
         url: str,
