@@ -530,7 +530,7 @@ from typing import Any
 # CONFIG CLASS
 # ============================================================
 
-@dataclass(slots=True)
+@dataclass
 class Config:
     """
     BRN Global Configuration
