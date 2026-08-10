@@ -2,43 +2,71 @@
 # ============================================================
 # BRN 2.0 Crawler Engine
 # Sprint 1-2
-# Part 1 / 3
+# 기존 news_pipeline.py 호환 버전
 # ============================================================
 
 from __future__ import annotations
 
-from typing import Callable
+from datetime import datetime
+from typing import Any, Callable
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
-from .config import (
+from modules.config import (
     HTTP_TIMEOUT,
     USER_AGENT,
 )
-from .exceptions import CrawlerError
-from .logger import main_logger
-from .utils import clean_text
+
+from modules.exceptions import (
+    CrawlerError,
+    HTMLParseError,
+)
+
+from modules.logger import main_logger
+
+from modules.utils import clean_text
+
 
 # ============================================================
-# BASE CRAWLER
+# SESSION
+# ============================================================
+
+_SESSION = requests.Session()
+
+_SESSION.headers.update(
+    {
+        "User-Agent": USER_AGENT,
+        "Accept": (
+            "text/html,application/xhtml+xml,"
+            "application/xml;q=0.9,*/*;q=0.8"
+        ),
+        "Accept-Language": (
+            "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        ),
+    }
+)
+
+
+# ============================================================
+# BASE ENGINE
 # ============================================================
 
 class CrawlerEngine:
     """
-    BRN HTML Crawler
+    BRN 기본 HTML Crawler
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        timeout: int = HTTP_TIMEOUT,
+    ):
 
-        self.session = requests.Session()
+        self.timeout = timeout
 
-        self.session.headers.update({
-
-            "User-Agent": USER_AGENT,
-
-        })
-
+    # --------------------------------------------------------
+    # REQUEST
     # --------------------------------------------------------
 
     def get(
@@ -46,14 +74,16 @@ class CrawlerEngine:
         url: str,
     ) -> BeautifulSoup:
 
+        if not url:
+            raise CrawlerError(
+                "Crawler URL이 없습니다."
+            )
+
         try:
 
-            response = self.session.get(
-
+            response = _SESSION.get(
                 url,
-
-                timeout=HTTP_TIMEOUT,
-
+                timeout=self.timeout,
             )
 
             response.raise_for_status()
@@ -61,69 +91,246 @@ class CrawlerEngine:
         except Exception as exc:
 
             raise CrawlerError(
-
-                f"페이지 요청 실패 : {url}",
-
+                f"페이지 요청 실패: {url}",
                 cause=exc,
-
             ) from exc
 
-        return BeautifulSoup(
+        try:
 
-            response.text,
+            return BeautifulSoup(
+                response.content,
+                "html.parser",
+            )
 
-            "html.parser",
+        except Exception as exc:
 
-        )
+            raise HTMLParseError(
+                f"HTML 파싱 실패: {url}",
+                cause=exc,
+            ) from exc
 
+    # --------------------------------------------------------
+    # CRAWL
     # --------------------------------------------------------
 
     def crawl(
         self,
         url: str,
         parser: Callable,
-    ) -> list[dict]:
+        now_kst: datetime | None = None,
+    ) -> list:
 
-        soup = self.get(url)
+        soup = self.get(
+            url
+        )
 
-        result = parser(soup)
+        try:
+
+            result = parser(
+                soup,
+                now_kst,
+            )
+
+        except TypeError:
+
+            result = parser(
+                soup
+            )
 
         main_logger.info(
-
-            "[Crawler] %s -> %d",
-
+            "[Crawler] %s -> %d건",
             url,
-
             len(result),
-
         )
 
         return result
 
     # --------------------------------------------------------
+    # ARTICLE
+    # --------------------------------------------------------
 
     @staticmethod
     def article(
+        pub_dt: datetime | None,
         title: str,
         link: str,
         source: str,
-        summary: str = "",
-        category: str = "",
-    ) -> dict:
+    ) -> tuple:
 
-        return {
+        return (
+            pub_dt,
+            clean_text(title),
+            link,
+            source,
+        )
 
-            "title": clean_text(title),
 
-            "summary": clean_text(summary),
+# ============================================================
+# DATE PARSER
+# ============================================================
 
-            "link": link,
+def _parse_datetime(
+    value: Any,
+    now_kst: datetime | None = None,
+) -> datetime | None:
 
-            "source": source,
+    if isinstance(
+        value,
+        datetime,
+    ):
 
-            "category": category,
+        if (
+            value.tzinfo is None
+            and now_kst is not None
+        ):
 
-        }
+            return value.replace(
+                tzinfo=now_kst.tzinfo
+            )
+
+        return value
+
+    if not value:
+        return now_kst
+
+    value = str(value).strip()
+
+    formats = [
+
+        "%Y-%m-%d %H:%M:%S",
+
+        "%Y-%m-%d %H:%M",
+
+        "%Y.%m.%d %H:%M:%S",
+
+        "%Y.%m.%d %H:%M",
+
+        "%Y-%m-%d",
+
+        "%Y.%m.%d",
+
+        "%m/%d %H:%M",
+
+    ]
+
+    for fmt in formats:
+
+        try:
+
+            dt = datetime.strptime(
+                value,
+                fmt,
+            )
+
+            if dt.tzinfo is None:
+
+                if now_kst is not None:
+                    dt = dt.replace(
+                        tzinfo=now_kst.tzinfo
+                    )
+
+            return dt
+
+        except ValueError:
+            continue
+
+    return now_kst
+
+
+# ============================================================
+# LINK
+# ============================================================
+
+def _absolute_url(
+    base_url: str,
+    href: str | None,
+) -> str:
+
+    if not href:
+        return ""
+
+    return urljoin(
+        base_url,
+        href,
+    )
+
+
+# ============================================================
+# GENERIC ARTICLE EXTRACTION
+# ============================================================
+
+def _extract_title(
+    tag,
+) -> str:
+
+    if tag is None:
+        return ""
+
+    return clean_text(
+        tag.get_text(
+            " ",
+            strip=True,
+        )
+    )
+
+
+def _extract_links(
+    soup: BeautifulSoup,
+    base_url: str,
+    source: str,
+    keyword: str | None = None,
+    now_kst: datetime | None = None,
+) -> list:
+
+    result = []
+
+    seen = set()
+
+    for tag in soup.select("a"):
+
+        title = _extract_title(
+            tag
+        )
+
+        href = tag.get(
+            "href"
+        )
+
+        if not title:
+            continue
+
+        if not href:
+            continue
+
+        link = _absolute_url(
+            base_url,
+            href,
+        )
+
+        if not link:
+            continue
+
+        if keyword:
+
+            if keyword.lower() not in link.lower():
+
+                continue
+
+        if link in seen:
+            continue
+
+        seen.add(link)
+
+        result.append(
+            CrawlerEngine.article(
+                now_kst,
+                title,
+                link,
+                source,
+            )
+        )
+
+    return result
 
 
 # ============================================================
@@ -132,69 +339,72 @@ class CrawlerEngine:
 
 def parse_busan(
     soup: BeautifulSoup,
-) -> list[dict]:
+    now_kst: datetime | None = None,
+) -> list:
 
-    news = []
+    result = []
 
-    for tag in soup.select("a"):
+    base_url = (
+        "https://www.busan.com/"
+    )
 
-        title = clean_text(
+    seen = set()
 
-            tag.get_text()
+    # --------------------------------------------------------
+    # 우선 일반 기사 링크
+    # --------------------------------------------------------
 
-        )
+    selectors = [
 
-        href = tag.get("href")
+        "a[href*='/news/']",
 
-        if not title:
+        "a[href*='/article/']",
 
-            continue
+        "a[href*='newsView']",
 
-        if not href:
+    ]
 
-            continue
+    for selector in selectors:
 
-        if "/news/" not in href:
+        for tag in soup.select(
+            selector
+        ):
 
-            continue
-
-        if href.startswith("/"):
-
-            href = (
-
-                "https://www.busan.com"
-
-                + href
-
+            title = _extract_title(
+                tag
             )
 
-        news.append(
+            href = tag.get(
+                "href"
+            )
 
-            CrawlerEngine.article(
+            if not title or not href:
+                continue
 
-                title,
-
+            link = _absolute_url(
+                base_url,
                 href,
-
-                "부산일보",
-
-                "",
-
-                "부산경남",
-
             )
 
-        )
+            if not link:
+                continue
 
-    return news
+            if link in seen:
+                continue
 
+            seen.add(link)
 
-# ============================================================
-# modules/crawler_engine.py
-# BRN 2.0 Crawler Engine
-# Sprint 1-2
-# Part 2 / 3
-# ============================================================
+            result.append(
+                CrawlerEngine.article(
+                    now_kst,
+                    title,
+                    link,
+                    "부산일보",
+                )
+            )
+
+    return result
+
 
 # ============================================================
 # KOOKJE SHINMUN
@@ -202,53 +412,67 @@ def parse_busan(
 
 def parse_kookje(
     soup: BeautifulSoup,
-) -> list[dict]:
+    now_kst: datetime | None = None,
+) -> list:
 
-    news = []
+    result = []
 
-    for tag in soup.select("a"):
+    base_url = (
+        "https://www.kookje.co.kr/"
+    )
 
-        title = clean_text(
-            tag.get_text()
-        )
+    seen = set()
 
-        href = tag.get("href")
+    selectors = [
 
-        if not title:
-            continue
+        "a[href*='/news/']",
 
-        if not href:
-            continue
+        "a[href*='/article/']",
 
-        if "/news" not in href:
-            continue
+        "a[href*='news_']",
 
-        if href.startswith("/"):
+    ]
 
-            href = (
-                "https://www.kookje.co.kr"
-                + href
+    for selector in selectors:
+
+        for tag in soup.select(
+            selector
+        ):
+
+            title = _extract_title(
+                tag
             )
 
-        news.append(
+            href = tag.get(
+                "href"
+            )
 
-            CrawlerEngine.article(
+            if not title or not href:
+                continue
 
-                title,
-
+            link = _absolute_url(
+                base_url,
                 href,
-
-                "국제신문",
-
-                "",
-
-                "부산경남",
-
             )
 
-        )
+            if not link:
+                continue
 
-    return news
+            if link in seen:
+                continue
+
+            seen.add(link)
+
+            result.append(
+                CrawlerEngine.article(
+                    now_kst,
+                    title,
+                    link,
+                    "국제신문",
+                )
+            )
+
+    return result
 
 
 # ============================================================
@@ -257,138 +481,214 @@ def parse_kookje(
 
 def parse_naver_land(
     soup: BeautifulSoup,
-) -> list[dict]:
+    now_kst: datetime | None = None,
+) -> list:
 
-    news = []
+    result = []
 
-    for tag in soup.select("a"):
+    base_url = (
+        "https://land.naver.com/"
+    )
 
-        title = clean_text(
-            tag.get_text()
-        )
+    seen = set()
 
-        href = tag.get("href")
+    selectors = [
 
-        if not title:
-            continue
+        "a[href*='news']",
 
-        if not href:
-            continue
+        "a[href*='article']",
 
-        if "land.naver.com" not in href:
-            continue
+    ]
 
-        news.append(
+    for selector in selectors:
 
-            CrawlerEngine.article(
+        for tag in soup.select(
+            selector
+        ):
 
-                title,
-
-                href,
-
-                "네이버부동산",
-
-                "",
-
-                "시장동향",
-
+            title = _extract_title(
+                tag
             )
 
-        )
+            href = tag.get(
+                "href"
+            )
 
-    return news
+            if not title or not href:
+                continue
+
+            link = _absolute_url(
+                base_url,
+                href,
+            )
+
+            if not link:
+                continue
+
+            if link in seen:
+                continue
+
+            seen.add(link)
+
+            result.append(
+                CrawlerEngine.article(
+                    now_kst,
+                    title,
+                    link,
+                    "네이버부동산",
+                )
+            )
+
+    return result
 
 
 # ============================================================
-# SCRAPER
+# ENGINE
 # ============================================================
 
 _engine = CrawlerEngine()
 
 
-def scrape_busan() -> list[dict]:
+# ============================================================
+# BUSAN
+# ============================================================
+
+def scrape_busan(
+    now_kst: datetime | None = None,
+) -> list:
 
     url = (
         "https://www.busan.com/"
     )
 
-    return _engine.crawl(
-        url,
-        parse_busan,
-    )
+    try:
+
+        result = _engine.crawl(
+            url,
+            parse_busan,
+            now_kst,
+        )
+
+        main_logger.info(
+            "[부산일보] %d건",
+            len(result),
+        )
+
+        return result
+
+    except Exception as exc:
+
+        main_logger.exception(
+            "[부산일보] 수집 실패: %s",
+            exc,
+        )
+
+        return []
 
 
-def scrape_kookje() -> list[dict]:
+# ============================================================
+# KOOKJE
+# ============================================================
+
+def scrape_kookje(
+    now_kst: datetime | None = None,
+) -> list:
 
     url = (
         "https://www.kookje.co.kr/"
     )
 
-    return _engine.crawl(
-        url,
-        parse_kookje,
-    )
+    try:
+
+        result = _engine.crawl(
+            url,
+            parse_kookje,
+            now_kst,
+        )
+
+        main_logger.info(
+            "[국제신문] %d건",
+            len(result),
+        )
+
+        return result
+
+    except Exception as exc:
+
+        main_logger.exception(
+            "[국제신문] 수집 실패: %s",
+            exc,
+        )
+
+        return []
 
 
-def scrape_naver_land() -> list[dict]:
+# ============================================================
+# NAVER LAND
+# ============================================================
+
+def scrape_naver_land(
+    now_kst: datetime | None = None,
+) -> list:
 
     url = (
         "https://land.naver.com/"
     )
 
-    return _engine.crawl(
-        url,
-        parse_naver_land,
+    try:
+
+        result = _engine.crawl(
+            url,
+            parse_naver_land,
+            now_kst,
+        )
+
+        main_logger.info(
+            "[네이버부동산] %d건",
+            len(result),
+        )
+
+        return result
+
+    except Exception as exc:
+
+        main_logger.exception(
+            "[네이버부동산] 수집 실패: %s",
+            exc,
+        )
+
+        return []
+
+
+# ============================================================
+# CRAWL ALL
+# ============================================================
+
+def crawl_all(
+    now_kst: datetime | None = None,
+) -> list:
+
+    result = []
+
+    result.extend(
+        scrape_busan(
+            now_kst
+        )
     )
 
-
-# ============================================================
-# modules/crawler_engine.py
-# BRN 2.0 Crawler Engine
-# Sprint 1-2
-# Part 3 / 3
-# ============================================================
-
-# ============================================================
-# RUN ALL
-# ============================================================
-
-def crawl_all() -> list[dict]:
-    """
-    모든 크롤러 실행
-    """
-
-    news = []
-
-    crawlers = (
-
-        scrape_busan,
-
-        scrape_kookje,
-
-        scrape_naver_land,
-
+    result.extend(
+        scrape_kookje(
+            now_kst
+        )
     )
 
-    for crawler in crawlers:
+    result.extend(
+        scrape_naver_land(
+            now_kst
+        )
+    )
 
-        try:
-
-            news.extend(
-                crawler()
-            )
-
-        except Exception as exc:
-
-            main_logger.exception(
-
-                "[Crawler] %s",
-
-                exc,
-
-            )
-
-    return news
+    return result
 
 
 # ============================================================
@@ -399,27 +699,28 @@ def health_check() -> dict:
 
     result = {}
 
-    tests = {
+    crawlers = {
 
         "부산일보": scrape_busan,
 
         "국제신문": scrape_kookje,
 
-        "네이버부동산": scrape_naver_land,
+        "네이버부동산":
+            scrape_naver_land,
 
     }
 
-    for name, func in tests.items():
+    for name, crawler in crawlers.items():
 
         try:
 
-            count = len(func())
+            items = crawler()
 
             result[name] = {
 
                 "success": True,
 
-                "count": count,
+                "count": len(items),
 
             }
 
@@ -446,9 +747,11 @@ __all__ = [
 
     "CrawlerEngine",
 
-    "crawl_all",
+    "parse_busan",
 
-    "health_check",
+    "parse_kookje",
+
+    "parse_naver_land",
 
     "scrape_busan",
 
@@ -456,5 +759,8 @@ __all__ = [
 
     "scrape_naver_land",
 
-]
+    "crawl_all",
 
+    "health_check",
+
+]
