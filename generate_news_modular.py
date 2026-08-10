@@ -69,7 +69,10 @@ def main():
     # HTML
     # --------------------------------------------------
 
-    html = build_html(data)
+    html = build_html(
+        data,
+        brn=brn_result,
+    )
 
     with open(
         output_path,
