@@ -1,5 +1,9 @@
 # modules/market_data_engine.py
+# ============================================================
+# BRN Market Data Engine
+# Sprint 1-3
 # (1/3)
+# ============================================================
 
 """
 BRN Market Data Engine
@@ -14,8 +18,6 @@ BOK
 
 from __future__ import annotations
 
-import os
-
 from modules.reb_market import REBMarket
 from modules.kb_market import get_market_data
 
@@ -28,6 +30,8 @@ class MarketDataEngine:
 
         self.reb = REBMarket()
 
+    # ---------------------------------------------------------
+    # REB
     # ---------------------------------------------------------
 
     def load_reb(self):
@@ -70,7 +74,6 @@ class MarketDataEngine:
         )
 
         self.values.update(
-
             {
 
                 # --------------------
@@ -156,47 +159,103 @@ class MarketDataEngine:
                     ),
 
             }
-
         )
 
-# modules/market_data_engine.py
-# (2/3)
-
+    # ---------------------------------------------------------
+    # KB
     # ---------------------------------------------------------
 
     def build_kb(self):
 
         """
-        KB 데이터
+        KB Market Data
 
-        현재 BRNEngine에서 사용하는 값은
-        generate_news.py에서 생성된 값을 그대로 유지한다.
+        modules.kb_market.get_market_data()
+        에서 실제 KB 시장 데이터를 가져온다.
+
+        반환 구조:
+
+            {
+                "date": "...",
+                "nation_change": ...,
+                "weeks": ...,
+                "trend": "...",
+                "seller": ...,
+                "buyer": ...,
+                "seoul_change": ...,
+                "busan_change": ...,
+            }
+
+        BRNEngine에서 사용하는
+        KB_* 형식으로 변환하여
+        self.values에 저장한다.
         """
 
-        defaults = {
+        data = get_market_data()
 
-            "KB_NATION_CHANGE": 0.0,
-            "KB_SEOUL_CHANGE": 0.0,
-            "KB_BUSAN_CHANGE": 0.0,
+        # -----------------------------------------------------
+        # 실제 KB 데이터
+        # -----------------------------------------------------
 
-            "KB_BUYER": 0.0,
-            "KB_SELLER": 0.0,
+        self.values.update(
+            {
 
-            "KB_WEEKS": 0,
+                "KB_DATE":
+                    data.get(
+                        "date",
+                        "",
+                    ),
 
-            "KB_TREND": "보합",
+                "KB_NATION_CHANGE":
+                    data.get(
+                        "nation_change",
+                        0.0,
+                    ),
 
-            "KB_MARKET": {},
+                "KB_SEOUL_CHANGE":
+                    data.get(
+                        "seoul_change",
+                        0.0,
+                    ),
 
-        }
+                "KB_BUSAN_CHANGE":
+                    data.get(
+                        "busan_change",
+                        0.0,
+                    ),
 
-        for key, value in defaults.items():
+                "KB_BUYER":
+                    data.get(
+                        "buyer",
+                        0.0,
+                    ),
 
-            self.values.setdefault(
-                key,
-                value,
-            )
+                "KB_SELLER":
+                    data.get(
+                        "seller",
+                        0.0,
+                    ),
 
+                "KB_WEEKS":
+                    data.get(
+                        "weeks",
+                        0,
+                    ),
+
+                "KB_TREND":
+                    data.get(
+                        "trend",
+                        "",
+                    ),
+
+                "KB_MARKET":
+                    data,
+
+            }
+        )
+
+    # ---------------------------------------------------------
+    # BOK
     # ---------------------------------------------------------
 
     def build_bok(self):
@@ -212,6 +271,8 @@ class MarketDataEngine:
             0.0,
         )
 
+    # ---------------------------------------------------------
+    # PUBLIC
     # ---------------------------------------------------------
 
     def build_public(self):
@@ -237,36 +298,239 @@ class MarketDataEngine:
             0.0,
         )
 
+
+# modules/market_data_engine.py
+# ============================================================
+# BRN Market Data Engine
+# Sprint 1-3
+# (2/3)
+# ============================================================
+
+    # ---------------------------------------------------------
+    # BUILD
     # ---------------------------------------------------------
 
     def build(self):
 
+        """
+        전체 시장 데이터 생성
+
+        순서:
+
+            REB
+            ↓
+            KB
+            ↓
+            BOK
+            ↓
+            PUBLIC
+        """
+
         self.values = {}
 
-        self.build_reb()
+        # -----------------------------------------------------
+        # REB
+        # -----------------------------------------------------
 
-        self.build_kb()
+        try:
 
-        self.build_bok()
+            self.build_reb()
 
-        self.build_public()
+        except Exception as exc:
+
+            print(
+                "[REB ERROR]",
+                repr(exc),
+            )
+
+        # -----------------------------------------------------
+        # KB
+        # -----------------------------------------------------
+
+        try:
+
+            self.build_kb()
+
+        except Exception as exc:
+
+            print(
+                "[KB ERROR]",
+                repr(exc),
+            )
+
+            # KB 전체 실패 시에도
+            # 나머지 Engine은 계속 실행한다.
+
+            self.values.setdefault(
+                "KB_DATE",
+                "",
+            )
+
+            self.values.setdefault(
+                "KB_NATION_CHANGE",
+                0.0,
+            )
+
+            self.values.setdefault(
+                "KB_SEOUL_CHANGE",
+                0.0,
+            )
+
+            self.values.setdefault(
+                "KB_BUSAN_CHANGE",
+                0.0,
+            )
+
+            self.values.setdefault(
+                "KB_BUYER",
+                0.0,
+            )
+
+            self.values.setdefault(
+                "KB_SELLER",
+                0.0,
+            )
+
+            self.values.setdefault(
+                "KB_WEEKS",
+                0,
+            )
+
+            self.values.setdefault(
+                "KB_TREND",
+                "",
+            )
+
+            self.values.setdefault(
+                "KB_MARKET",
+                {},
+            )
+
+        # -----------------------------------------------------
+        # BOK
+        # -----------------------------------------------------
+
+        try:
+
+            self.build_bok()
+
+        except Exception as exc:
+
+            print(
+                "[BOK ERROR]",
+                repr(exc),
+            )
+
+        # -----------------------------------------------------
+        # PUBLIC
+        # -----------------------------------------------------
+
+        try:
+
+            self.build_public()
+
+        except Exception as exc:
+
+            print(
+                "[PUBLIC DATA ERROR]",
+                repr(exc),
+            )
 
         return self.values
 
-
-
-# modules/market_data_engine.py
-# (3/3)
-
+    # ---------------------------------------------------------
+    # SUMMARY
     # ---------------------------------------------------------
 
     def summary(self):
 
         print()
 
-        print("===================================")
-        print("BRN Market Data")
-        print("===================================")
+        print(
+            "==================================="
+        )
+
+        print(
+            "BRN Market Data"
+        )
+
+        print(
+            "==================================="
+        )
+
+        # -----------------------------------------------------
+        # KB
+        # -----------------------------------------------------
+
+        print(
+            "KB 기준일 :",
+            self.values.get(
+                "KB_DATE",
+                "",
+            ),
+        )
+
+        print(
+            "KB 전국 변동률 :",
+            self.values.get(
+                "KB_NATION_CHANGE",
+                0,
+            ),
+        )
+
+        print(
+            "KB 서울 변동률 :",
+            self.values.get(
+                "KB_SEOUL_CHANGE",
+                0,
+            ),
+        )
+
+        print(
+            "KB 부산 변동률 :",
+            self.values.get(
+                "KB_BUSAN_CHANGE",
+                0,
+            ),
+        )
+
+        print(
+            "KB 매수우위 :",
+            self.values.get(
+                "KB_BUYER",
+                0,
+            ),
+        )
+
+        print(
+            "KB 매도우위 :",
+            self.values.get(
+                "KB_SELLER",
+                0,
+            ),
+        )
+
+        print(
+            "KB 연속주수 :",
+            self.values.get(
+                "KB_WEEKS",
+                0,
+            ),
+        )
+
+        print(
+            "KB 추세 :",
+            self.values.get(
+                "KB_TREND",
+                "",
+            ),
+        )
+
+        print()
+
+        # -----------------------------------------------------
+        # REB
+        # -----------------------------------------------------
 
         print(
             "REB 기준월 :",
@@ -277,7 +541,7 @@ class MarketDataEngine:
         )
 
         print(
-            "전국 매매지수 :",
+            "REB 전국 매매지수 :",
             self.values.get(
                 "REB_PRICE_NATION",
                 0,
@@ -285,7 +549,7 @@ class MarketDataEngine:
         )
 
         print(
-            "서울 매매지수 :",
+            "REB 서울 매매지수 :",
             self.values.get(
                 "REB_PRICE_SEOUL",
                 0,
@@ -293,7 +557,7 @@ class MarketDataEngine:
         )
 
         print(
-            "부산 매매지수 :",
+            "REB 부산 매매지수 :",
             self.values.get(
                 "REB_PRICE_BUSAN",
                 0,
@@ -303,7 +567,7 @@ class MarketDataEngine:
         print()
 
         print(
-            "전국 전세지수 :",
+            "REB 전국 전세지수 :",
             self.values.get(
                 "REB_JEONSE_NATION",
                 0,
@@ -311,7 +575,7 @@ class MarketDataEngine:
         )
 
         print(
-            "서울 전세지수 :",
+            "REB 서울 전세지수 :",
             self.values.get(
                 "REB_JEONSE_SEOUL",
                 0,
@@ -319,7 +583,7 @@ class MarketDataEngine:
         )
 
         print(
-            "부산 전세지수 :",
+            "REB 부산 전세지수 :",
             self.values.get(
                 "REB_JEONSE_BUSAN",
                 0,
@@ -329,7 +593,7 @@ class MarketDataEngine:
         print()
 
         print(
-            "전국 평균가격 :",
+            "REB 전국 평균가격 :",
             self.values.get(
                 "REB_AVG_NATION",
                 0,
@@ -337,17 +601,23 @@ class MarketDataEngine:
         )
 
         print(
-            "전국 중위가격 :",
+            "REB 전국 중위가격 :",
             self.values.get(
                 "REB_MEDIAN_NATION",
                 0,
             ),
         )
 
-        print("===================================")
+        print(
+            "==================================="
+        )
 
         return self.values
 
+
+# ============================================================
+# DIRECT EXECUTION
+# ============================================================
 
 if __name__ == "__main__":
 
@@ -356,4 +626,10 @@ if __name__ == "__main__":
     engine.build()
 
     engine.summary()
+
+
+
+
+
+
 
