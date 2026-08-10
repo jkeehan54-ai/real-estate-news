@@ -2,17 +2,18 @@
 # ============================================================
 # BRN 2.0 Logger
 # Sprint 1-1
-# Part 1 / 3
 # ============================================================
 
 from __future__ import annotations
 
 import logging
 import logging.handlers
-import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
+from functools import wraps
+from typing import Any, Callable, Iterable
 
 from .config import (
     LOG_DIR,
@@ -27,22 +28,28 @@ from .config import (
 # ============================================================
 
 _LEVEL_MAP = {
-
     "CRITICAL": logging.CRITICAL,
     "ERROR": logging.ERROR,
     "WARNING": logging.WARNING,
     "INFO": logging.INFO,
     "DEBUG": logging.DEBUG,
-
 }
 
-LOGLEVEL = _LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO)
+LOGLEVEL = _LEVEL_MAP.get(
+    str(LOG_LEVEL).upper(),
+    logging.INFO,
+)
 
 # ============================================================
 # DIRECTORY
 # ============================================================
 
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = Path(LOG_DIR)
+
+LOG_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 # ============================================================
 # FILE NAME
@@ -84,7 +91,9 @@ FORMATTER = logging.Formatter(
 # HANDLER
 # ============================================================
 
-def _file_handler(filename: Path) -> logging.Handler:
+def _file_handler(
+    filename: Path,
+) -> logging.Handler:
 
     handler = logging.handlers.RotatingFileHandler(
         filename,
@@ -102,11 +111,17 @@ def _file_handler(filename: Path) -> logging.Handler:
 
 def _console_handler() -> logging.Handler:
 
-    handler = logging.StreamHandler(sys.stdout)
+    handler = logging.StreamHandler(
+        sys.stdout
+    )
 
-    handler.setFormatter(FORMATTER)
+    handler.setFormatter(
+        FORMATTER
+    )
 
-    handler.setLevel(LOGLEVEL)
+    handler.setLevel(
+        LOGLEVEL
+    )
 
     return handler
 
@@ -115,7 +130,7 @@ def _console_handler() -> logging.Handler:
 # LOGGER FACTORY
 # ============================================================
 
-_CREATED = {}
+_CREATED: dict[str, logging.Logger] = {}
 
 
 def get_logger(
@@ -128,14 +143,18 @@ def get_logger(
 
     logger = logging.getLogger(name)
 
-    logger.setLevel(LOGLEVEL)
+    logger.setLevel(
+        LOGLEVEL
+    )
 
     logger.propagate = False
 
     if LOG_FILE:
 
         logger.addHandler(
-            _file_handler(logfile or MAIN_LOG)
+            _file_handler(
+                logfile or MAIN_LOG
+            )
         )
 
     if LOG_CONSOLE:
@@ -185,113 +204,73 @@ error_logger = get_logger(
 
 
 # ============================================================
-# modules/logger.py
-# BRN 2.0 Logger
-# Sprint 1-1
-# Part 2 / 3
+# SAFE MESSAGE
 # ============================================================
 
-from __future__ import annotations
-
-import time
-from functools import wraps
-from typing import Any, Callable
-
-
-# ============================================================
-# INTERNAL
-# ============================================================
-
-def _safe_message(message: Any) -> str:
-    """
-    어떤 객체라도 안전하게 문자열로 변환
-    """
+def _safe_message(
+    message: Any,
+) -> str:
 
     try:
         return str(message)
+
     except Exception:
         return "<unprintable>"
 
 
 # ============================================================
-# BASIC WRAPPERS
+# BASIC LOGGING
 # ============================================================
 
-def debug(message: Any) -> None:
+def debug(
+    message: Any,
+) -> None:
 
     main_logger.debug(
         _safe_message(message)
     )
 
 
-def info(message: Any) -> None:
+def info(
+    message: Any,
+) -> None:
 
     main_logger.info(
         _safe_message(message)
     )
 
 
-def warning(message: Any) -> None:
+def warning(
+    message: Any,
+) -> None:
 
     main_logger.warning(
         _safe_message(message)
     )
 
 
-def error(message: Any) -> None:
+def error(
+    message: Any,
+) -> None:
 
     error_logger.error(
         _safe_message(message)
     )
 
 
-def critical(message: Any) -> None:
+def critical(
+    message: Any,
+) -> None:
 
     error_logger.critical(
         _safe_message(message)
     )
 
 
-# ============================================================
-# MODULE LOG
-# ============================================================
-
-def rss(message: Any) -> None:
-
-    rss_logger.info(
-        _safe_message(message)
-    )
-
-
-def market(message: Any) -> None:
-
-    market_logger.info(
-        _safe_message(message)
-    )
-
-
-def report(message: Any) -> None:
-
-    report_logger.info(
-        _safe_message(message)
-    )
-
-
-def history(message: Any) -> None:
-
-    history_logger.info(
-        _safe_message(message)
-    )
-
-
-# ============================================================
-# EXCEPTION
-# ============================================================
-
 def exception(
     exc: Exception,
     *,
-    logger=error_logger,
+    logger: logging.Logger = error_logger,
 ) -> None:
 
     logger.exception(
@@ -301,21 +280,62 @@ def exception(
 
 
 # ============================================================
+# MODULE LOGGING
+# ============================================================
+
+def rss(
+    message: Any,
+) -> None:
+
+    rss_logger.info(
+        _safe_message(message)
+    )
+
+
+def market(
+    message: Any,
+) -> None:
+
+    market_logger.info(
+        _safe_message(message)
+    )
+
+
+def report(
+    message: Any,
+) -> None:
+
+    report_logger.info(
+        _safe_message(message)
+    )
+
+
+def history(
+    message: Any,
+) -> None:
+
+    history_logger.info(
+        _safe_message(message)
+    )
+
+
+# ============================================================
 # EXECUTION TIMER
 # ============================================================
 
 def log_execution(
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> Callable:
 
-    """
-    함수 실행시간 측정
-    """
-
-    def decorator(func: Callable):
+    def decorator(
+        func: Callable,
+    ):
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(
+            *args,
+            **kwargs,
+        ):
 
             start = time.perf_counter()
 
@@ -344,7 +364,7 @@ def log_execution(
 
                 return result
 
-            except Exception as exc:
+            except Exception:
 
                 elapsed = (
                     time.perf_counter()
@@ -357,7 +377,7 @@ def log_execution(
                     elapsed,
                 )
 
-                raise exc
+                raise
 
         return wrapper
 
@@ -365,20 +385,22 @@ def log_execution(
 
 
 # ============================================================
-# CONTEXT MANAGER
+# LOG TIMER
 # ============================================================
 
 class LogTimer:
-
     """
-    with LogTimer("RSS"):
-        ...
+    실행시간 측정용 Context Manager
+
+    사용 예:
+        with LogTimer("RSS 수집"):
+            ...
     """
 
     def __init__(
         self,
         title: str,
-        logger=main_logger,
+        logger: logging.Logger = main_logger,
     ):
 
         self.title = title
@@ -430,91 +452,84 @@ class LogTimer:
 
 
 # ============================================================
-# modules/logger.py
-# BRN 2.0 Logger
-# Sprint 1-1
-# Part 3 / 3
-# ============================================================
-
-from __future__ import annotations
-
-from typing import Iterable
-
-
-# ============================================================
-# BANNER
+# DISPLAY HELPERS
 # ============================================================
 
 def banner(
     title: str,
     *,
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> None:
 
-    line = "=" * 72
+    line_text = "=" * 72
 
-    logger.info(line)
-    logger.info(title)
-    logger.info(line)
+    logger.info(
+        line_text
+    )
 
+    logger.info(
+        title
+    )
 
-# ============================================================
-# SECTION
-# ============================================================
+    logger.info(
+        line_text
+    )
+
 
 def section(
     title: str,
     *,
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> None:
 
     logger.info("")
-    logger.info("-" * 60)
-    logger.info(title)
-    logger.info("-" * 60)
 
+    logger.info(
+        "-" * 60
+    )
 
-# ============================================================
-# TABLE
-# ============================================================
+    logger.info(
+        title
+    )
+
+    logger.info(
+        "-" * 60
+    )
+
 
 def table(
     rows: Iterable[tuple],
     *,
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> None:
 
     for row in rows:
 
         text = " | ".join(
-            str(x)
-            for x in row
+            str(value)
+            for value in row
         )
 
-        logger.info(text)
+        logger.info(
+            text
+        )
 
-
-# ============================================================
-# LINE
-# ============================================================
 
 def line(
     char: str = "-",
     length: int = 60,
     *,
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> None:
 
-    logger.info(char * length)
+    logger.info(
+        char * length
+    )
 
-
-# ============================================================
-# EMPTY
-# ============================================================
 
 def blank(
     *,
-    logger=main_logger,
+    logger: logging.Logger = main_logger,
 ) -> None:
 
     logger.info("")
@@ -535,10 +550,8 @@ def shutdown() -> None:
 
 __all__ = [
 
-    # Factory
     "get_logger",
 
-    # Instances
     "main_logger",
     "rss_logger",
     "market_logger",
@@ -546,7 +559,6 @@ __all__ = [
     "history_logger",
     "error_logger",
 
-    # Basic
     "debug",
     "info",
     "warning",
@@ -554,31 +566,33 @@ __all__ = [
     "critical",
     "exception",
 
-    # Module
     "rss",
     "market",
     "report",
     "history",
 
-    # Helpers
+    "log_execution",
+    "LogTimer",
+
     "banner",
     "section",
     "table",
     "line",
     "blank",
 
-    # Utilities
-    "log_execution",
-    "LogTimer",
     "shutdown",
 
 ]
 
 
 # ============================================================
-# STARTUP MESSAGE
+# STARTUP
 # ============================================================
 
-banner("BRN 2.0 Logger initialized")
+banner(
+    "BRN 2.0 Logger initialized"
+)
 
-info("Logging system is ready.")
+info(
+    "Logging system is ready."
+)
