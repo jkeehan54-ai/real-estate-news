@@ -43,6 +43,11 @@ _SESSION.headers.update(
             "text/xml, "
             "*/*;q=0.8"
         ),
+        "Accept-Language": (
+            "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        ),
+        "Referer": "https://www.google.com/",
+        "Cache-Control": "no-cache",
     }
 )
 
@@ -61,8 +66,10 @@ def _parse_datetime(
     우선순위:
         published_parsed
         updated_parsed
+        created_parsed
         published
         updated
+        created
     """
 
     # --------------------------------------------------------
@@ -126,9 +133,14 @@ def _parse_datetime(
         if not value:
             continue
 
-        value = str(value).strip()
+        value = str(
+            value
+        ).strip()
 
+        # ----------------------------------------------------
         # RFC 822 / RFC 2822
+        # ----------------------------------------------------
+
         try:
 
             dt = parsedate_to_datetime(
@@ -147,7 +159,10 @@ def _parse_datetime(
         except Exception:
             pass
 
+        # ----------------------------------------------------
         # ISO 8601
+        # ----------------------------------------------------
+
         try:
 
             normalized = value.replace(
@@ -185,7 +200,9 @@ def _clean_text(
     if value is None:
         return ""
 
-    text = str(value)
+    text = str(
+        value
+    )
 
     replacements = {
         "\r": " ",
@@ -224,7 +241,9 @@ def _get_link(
     )
 
     if link:
-        return str(link).strip()
+        return str(
+            link
+        ).strip()
 
     links = getattr(
         entry,
@@ -340,7 +359,6 @@ def _decode_content(
                 )
 
             except Exception:
-
                 pass
 
     return content
@@ -386,6 +404,12 @@ def fetch_rss(
             ),
             ...
         ]
+
+    개별 RSS 피드가 403, 404, timeout 등의
+    네트워크 오류를 발생시키더라도 전체 BRN
+    파이프라인을 중단하지 않는다.
+
+    실패한 피드는 []를 반환하고 다음 피드로 진행한다.
     """
 
     result = []
@@ -404,6 +428,10 @@ def fetch_rss(
         name,
     )
 
+    # --------------------------------------------------------
+    # RSS 다운로드
+    # --------------------------------------------------------
+
     try:
 
         response = _SESSION.get(
@@ -421,10 +449,16 @@ def fetch_rss(
             exc,
         )
 
-        raise RSSFetchError(
-            f"{name} RSS 다운로드 실패",
-            cause=exc,
-        ) from exc
+        # ----------------------------------------------------
+        # 중요:
+        #
+        # 기존에는 RSSFetchError를 raise하여
+        # news_pipeline.py 전체가 중단되었다.
+        #
+        # 이제 개별 매체 오류는 해당 매체만 건너뛴다.
+        # ----------------------------------------------------
+
+        return result
 
     # --------------------------------------------------------
     # RSS 파싱
@@ -449,10 +483,11 @@ def fetch_rss(
             exc,
         )
 
-        raise RSSParseError(
-            f"{name} RSS 파싱 실패",
-            cause=exc,
-        ) from exc
+        # ----------------------------------------------------
+        # 파싱 실패도 해당 피드만 건너뛴다.
+        # ----------------------------------------------------
+
+        return result
 
     # --------------------------------------------------------
     # feedparser 오류 확인
