@@ -24,7 +24,7 @@ from .config import (
 # DEFAULT SETTINGS
 # ============================================================
 
-@dataclass(slots=True)
+@dataclass
 class Settings:
 
     # --------------------------------------------------------
