@@ -563,7 +563,7 @@ def classify(title: str) -> str:
     6. 부산경남
     7. 시장동향
     """
-
+    print("[CLASSIFY TEST]", title)
     t = normalize(title)
 
     # ---------------------------------------------------------
