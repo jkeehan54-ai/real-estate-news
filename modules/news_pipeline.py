@@ -82,83 +82,87 @@ def get_clean_news():
     )
 
     total = 0
-    dup = 0
-    nonre = 0
+dup = 0
+nonre = 0
 
-    for pub_dt, title, link, src in all_entries:
+for pub_dt, title, link, src in all_entries:
 
-        total += 1
+    total += 1
 
-        # ---------------------------------------------------------
-        # ① 부동산 기사 여부 1차 필터
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
+    # ① 부동산 기사 여부 1차 필터
+    # ---------------------------------------------------------
 
-        if not is_estate_related(title):
-            nonre += 1
+    if not is_estate_related(title):
+        nonre += 1
+        continue
+
+    # ---------------------------------------------------------
+    # ② 중복 제거
+    # ---------------------------------------------------------
+
+    if is_duplicate(title, seen):
+        dup += 1
+        continue
+
+    # ---------------------------------------------------------
+    # ③ 카테고리 분류
+    # ---------------------------------------------------------
+
+    cat = classify(title)
+
+    # 예상하지 못한 카테고리 방어
+    if cat not in results:
+        continue
+
+    # ---------------------------------------------------------
+    # ④ 시장동향 2차 필터
+    # ---------------------------------------------------------
+
+    if cat == "시장동향" and not is_market_valid(title):
+        nonre += 1
+        continue
+
+    # ---------------------------------------------------------
+    # ⑤ 매체별 제한
+    # ---------------------------------------------------------
+
+    if src in SOURCE_LIMITS:
+        if src_cnt.get(src, 0) >= SOURCE_LIMITS[src]:
             continue
 
-        # ---------------------------------------------------------
-        # ② 중복 제거
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
+    # ⑥ 카테고리별 제한
+    # ---------------------------------------------------------
 
-        if is_duplicate(title, seen):
-            dup += 1
+    limit = CAT_LIMITS.get(cat)
+
+    if limit is not None:
+        if len(results[cat]) >= limit:
             continue
 
-        # ---------------------------------------------------------
-        # ③ 카테고리 분류
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
+    # ⑦ 저장
+    # ---------------------------------------------------------
 
-        cat = classify(title)
+    pub_str = (
+        pub_dt.strftime("%m/%d %H:%M")
+        if pub_dt
+        else ""
+    )
 
-        # 예상하지 못한 카테고리 방어
-        if cat not in results:
-            continue
+    results[cat].append(
+        {
+            "title": normalize(title),
+            "link": link,
+            "src": src,
+            "pub_str": pub_str,
+        }
+    )
 
-        # ---------------------------------------------------------
-        # ④ 시장동향 2차 필터
-        # ---------------------------------------------------------
+    seen.append(title)
 
-        if cat == "시장동향" and not is_market_valid(title):
-            nonre += 1
-            continue
- 
-        # ---------------------------------------------------------
-        # ⑤ 매체별 제한
-        # ---------------------------------------------------------
-
-        if src in SOURCE_LIMITS:
-            if src_cnt.get(src, 0) >= SOURCE_LIMITS[src]:
-                continue
-
-        # ---------------------------------------------------------
-        # ⑥ 카테고리별 제한
-        # ---------------------------------------------------------
-
-        limit = CAT_LIMITS.get(cat)
-
-        if limit is not None:
-            if len(results[cat]) >= limit:
-                continue
-
-        pub_str = (
-            pub_dt.strftime("%m/%d %H:%M")
-            if pub_dt
-            else ""
-        )
-
-        results[cat].append(
-            {
-                "title": normalize(title),
-                "link": link,
-                "src": src,
-                "pub_str": pub_str,
-            }
-        )
-
-        seen.append(title)
-
-        src_cnt[src] = src_cnt.get(src, 0) + 1
+    src_cnt[src] = src_cnt.get(src, 0) + 1
 
     # 예상하지 못한 카테고리 방어
     if cat not in results:
