@@ -583,7 +583,6 @@ def classify(title: str) -> str:
             "청약률",
             "분양권",
             "전매제한",
-            "분양",
         ]
     ):
         return "청약"
