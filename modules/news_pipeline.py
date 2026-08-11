@@ -22,6 +22,7 @@ from modules.google_engine import fetch_google
 from modules.news_filter import (
     classify,
     is_duplicate,
+    is_estate_related,
     is_market_valid,
     normalize,
 )
@@ -86,24 +87,24 @@ def get_clean_news():
 
     for pub_dt, title, link, src in all_entries:
 
-        total += 1
+    total += 1
 
-        # ① 중복 제거
-        if is_duplicate(title, seen):
-            dup += 1
-            continue
+    # ① 중복 제거
+    if is_duplicate(title, seen):
+        dup += 1
+        continue
 
-        # ② 카테고리 분류
-        cat = classify(title)
+    # ② 카테고리 분류
+    cat = classify(title)
 
-        # 예상하지 못한 카테고리 방어
-        if cat not in results:
-            continue
+    # 예상하지 못한 카테고리 방어
+    if cat not in results:
+        continue
 
-        # ③ 시장동향 2차 필터
-        if cat == "시장동향" and not is_market_valid(title):
-            nonre += 1
-            continue
+    # ③ 시장동향 2차 필터
+    if cat == "시장동향" and not is_market_valid(title):
+        nonre += 1
+        continue
 
         # ④ 매체별 제한
         if src in SOURCE_LIMITS:
