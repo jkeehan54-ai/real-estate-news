@@ -1,0 +1,112 @@
+name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
+
+on:
+  schedule:
+    # 매일 오전 8시 KST = UTC 23시 (전날)
+    - cron: '0 23 * * *'
+  workflow_dispatch:  # 수동 실행 버튼
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # 1. 저장소 체크아웃
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Python 설치
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. 패키지 설치
+      - name: 패키지 설치
+        run: |
+          pip install --upgrade pip
+          pip install feedparser requests beautifulsoup4 lxml
+
+      # 4. 경기 지표 대시보드 실행
+      - name: 부동산 경기 지표 대시보드 생성
+        run: |
+          echo "=== realestate_dashboard.py 실행 ==="
+          python realestate_dashboard.py
+        continue-on-error: true
+
+      # 5. 뉴스브리핑 실행
+      - name: 부동산 뉴스브리핑 생성
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "=== generate_news_modular.py 실행 ==="
+          python generate_news_modular.py
+        continue-on-error: true
+
+      # 6. GitHub Pages용 index.html 업데이트
+      - name: index.html 생성 (네비게이션 포함)
+        run: |
+          python - << 'EOF'
+          import os
+          from datetime import datetime, timezone, timedelta
+
+          KST = timezone(timedelta(hours=9))
+          now = datetime.now(KST).strftime("%Y년 %m월 %d일 %H:%M KST")
+
+          # 각 파일 존재 여부 확인
+          has_dashboard = os.path.exists("realestate_dashboard.html")
+          has_news = os.path.exists("index.html")
+
+          html = f"""<!DOCTYPE html>
+          <html lang="ko">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta http-equiv="refresh" content="0; url=realestate_dashboard.html">
+          <title>부동산 정보 센터</title>
+          <style>
+            body {{ font-family: 'Malgun Gothic', sans-serif; background: #0f1923; color: #cfd8dc;
+                   display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
+            .box {{ text-align: center; padding: 40px; }}
+            h1 {{ color: #4fc3f7; font-size: 24px; margin-bottom: 8px; }}
+            .upd {{ color: #546e7a; font-size: 12px; margin-bottom: 32px; }}
+            .links {{ display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }}
+            a.btn {{ display: block; padding: 16px 28px; border-radius: 8px; text-decoration: none;
+                    font-weight: 700; font-size: 15px; transition: opacity .2s; }}
+            a.btn:hover {{ opacity: .8; }}
+            .blue {{ background: #1565c0; color: #fff; }}
+            .dark {{ background: #132030; color: #4fc3f7; border: 1px solid #1e3a5f; }}
+          </style>
+          </head>
+          <body>
+          <div class="box">
+            <h1>🏠 부동산 정보 센터</h1>
+            <div class="upd">마지막 업데이트: {now}</div>
+            <div class="links">
+              <a class="btn blue" href="realestate_dashboard.html">📊 경기 지표 대시보드</a>
+              <a class="btn dark" href="index.html">📰 부동산 뉴스브리핑</a>
+            </div>
+          </div>
+          </body>
+          </html>"""
+
+          with open("home.html", "w", encoding="utf-8") as f:
+              f.write(html)
+          print("home.html 생성 완료")
+          EOF
+
+      # 7. 변경사항 커밋 & 푸시
+      - name: 결과물 커밋 및 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add realestate_dashboard.html home.html index.html || true
+          git add realestate_dashboard.html home.html || true
+          # 변경사항 있을 때만 커밋
+          git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

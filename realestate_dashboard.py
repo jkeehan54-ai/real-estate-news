@@ -171,13 +171,16 @@ def get_kb_weekly(rss):
     RE_JEO = re.compile(r'전세\s*(?:가격\s*)?[▲△▼▽↑↓]?\s*([-+]?\d+\.\d+)\s*%')
     RE_JEO2= re.compile(r'전세도\s*([-+]?\d+\.\d+)\s*%')
     RE_BUY = re.compile(r'매수우위지수\s*[^\d]*([\d.]+)')
-    RE_WEK = re.compile(r'(\d+)\s*주\s*(?:연속|째)')
+    RE_WEK = re.compile(r'(\d+)\s*주\s*(?:연속|째|만에|간)')
     RE_DTE = re.compile(r'(\d{4})[년.]\s*(\d{1,2})[월.]\s*(\d{1,2})')
 
     all_items = combine(rss,
         "서울 아파트값 주간 상승 전세",
         "전국 아파트 매매가 주간 변동",
-        "KB부동산 주간 아파트 매매")
+        "KB부동산 주간 아파트 매매",
+        "서울 아파트값 연속 상승 주간",
+        "전국 아파트값 상승 주간 변동률",
+        "아파트값 연속 상승 전국 서울")
 
     for title, _, link, date in all_items:
         # 제목만 사용
@@ -221,9 +224,16 @@ def get_kb_weekly(rss):
             r["방향"] = "상승" if ref > 0 else ("하락" if ref < 0 else "보합")
 
         r["원문"].append({"title": title, "link": link, "date": date})
-        print(f"  ✔ 전국 {disp(r['국전체'])}% | 서울 {disp(r['서울'])}% | 부산 {disp(r['부산'])}% | {disp(r['연속주수'])}주")
-        return r
 
+        # 전국+서울 둘 다 있으면 바로 반환, 하나만 있으면 계속 탐색
+        if r.get("국전체") and r.get("서울"):
+            print(f"  ✔ 전국 {disp(r['국전체'])}% | 서울 {disp(r['서울'])}% | 부산 {disp(r['부산'])}% | {disp(r['연속주수'])}주")
+            return r
+
+    # 전국 또는 서울 중 하나라도 있으면 반환
+    if r.get("국전체") or r.get("서울"):
+        print(f"  ✔ 전국 {disp(r["국전체"])}% | 서울 {disp(r["서울"])}% | 부산 {disp(r["부산"])}% | {disp(r["연속주수"])}주")
+        return r
     print("  - 데이터 없음")
     return r
 
@@ -251,7 +261,7 @@ def get_auction(rss):
         m_pr = RE_PR.search(text) or RE_PR2.search(text)
 
         rate  = safe_float(m_r.group(1)  if m_r  else None, 10, 80)
-        prate = safe_float(m_pr.group(1) if m_pr else None, 50, 200)
+        prate = safe_float(m_pr.group(1) if m_pr else None, 70, 130)
 
         if rate is not None or prate is not None:
             if rate:  r["낙찰률"]  = f"{rate}"
@@ -278,6 +288,7 @@ def get_permit(rss):
     RE_MON  = re.compile(r'(\d{4})년\s*(\d{1,2})월')
 
     all_items = combine(rss,
+        "주택통계 인허가 착공 준공 전년동기",
         "주택인허가 전년대비 감소 증가",
         "주택 인허가 실적 국토교통부")
 
@@ -288,12 +299,25 @@ def get_permit(rss):
         if not any(k in text for k in ["주택","아파트","공동주택","단독주택","주거"]):
             continue
 
-        cnt = parse_korean_num(text, "인허가", lo=1000, hi=500000)
-        m_y = RE_YOY.search(text) or RE_YOY2.search(text)
+        cnt = parse_korean_num(text, "인허가", lo=10000, hi=80000)
         m_m = RE_MON.search(text)
 
-        # 전년비 범위 조정: 주택인허가는 최대 ±80% 수준
-        yoy = safe_float(m_y.group(1) if m_y else None, -80, 150)
+        # ★ 인허가 키워드 근처 전년비만 추출
+        # "준공 59.8%·인허가 32.8% 감소" → 32.8% 정확히 추출
+        RE_인허가YOY = re.compile(
+            r'인허가[^%\d]{0,20}?([-+]?\d+\.?\d*)\s*%|'
+            r'인허가.*?전년\s*(?:동기|대비|比|보다|비)?\s*([-+]?\d+\.?\d*)\s*%'
+        )
+        m_y = RE_인허가YOY.search(text)
+        yoy = None
+        if m_y:
+            v = None
+            for g in range(1, 4):
+                try:
+                    v = m_y.group(g)
+                    if v: break
+                except: pass
+            yoy = safe_float(v, -70, 100)  # 148%도 허용 (실제 발생 가능)
 
         if cnt or yoy is not None:
             if cnt: r["수치"] = f"{cnt:,}"
@@ -316,10 +340,13 @@ def get_jeonse_ratio(rss):
 
     RE_SEO = re.compile(r'서울\s*(?:아파트\s*)?전세가율\s*([\d.]+)\s*%')
     RE_NAT = re.compile(r'(?:전국|평균)\s*(?:아파트\s*)?전세가율\s*([\d.]+)\s*%')
+    RE_BUS = re.compile(r'부산\s*(?:아파트\s*)?전세가율\s*([\d.]+)\s*%')
     RE_GEN = re.compile(r'전세가율\s*([\d.]+)\s*%')
 
     all_items = combine(rss,
+        "전국 아파트 전세가율 현황 KB",
         "서울 아파트 전세가율 현황",
+        "전국 전세가율 아파트",
         "전세가율 붕괴 돌파 아파트")
 
     for title, _, link, date in all_items:
@@ -328,17 +355,33 @@ def get_jeonse_ratio(rss):
 
         m_s = RE_SEO.search(text)
         m_n = RE_NAT.search(text)
+        m_b = RE_BUS.search(text)
         m_g = RE_GEN.search(text)
 
         seo = safe_float(m_s.group(1) if m_s else None, 30, 90)
         nat = safe_float(m_n.group(1) if m_n else None, 30, 90)
+        bus = safe_float(m_b.group(1) if m_b else None, 30, 90)
         gen = safe_float(m_g.group(1) if m_g else None, 30, 90)
 
+        # ★ 핵심 수정: 서울 기사의 수치를 전국으로 오분류 방지
+        # "서울 아파트 전세가율 50%" → 서울값으로만 저장
+        # 전국값은 "전국" 또는 "평균" 키워드가 있을 때만 저장
         if seo is None and nat is None and gen is None: continue
 
         if seo: r["서울"] = f"{seo}"
         if nat: r["전국"] = f"{nat}"
-        elif gen: r["전국"] = f"{gen}"
+        elif gen:
+            # "전국/평균" 없이 일반 전세가율 패턴
+            if "서울" in text or "서울" in text[:text.find("전세가율")]:
+                # 서울 기사 → 서울로 저장
+                if not seo: r["서울"] = f"{gen}"
+            elif any(k in text for k in ["전국","전체","평균","우리나라"]):
+                r["전국"] = f"{gen}"
+            else:
+                # 명확하지 않으면 서울로 (대부분 서울 기사)
+                if not seo: r["서울"] = f"{gen}"
+        if bus: r["부산"] = f"{bus}"
+
         r["원문"].append({"title": title, "link": link, "date": date})
         print(f"  ✔ 전국 {disp(r['전국'])}% | 서울 {disp(r['서울'])}%")
         return r
@@ -400,7 +443,9 @@ def get_kb_forecast(rss):
 
     all_items = (list(rss)
         + fetch_gn_titles("KB국민은행 매매가격전망지수 전세가격전망지수", 15)
-        + fetch_gn_titles("KB부동산 매매전망 전세전망", 10))
+        + fetch_gn_titles("KB부동산 매매전망 전세전망", 10)
+        + fetch_gn_titles("KB 주택 매매전망 전세전망 지수", 10)
+        + fetch_gn_titles("국민은행 주택가격전망지수", 10))
 
     for title, _, link, date in all_items:
         text = title
@@ -422,7 +467,7 @@ def get_kb_forecast(rss):
             print(f"  ✔ 매매전망 {disp(r['매매전망'])} | 전세전망 {disp(r['전세전망'])}")
             return r
 
-    print("  - 데이터 없음")
+    print("  - 데이터 없음 (월말 발표, 미발표 기간)")
     return r
 
 
@@ -434,31 +479,42 @@ def get_supply_demand(rss):
     print("[선행7] 수급동향 (한국부동산원)")
     r = {"매매수급": None, "전세수급": None, "원문": []}
 
-    RE_T  = re.compile(r'매매\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
-    RE_J  = re.compile(r'전세\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
-    # "수급지수 XX.X" 단독
-    RE_SQ = re.compile(r'수급지수\s*(\d{2,3}\.?\d*)')
+    RE_T = re.compile(r'매매\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
+    RE_J = re.compile(r'전세\s*수급\s*(?:지수)?\s*(\d{2,3}\.?\d*)')
 
     all_items = combine(rss,
-        "한국부동산원 매매수급지수 전세수급지수",
-        "부동산원 수급동향 아파트 지수",
-        "매매수급지수 전세수급지수")
+        "매매수급지수 전세수급지수",
+        "한국부동산원 매매수급지수",
+        "수도권 매매수급지수 기록",
+        "아파트 매매수급지수 주간",
+        "전국 매매수급지수 아파트",
+        "서울 아파트 매수심리 수급지수")
 
     for title, _, link, date in all_items:
         text = title
         if "수급" not in text: continue
 
-        m_t  = RE_T.search(text)
-        m_j  = RE_J.search(text)
-        m_sq = RE_SQ.search(text)
-        tv = safe_float(m_t.group(1) if m_t else None, 50, 180)
-        jv = safe_float(m_j.group(1) if m_j else None, 50, 180)
-        sv = safe_float(m_sq.group(1) if (m_sq and not m_t) else None, 50, 180)
+        m_t = RE_T.search(text)
+        m_j = RE_J.search(text)
 
-        if tv or jv or sv:
-            if tv: r["매매수급"] = f"{tv}"
-            elif sv: r["매매수급"] = f"{sv}"
-            if jv: r["전세수급"] = f"{jv}"
+        tv = safe_float(m_t.group(1) if m_t else None, 85, 135)
+        jv = safe_float(m_j.group(1) if m_j else None, 85, 135)
+
+        # ★ 핵심: 같은 기사에서 매매·전세 모두 잡히면 매매만 채택
+        # 같은 숫자가 두 패턴 모두 매칭되는 경우 방지
+        if tv is not None and jv is not None:
+            # 실제로 제목에 "매매수급지수"와 "전세수급지수" 둘 다 있는지 확인
+            has_both = ("매매수급" in text and "전세수급" in text)
+            if not has_both:
+                # 하나의 수치가 두 패턴에 매칭된 것 → 매매만 유지
+                jv = None
+            elif abs(tv - jv) < 0.01:
+                # 같은 수치 → 오파싱
+                jv = None
+
+        if tv is not None:
+            r["매매수급"] = f"{tv}"
+            if jv is not None: r["전세수급"] = f"{jv}"
             r["원문"].append({"title": title, "link": link, "date": date})
             print(f"  ✔ 매매 {disp(r['매매수급'])} | 전세 {disp(r['전세수급'])}")
             return r
@@ -480,7 +536,10 @@ def get_krihs(rss):
 
     all_items = combine(rss,
         "국토연구원 부동산 소비심리지수",
-        "국토연구원 주거 심리지수 매매 전세")
+        "국토연구원 부동산시장 소비심리",
+        "부동산 소비심리지수 국토연구원",
+        "국토연구원 소비심리 매매 전세 지수",
+        "부동산 소비심리지수 101 102 103 104 105")
 
     for title, _, link, date in all_items:
         text = title
@@ -518,7 +577,9 @@ def get_khai(rss):
     all_items = combine(rss,
         "주택금융공사 주택구입부담지수 K-HAI",
         "K-HAI 주택구입부담 분기",
-        "주택구입부담지수 상승 하락 분기")
+        "주택구입부담지수 상승 하락 분기",
+        "주택구입부담지수 발표",
+        "K-HAI 발표 분기")
 
     for title, _, link, date in all_items:
         text = title
@@ -536,7 +597,7 @@ def get_khai(rss):
             print(f"  ✔ K-HAI {disp(r['지수'])} | 전분기비 {disp(r['전분기비'])}")
             return r
 
-    print("  - 데이터 없음")
+    print("  - 데이터 없음 (분기 발표, 미발표 기간)")
     return r
 
 
@@ -555,13 +616,15 @@ def get_trade_vol(rss):
     RE_MON  = re.compile(r'(\d{1,2})월\s*(?:주택\s*)?(?:매매\s*)?거래')
 
     all_items = combine(rss,
-        "주택 매매거래량 감소 증가 전년",
-        "아파트 거래량 전년대비")
+        "주택 매매 거래량 국토교통부 전년",
+        "아파트 거래량 전년대비 증가 감소")
 
     for title, _, link, date in all_items:
         text = title
         if "거래" not in text: continue
         if not any(k in text for k in ["거래량","매매거래","거래건수"]): continue
+        # 전월비 기사 제외 (전년비만 수집)
+        if "전월비" in text and "전년" not in text: continue
 
         cnt = parse_korean_num(text, "거래", lo=5000, hi=300000)
         m_y = RE_YOY.search(text) or RE_YOY2.search(text) or RE_YOY3.search(text)
@@ -595,24 +658,41 @@ def get_construction_start(rss):
     RE_MON  = re.compile(r'(\d{4})년\s*(\d{1,2})월|(\d{1,2})월\s*착공')
 
     all_items = combine(rss,
-        "아파트 착공 전년대비 감소 증가",
-        "주택 착공 실적 국토교통부 전년")
+        "착공 전년대비 감소 증가",
+        "아파트 착공 전년 비아파트",
+        "주택 착공 실적 국토교통부",
+        "주택통계 착공 전년동기")
 
     for title, _, link, date in all_items:
         text = title
         if "착공" not in text: continue
+        # 착공 + 전년비/실적 관련 기사만
+        if not any(k in text for k in ["착공 전년","착공량","착공 실적","착공물량",
+                                        "비아파트 착공","아파트 착공","착공 감소","착공 증가",
+                                        "착공이 ","착공은 ","착공했","월 착공"]):
+            continue
 
-        cnt = parse_korean_num(text, "착공", lo=500, hi=300000)
-        m_y = RE_YOY.search(text) or RE_YOY2.search(text)
+        cnt = parse_korean_num(text, "착공", lo=3000, hi=300000)
         m_m = RE_MON.search(text)
 
-        yoy = safe_float(m_y.group(1) if m_y else None, -80, 200)
+        # ★ 착공 키워드 근처 전년비만 추출 (준공 기사 전년비 오파싱 방지)
+        RE_착공YOY = re.compile(r'착공.{0,20}?([-+]?\d+\.?\d*)\s*%|'
+                                r'([-+]?\d+\.?\d*)\s*%\s*(?:감소|증가).{0,10}착공')
+        m_y = RE_착공YOY.search(text)
+        if not m_y:
+            m_y = RE_YOY.search(text) if "착공" in (text[:text.find("준공")] if "준공" in text else text) else None
 
-        # 착공 관련 기사임을 좀 더 엄격히 확인
-        is_relevant = any(k in text for k in ["착공 전년","착공량","착공 실적","착공물량",
-                                                "비아파트 착공","아파트 착공"])
+        yoy = None
+        if m_y:
+            v = None
+            try: v = m_y.group(1)
+            except: pass
+            if not v:
+                try: v = m_y.group(2)
+                except: pass
+            yoy = safe_float(v, -80, 100)
 
-        if is_relevant and (cnt or yoy is not None):
+        if cnt or yoy is not None:
             if cnt: r["수치"] = f"{cnt:,}"
             if yoy is not None: r["전년비"] = f"{yoy}"
             if m_m:
@@ -643,14 +723,17 @@ def get_unsold(rss):
 
     all_items = combine(rss,
         "전국 미분양 주택 국토교통부 만가구",
+        "미분양 5만 6만 7만 8만 가구",
+        "미분양 넘어 기록 가구 전국",
         "미분양 준공후 악성 가구")
 
     for title, _, link, date in all_items:
         text = title
         if "미분양" not in text: continue
 
-        # 전국 미분양 수치 (제목에서)
-        cnt = parse_korean_num(text, "미분양", lo=3000, hi=300000)
+        # 전국 미분양: 현재 시장 5~8만호 수준
+        # "5만8천가구" = 58000, "7만가구" = 70000
+        cnt = parse_korean_num(text, "미분양", lo=50000, hi=300000)
 
         # 악성(준공후) 미분양
         악성 = None
@@ -685,7 +768,7 @@ def get_unsold(rss):
         "전국 미분양 현황"):
         text = title
         if "미분양" not in text: continue
-        cnt = parse_korean_num(text, "미분양", lo=5000, hi=300000)  # 최소 5000호
+        cnt = parse_korean_num(text, "미분양", lo=50000, hi=300000)  # 최소 3만호
         m_a  = RE_악성1.search(text)
         m_a2 = RE_악성2.search(text)
         악성 = None
@@ -715,27 +798,52 @@ def get_completion(rss):
     r = {"수치": None, "전년비": None, "기준월": None, "원문": []}
 
     RE_YOY  = re.compile(r'전년\s*(?:동기|대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
-    RE_YOY2 = re.compile(r'([-+]?\d+\.?\d*)\s*%?\s*[↓↑]\s*')
     RE_YOY3 = re.compile(r'([-+]?\d+\.?\d*)\s*%\s*(?:감소|급감|증가|급증)')
     RE_MON  = re.compile(r'(\d{1,2})월\s*(?:서울\s*)?(?:입주|준공)')
 
     all_items = combine(rss,
         "아파트 입주 물량 준공 전년",
-        "주택 준공 실적 국토교통부")
+        "주택 준공 실적 국토교통부",
+        "입주물량 감소 증가 전년")
 
     for title, _, link, date in all_items:
         text = title
-        if "준공" not in text and "입주물량" not in text and "입주 물량" not in text: continue
+        if "준공" not in text and "입주물량" not in text and "입주 물량" not in text:
+            continue
 
-        cnt = parse_korean_num(text, "준공", lo=500, hi=300000)
+        # 착공 기사와 구분: 착공 전용 기사 제외
+        if "착공" in text and "준공" not in text and "입주" not in text:
+            continue
+
+        cnt = parse_korean_num(text, "준공", lo=10000, hi=300000)
         if not cnt:
-            cnt = parse_korean_num(text, "입주", lo=500, hi=300000)
+            cnt = parse_korean_num(text, "입주", lo=10000, hi=300000)
 
-        m_y = RE_YOY.search(text) or RE_YOY2.search(text) or RE_YOY3.search(text)
+        # ★ 준공/입주 키워드 근처 전년비만 추출
+        RE_준공YOY = re.compile(
+            r'(?:준공|입주).{0,25}?([-+]?\d+\.?\d*)\s*%|'
+            r'([-+]?\d+\.?\d*)\s*%\s*(?:감소|증가|급감|급증).{0,15}(?:준공|입주)'
+        )
+        m_y = RE_준공YOY.search(text)
+        yoy = None
+        if m_y:
+            v = None
+            try: v = m_y.group(1)
+            except: pass
+            if not v:
+                try: v = m_y.group(2)
+                except: pass
+            yoy = safe_float(v, -80, 200)
+        if yoy is None:
+            m_y2 = RE_YOY.search(text) or RE_YOY3.search(text)
+            if m_y2: yoy = safe_float(m_y2.group(1), -80, 200)
+
         m_m = RE_MON.search(text)
-        yoy = safe_float(m_y.group(1) if m_y else None, -80, 300)
 
-        is_relevant = any(k in text for k in ["준공 실적","입주물량","입주 물량","준공량","반토막","급감","급증"])
+        is_relevant = any(k in text for k in [
+            "준공 실적","입주물량","입주 물량","준공량","반토막","급감","급증",
+            "준공 전년","입주 전년","준공 감소","준공 증가","입주 감소","입주 증가"
+        ])
 
         if is_relevant and (cnt or yoy is not None):
             if cnt: r["수치"] = f"{cnt:,}"
@@ -786,6 +894,8 @@ def get_busan(rss):
     # 한국부동산원 주간 기사에서 부산 수치 탐색
     all_items = busan_rss_items + fetch_gn_titles("부산 아파트 매매 전세 주간 변동률", 15)
     all_items += fetch_gn_titles("부산 아파트값 상승 하락 주간", 10)
+    all_items += fetch_gn_titles("부산 매매가 전세가 주간", 10)
+    all_items += fetch_gn_titles("부산 아파트 매매가 하락 전환 변동", 10)
     all_items += list(rss)  # 전체 RSS에서도 탐색
 
     for title, _, link, date in all_items:
@@ -1076,11 +1186,15 @@ footer{{text-align:center;padding:16px;font-size:10px;color:#263238}}
         f"낙찰가율 {disp(auction.get('낙찰가율'))}% | {disp(auction.get('건수'))}건",
         "#c62828" if safe_float(auction.get("낙찰률"),38,80) else "#1565c0" if safe_float(auction.get("낙찰률"),0,34) else "#ef6c00",
         "32.4%(2023 저점)~42%(2021 고점)",auction.get("원문",[]))}
-    {card("② 주택 인허가",disp(permit.get("수치")),"호",
-        f"전년비 {disp(permit.get('전년비'))}% | {disp(permit.get('기준월'))}",
+    {card("② 주택 인허가",
+        disp(permit.get("수치")) if permit.get("수치") else f"전년비 {disp(permit.get('전년비'))}%",
+        "호" if permit.get("수치") else "",
+        f"{disp(permit.get('수치'))}호 | 전년비 {disp(permit.get('전년비'))}% | {disp(permit.get('기준월'))}",
         rcolor(permit.get("전년비")),"인허가→착공→준공 6~24개월 시차",permit.get("원문",[]))}
-    {card("③ 전세가율",disp(jeonse.get("전국") or jeonse.get("서울")),"%",
-        f"서울 {disp(jeonse.get('서울'))}% | 부산 {disp(jeonse.get('부산'))}%",
+    {card("③ 전세가율",
+        f"{disp(jeonse.get('전국'))}(전국)" if jeonse.get("전국") else f"{disp(jeonse.get('서울'))}(서울)",
+        "%",
+        f"전국 {disp(jeonse.get('전국'))}% | 서울 {disp(jeonse.get('서울'))}% | 부산 {disp(jeonse.get('부산'))}%",
         "#c62828" if safe_float(jeonse.get("전국") or jeonse.get("서울"),70,90) else "#1565c0" if safe_float(jeonse.get("전국") or jeonse.get("서울"),0,60) else "#2e7d32",
         "적정 60~70% | 70↑과열 | 60↓침체",jeonse.get("원문",[]))}
     {card("④ 주택가격전망지수(CSI)",disp(csi.get("주택전망")),"",
@@ -1112,8 +1226,16 @@ footer{{text-align:center;padding:16px;font-size:10px;color:#263238}}
     {card("KB 전국 매매가",pct_str(kb.get("국전체")),"%",f"{wk}주 연속 {wkd}",rcolor(kb.get("국전체")),"주간 변동률 (KB국민은행)",kb.get("원문",[]))}
     {card("KB 서울 매매가",pct_str(kb.get("서울")),"%",f"수도권 {pct_str(kb.get('수도권'))}%",rcolor(kb.get("서울")),"주간 변동률 (KB국민은행)",[])}
     {card("KB 전국 전세가",pct_str(kb.get("전세전국")),"%",f"서울 전세 {pct_str(kb.get('전세서울'))}%",rcolor(kb.get("전세전국")),"주간 전세 변동률 (KB국민은행)",[])}
-    {card("주택 매매 거래량",disp(trade.get("거래량")),"건",f"전년비 {disp(trade.get('전년비'))}% | {disp(trade.get('기준월'))}",rcolor(trade.get("전년비")),"국토교통부 실거래 신고 기준",trade.get("원문",[]))}
-    {card("착공량",disp(cstart.get("수치")),"호",f"전년비 {disp(cstart.get('전년비'))}% | {disp(cstart.get('기준월'))}",rcolor(cstart.get("전년비")),"착공 후 12~24개월 후 공급",cstart.get("원문",[]))}
+    {card("주택 매매 거래량",
+        disp(trade.get("거래량")) if trade.get("거래량") else f"전년비 {disp(trade.get('전년비'))}%",
+        "건" if trade.get("거래량") else "",
+        f"전년비 {disp(trade.get('전년비'))}% | {disp(trade.get('기준월'))}",
+        rcolor(trade.get("전년비")),"국토교통부 실거래 신고 기준",trade.get("원문",[]))}
+    {card("착공량",
+        disp(cstart.get("수치")) if cstart.get("수치") else f"전년비 {disp(cstart.get('전년비'))}%",
+        "호" if cstart.get("수치") else "",
+        f"전년비 {disp(cstart.get('전년비'))}% | {disp(cstart.get('기준월'))}",
+        rcolor(cstart.get("전년비")),"착공 후 12~24개월 후 공급",cstart.get("원문",[]))}
   </div>
 </div>
 
@@ -1124,8 +1246,11 @@ footer{{text-align:center;padding:16px;font-size:10px;color:#263238}}
         f"준공후(악성) {disp(unsold.get('악성'))}호 | {disp(unsold.get('기준월'))}",
         "#1565c0" if safe_int(str(unsold.get("전국") or "").replace(",",""),60001,999999) else "#c62828" if safe_int(str(unsold.get("전국") or "").replace(",",""),1,29999) else "#ef6c00",
         "3만호↓호황 | 6.2만호↑위험 (국토교통부)",unsold.get("원문",[]))}
-    {card("준공량",disp(compl.get("수치")),"호",f"전년비 {disp(compl.get('전년비'))}% | {disp(compl.get('기준월'))}",
-        "#ef6c00" if compl.get("수치") else "#546e7a","준공 증가→공급 확대→가격 하락 압력",compl.get("원문",[]))}
+    {card("준공량",
+        disp(compl.get("수치")) if compl.get("수치") else f"전년비 {disp(compl.get('전년비'))}%",
+        "호" if compl.get("수치") else "",
+        f"전년비 {disp(compl.get('전년비'))}% | {disp(compl.get('기준월'))}",
+        rcolor(compl.get("전년비")),"준공 증가→공급 확대→가격 하락 압력",compl.get("원문",[]))}
   </div>
 </div>
 
