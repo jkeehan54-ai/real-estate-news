@@ -1,5 +1,4 @@
-# dashboard_engine.py
-
+# modules/dashboard_engine.py
 
 """
 BRN Dashboard Engine

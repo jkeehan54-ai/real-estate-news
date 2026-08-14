@@ -22,6 +22,7 @@ from modules.google_engine import fetch_google
 from modules.news_filter import (
     classify,
     is_duplicate,
+    is_estate_related,
     is_market_valid,
     normalize,
 )
@@ -47,9 +48,16 @@ def get_clean_news():
 
     now_kst = datetime.now(KST)
 
-    print(f"[실행시각] {now_kst.strftime('%Y-%m-%d %H:%M KST')}")
+    print(
+        f"[실행시각] "
+        f"{now_kst.strftime('%Y-%m-%d %H:%M KST')}"
+    )
 
     all_entries = []
+
+    # ---------------------------------------------------------
+    # A. RSS
+    # ---------------------------------------------------------
 
     print("\n[A] RSS 피드")
 
@@ -63,20 +71,51 @@ def get_clean_news():
             )
         )
 
-    print("\n[B] 스크래핑 (부산일보/국제신문/네이버부동산)")
+    # ---------------------------------------------------------
+    # B. 스크래핑
+    # ---------------------------------------------------------
 
-    all_entries.extend(scrape_busan(now_kst))
-    all_entries.extend(scrape_kookje(now_kst))
-    all_entries.extend(scrape_naver_land(now_kst))
+    print(
+        "\n[B] 스크래핑 "
+        "(부산일보/국제신문/네이버부동산)"
+    )
+
+    all_entries.extend(
+        scrape_busan(now_kst)
+    )
+
+    all_entries.extend(
+        scrape_kookje(now_kst)
+    )
+
+    all_entries.extend(
+        scrape_naver_land(now_kst)
+    )
+
+    # ---------------------------------------------------------
+    # C. Google News RSS
+    # ---------------------------------------------------------
 
     print("\n[C] Google News RSS")
 
-    all_entries.extend(fetch_google(now_kst))
+    all_entries.extend(
+        fetch_google(now_kst)
+    )
 
-    print(f"\n수집 합계(필터전): {len(all_entries)}건")
+    print(
+        f"\n수집 합계(필터전): "
+        f"{len(all_entries)}건"
+    )
+
+    # ---------------------------------------------------------
+    # 최신순 정렬
+    # ---------------------------------------------------------
 
     all_entries.sort(
-        key=lambda x: x[0] or datetime.max.replace(tzinfo=KST),
+        key=lambda x: (
+            x[0]
+            or datetime.max.replace(tzinfo=KST)
+        ),
         reverse=True,
     )
 
@@ -84,38 +123,73 @@ def get_clean_news():
     dup = 0
     nonre = 0
 
+    # =========================================================
+    # 기사 필터링
+    # =========================================================
+
     for pub_dt, title, link, src in all_entries:
 
         total += 1
 
-        # ① 중복 제거
+        # -----------------------------------------------------
+        # ① 부동산 여부 1차 필터
+        # -----------------------------------------------------
+
+        if not is_estate_related(title):
+            nonre += 1
+            continue
+
+        # -----------------------------------------------------
+        # ② 중복 제거
+        # -----------------------------------------------------
+
         if is_duplicate(title, seen):
             dup += 1
             continue
 
-        # ② 카테고리 분류
+        # -----------------------------------------------------
+        # ③ 카테고리 분류
+        # -----------------------------------------------------
+
         cat = classify(title)
 
         # 예상하지 못한 카테고리 방어
         if cat not in results:
             continue
 
-        # ③ 시장동향 2차 필터
-        if cat == "시장동향" and not is_market_valid(title):
-            nonre += 1
-            continue
+        # -----------------------------------------------------
+        # ④ 시장동향 2차 필터
+        # -----------------------------------------------------
 
-        # ④ 매체별 제한
+        if cat == "시장동향":
+
+            if not is_market_valid(title):
+                nonre += 1
+                continue
+
+        # -----------------------------------------------------
+        # ⑤ 매체별 제한
+        # -----------------------------------------------------
+
         if src in SOURCE_LIMITS:
+
             if src_cnt.get(src, 0) >= SOURCE_LIMITS[src]:
                 continue
 
-        # ⑤ 카테고리별 제한
+        # -----------------------------------------------------
+        # ⑥ 카테고리별 제한
+        # -----------------------------------------------------
+
         limit = CAT_LIMITS.get(cat)
 
         if limit is not None:
+
             if len(results[cat]) >= limit:
                 continue
+
+        # -----------------------------------------------------
+        # ⑦ 기사 저장
+        # -----------------------------------------------------
 
         pub_str = (
             pub_dt.strftime("%m/%d %H:%M")
@@ -134,9 +208,18 @@ def get_clean_news():
 
         seen.append(title)
 
-        src_cnt[src] = src_cnt.get(src, 0) + 1
+        src_cnt[src] = (
+            src_cnt.get(src, 0) + 1
+        )
 
-    saved = sum(len(v) for v in results.values())
+    # =========================================================
+    # 결과
+    # =========================================================
+
+    saved = sum(
+        len(v)
+        for v in results.values()
+    )
 
     print(
         f"\n[결과] "
@@ -147,7 +230,11 @@ def get_clean_news():
     )
 
     for cat in cats:
-        print(f"  [{cat}] {len(results[cat])}건")
+
+        print(
+            f"  [{cat}] "
+            f"{len(results[cat])}건"
+        )
 
     print("\n[매체별]")
 
@@ -155,6 +242,9 @@ def get_clean_news():
         src_cnt.items(),
         key=lambda x: -x[1],
     ):
-        print(f"  {k}: {v}건")
+
+        print(
+            f"  {k}: {v}건"
+        )
 
     return results

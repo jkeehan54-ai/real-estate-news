@@ -1,5 +1,4 @@
-# history_engine.py
-
+# modules/history_engine.py
 
 """
 BRN History Engine
@@ -126,7 +125,6 @@ class HistoryEngine:
         )
 
         if region is None:
-
             return files
 
         return [
@@ -143,7 +141,6 @@ class HistoryEngine:
         files = self.list_history(region)
 
         if not files:
-
             return None
 
         with open(

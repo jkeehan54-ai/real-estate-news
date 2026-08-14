@@ -19,6 +19,17 @@ SOURCES = {
     "주택경제신문": "https://www.arunews.com/",
     "건설타임즈":  "https://www.constimes.co.kr/",
     "네이버부동산": "https://land.naver.com/news/",
+    "OBS경인TV": "https://www.obsnews.co.kr/",
+    "OhmyNews": "https://www.ohmynews.com/",
+    "ppss.kr": "https://ppss.kr/",
+    "경남도민일보": "https://www.idomin.com/",
+    "네이트": "https://news.nate.com/",
+    "뉴스후플러스": "https://www.newswhoplus.com/",
+    "신아일보": "https://www.shinailbo.co.kr/",
+    "아시아경제": "https://www.asiae.co.kr/",
+    "이투데이": "https://www.etoday.co.kr/",
+    "일간경기": "https://www.1gan.co.kr/",
+    "재경일보": "https://www.jknews.co.kr/",
 }
 
 HEADERS = {
@@ -126,7 +137,17 @@ CAT_LIMITS = {
 }
 
 SOURCE_LIMITS = {
-    "건설타임즈":  6,
+    "한국경제": 10,
+    "서울경제": 10,
+    "연합뉴스": 8,
+    "아시아경제": 8,
+    "부산일보": 8,
+    "국제신문": 8,
+    "조선일보": 6,
+    "동아일보": 6,
+    "한겨레": 6,
+    "매일경제": 6,
     "주택경제신문": 6,
+    "건설타임즈": 6,
     "경남도민일보": 4,
 }
