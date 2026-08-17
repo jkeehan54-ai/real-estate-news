@@ -22,7 +22,7 @@ jobs:
       - name: Python 3.11 설치
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       # 3. 패키지 설치
       - name: 패키지 설치
