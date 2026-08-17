@@ -1,112 +1,141 @@
-name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
+name: daily news update
 
 on:
   schedule:
-    # 매일 오전 8시 KST = UTC 23시 (전날)
-    - cron: '0 23 * * *'
-  workflow_dispatch:  # 수동 실행 버튼
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    env:
+      REB_API_KEY: ${{ secrets.REB_API_KEY }}
+      BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
+      DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
 
     steps:
-      # 1. 저장소 체크아웃
-      - name: 저장소 체크아웃
+
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: "3.9"
 
-      # 2. Python 설치
-      - name: Python 3.11 설치
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      # 3. 패키지 설치
-      - name: 패키지 설치
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install feedparser requests beautifulsoup4 lxml
+          python -m pip install --upgrade pip
+          pip install feedparser requests beautifulsoup4 playwright
 
-      # 4. 경기 지표 대시보드 실행
-      - name: 부동산 경기 지표 대시보드 생성
+      - name: Install Playwright Chromium
         run: |
-          echo "=== realestate_dashboard.py 실행 ==="
-          python realestate_dashboard.py
-        continue-on-error: true
+          playwright install chromium
 
-      # 5. 뉴스브리핑 실행
-      - name: 부동산 뉴스브리핑 생성
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Check Environment
         run: |
-          echo "=== generate_news_modular.py 실행 ==="
-          python generate_news_modular.py
-        continue-on-error: true
-
-      # 6. GitHub Pages용 index.html 업데이트
-      - name: index.html 생성 (네비게이션 포함)
-        run: |
-          python - << 'EOF'
+          python - <<'PY'
           import os
-          from datetime import datetime, timezone, timedelta
 
-          KST = timezone(timedelta(hours=9))
-          now = datetime.now(KST).strftime("%Y년 %m월 %d일 %H:%M KST")
+          print(
+              "REB_API_KEY :",
+              "OK" if os.getenv("REB_API_KEY") else "MISSING"
+          )
 
-          # 각 파일 존재 여부 확인
-          has_dashboard = os.path.exists("realestate_dashboard.html")
-          has_news = os.path.exists("index.html")
+          print(
+              "BOK_ECOS_KEY :",
+              "OK" if os.getenv("BOK_ECOS_KEY") else "MISSING"
+          )
 
-          html = f"""<!DOCTYPE html>
-          <html lang="ko">
-          <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <meta http-equiv="refresh" content="0; url=realestate_dashboard.html">
-          <title>부동산 정보 센터</title>
-          <style>
-            body {{ font-family: 'Malgun Gothic', sans-serif; background: #0f1923; color: #cfd8dc;
-                   display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
-            .box {{ text-align: center; padding: 40px; }}
-            h1 {{ color: #4fc3f7; font-size: 24px; margin-bottom: 8px; }}
-            .upd {{ color: #546e7a; font-size: 12px; margin-bottom: 32px; }}
-            .links {{ display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }}
-            a.btn {{ display: block; padding: 16px 28px; border-radius: 8px; text-decoration: none;
-                    font-weight: 700; font-size: 15px; transition: opacity .2s; }}
-            a.btn:hover {{ opacity: .8; }}
-            .blue {{ background: #1565c0; color: #fff; }}
-            .dark {{ background: #132030; color: #4fc3f7; border: 1px solid #1e3a5f; }}
-          </style>
-          </head>
-          <body>
-          <div class="box">
-            <h1>🏠 부동산 정보 센터</h1>
-            <div class="upd">마지막 업데이트: {now}</div>
-            <div class="links">
-              <a class="btn blue" href="realestate_dashboard.html">📊 경기 지표 대시보드</a>
-              <a class="btn dark" href="index.html">📰 부동산 뉴스브리핑</a>
-            </div>
-          </div>
-          </body>
-          </html>"""
+          print(
+              "DATA_PORTAL_KEY :",
+              "OK" if os.getenv("DATA_PORTAL_KEY") else "MISSING"
+          )
+          PY
 
-          with open("home.html", "w", encoding="utf-8") as f:
-              f.write(html)
-          print("home.html 생성 완료")
-          EOF
-
-      # 7. 변경사항 커밋 & 푸시
-      - name: 결과물 커밋 및 푸시
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add realestate_dashboard.html home.html index.html || true
-          git add realestate_dashboard.html home.html || true
-          # 변경사항 있을 때만 커밋
-          git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
-          git push
+      - name: Generate news
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+          BOK_ECOS_KEY: ${{ secrets.BOK_ECOS_KEY }}
+          DATA_PORTAL_KEY: ${{ secrets.DATA_PORTAL_KEY }}
+        run: |
+          python generate_news_modular.py
+
+      - name: Verify generated HTML
+        run: |
+          echo "========================================"
+          echo "Generated index.html"
+          echo "========================================"
+
+          pwd
+          ls -lh index.html
+
+          echo ""
+          echo "========== HEAD (처음 30줄) =========="
+          head -30 index.html
+
+          echo ""
+          echo "========== BRN =========="
+          grep -n "BRN" index.html || true
+
+          echo ""
+          echo "========== 오늘의 뉴스 통계 =========="
+          grep -n "오늘의 뉴스 통계" index.html || true
+
+          echo ""
+          echo "========== 언론사별 기사수 =========="
+          grep -n "언론사별 기사수" index.html || true
+
+          echo ""
+          echo "========== 시장동향 =========="
+          grep -n "시장동향" index.html || true
+
+          echo ""
+          echo "========== 정책 =========="
+          grep -n "정책" index.html || true
+
+          echo ""
+          echo "========== 청약 =========="
+          grep -n "청약" index.html || true
+
+          echo ""
+          echo "========== 공급개발 =========="
+          grep -n "공급개발" index.html || true
+
+          echo ""
+          echo "========== 재건축 =========="
+          grep -n "재건축" index.html || true
+
+          echo ""
+          echo "========== 세제 =========="
+          grep -n "세제" index.html || true
+
+          echo ""
+          echo "========== 부산경남 =========="
+          grep -n "부산경남" index.html || true
+
+          echo ""
+          echo "========== 마지막 30줄 =========="
+          tail -30 index.html
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
