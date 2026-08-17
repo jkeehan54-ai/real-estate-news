@@ -232,7 +232,7 @@ def get_kb_weekly(rss):
 
     # 전국 또는 서울 중 하나라도 있으면 반환
     if r.get("국전체") or r.get("서울"):
-        print(f"  ✔ 전국 {disp(r["국전체"])}% | 서울 {disp(r["서울"])}% | 부산 {disp(r["부산"])}% | {disp(r["연속주수"])}주")
+        print(f"  ✔ 전국 {disp(r['국전체'])}% | 서울 {disp(r['서울'])}% | 부산 {disp(r['부산'])}% | {disp(r['연속주수'])}주")
         return r
     print("  - 데이터 없음")
     return r
