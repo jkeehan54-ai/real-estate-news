@@ -38,6 +38,17 @@ class IndicatorEngine:
             {"id": "SUPPLY_START", "name": "착공", "source": "국토교통부", "weight": 1.0},
             {"id": "SUPPLY_UNSOLD", "name": "미분양", "source": "국토교통부", "weight": 1.0},
         ],
+        "kb": [
+            {"id": "KB_NATION_CHANGE", "name": "KB전국매매변동률", "source": "KB", "weight": 1.0},
+            {"id": "KB_SEOUL_CHANGE", "name": "KB서울매매변동률", "source": "KB", "weight": 1.0},
+            {"id": "KB_BUSAN_CHANGE", "name": "KB부산매매변동률", "source": "KB", "weight": 1.0},
+            {"id": "KB_BUYER", "name": "매수우위지수", "source": "KB", "weight": 1.0},
+            {"id": "KB_SELLER", "name": "매도우위지수", "source": "KB", "weight": 1.0},
+            {"id": "KB_WEEKS", "name": "연속주수", "source": "KB", "weight": 1.0},
+            {"id": "KB_DATE", "name": "KB기준일", "source": "KB", "weight": 1.0},
+            {"id": "KB_TREND", "name": "KB추세", "source": "KB", "weight": 1.0},
+            {"id": "KB_MARKET", "name": "KB시장데이터", "source": "KB", "weight": 1.0},
+        ],
         "finance": [
             {"id": "FINANCE_RATE", "name": "기준금리", "source": "한국은행", "weight": 1.0},
         ],
