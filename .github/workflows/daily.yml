@@ -1,4 +1,4 @@
-name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
+name: Real Estate Dashboard Auto Build
 
 on:
   schedule:
@@ -110,3 +110,4 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
