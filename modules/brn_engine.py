@@ -1,4 +1,3 @@
-```python
 # modules/brn_engine.py
 
 """
@@ -264,4 +263,3 @@ class BRNEngine:
             "comment": comment,
             "trend": trend,
         }
-```
