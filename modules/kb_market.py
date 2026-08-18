@@ -354,4 +354,3 @@ def get_market_data():
 
             "busan_change": 0.0,
         }
-```
