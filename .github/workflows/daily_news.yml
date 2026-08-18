@@ -2,7 +2,7 @@ name: daily news update
 
 on:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,6 @@ jobs:
 
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     env:
       REB_API_KEY: ${{ secrets.REB_API_KEY }}
@@ -63,7 +62,6 @@ jobs:
           echo "========================================"
           echo "Generated index.html"
           echo "========================================"
-
           pwd
           ls -lh index.html
 
@@ -125,5 +123,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
         uses: actions/deploy-pages@v4
