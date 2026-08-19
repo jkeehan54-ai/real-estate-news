@@ -76,9 +76,8 @@ class REBMarket:
         )
 
         if not self.api_key:
-            raise RuntimeError(
-                "REB_API_KEY 환경변수가 없습니다."
-            )
+            print("[REB] REB_API_KEY 환경변수가 없습니다. REB 데이터를 건너뜁니다.")
+            self.api_key = None
 
         self.timeout = timeout
 
