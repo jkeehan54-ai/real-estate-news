@@ -1,0 +1,12 @@
+# 자동 생성 파일 (GitHub Actions에서 생성)
+realestate_dashboard.html
+index.html
+home.html
+
+# 디버그/임시 파일
+debug*.py
+fix_*.py
+*.pyc
+__pycache__/
+logs/
+reb_market.json
