@@ -2,8 +2,9 @@ name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
 
 on:
   schedule:
-    # 매일 오전 8시 KST = UTC 23시 (전날)
-    - cron: '0 23 * * *'
+    # 매일 08:00 ~ 22:00 KST, 1시간 간격 (총 15회/일)
+    # KST = UTC+9 이므로 08:00 KST는 전날 23:00 UTC, 22:00 KST는 13:00 UTC
+    - cron: '0 23,0-13 * * *'
   workflow_dispatch:  # 수동 실행 버튼
 
 jobs:
@@ -19,10 +20,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # 2. Python 설치
-      - name: Python 3.11 설치
+      - name: Python 3.12 설치
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       # 3. 패키지 설치
       - name: 패키지 설치
@@ -30,15 +31,40 @@ jobs:
           pip install --upgrade pip
           pip install feedparser requests beautifulsoup4 lxml
 
-      # 4. 경기 지표 대시보드 실행
+      # 4. 현재 KST 시각 확인 (08시 여부로 "일일 정기 실행" 판단)
+      - name: 현재 KST 시각 확인
+        id: kst
+        run: |
+          HOUR=$(TZ='Asia/Seoul' date +%H)
+          echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
+          if [ "$HOUR" = "08" ]; then
+            echo "is_morning=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_morning=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "현재 KST 시각: ${HOUR}시 (is_morning=$([ "$HOUR" = "08" ] && echo true || echo false))"
+
+      # 5. 알림 비교용 - 이전 지표 스냅샷 백업
+      - name: 이전 지표 스냅샷 백업
+        run: |
+          mkdir -p data
+          if [ -f data/indicators.json ]; then
+            cp data/indicators.json data/indicators_prev.json
+            echo "이전 지표 백업 완료"
+          else
+            echo "이전 지표 없음 (최초 실행)"
+          fi
+
+      # 6. 경기 지표 대시보드 실행 (매 실행마다 = 1시간 간격)
       - name: 부동산 경기 지표 대시보드 생성
         run: |
           echo "=== realestate_dashboard.py 실행 ==="
           python realestate_dashboard.py
         continue-on-error: true
 
-      # 5. 뉴스브리핑 실행
-      - name: 부동산 뉴스브리핑 생성
+      # 7. 뉴스브리핑 실행 (API 비용 절감을 위해 08시 정기 실행 시에만 1일 1회 실행)
+      - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
+        if: steps.kst.outputs.is_morning == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -46,7 +72,23 @@ jobs:
           python generate_news_modular.py
         continue-on-error: true
 
-      # 6. GitHub Pages용 index.html 업데이트
+      # 8. 이메일/슬랙 알림 발송
+      #    - 08시 실행: 무조건 일일 요약 발송
+      #    - 그 외 시간: 직전 실행 대비 지표가 유의미하게 변했을 때만 발송 (스팸 방지)
+      - name: 이메일/슬랙 알림 발송
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "=== notify.py 실행 ==="
+          python notify.py
+        continue-on-error: true
+
+      # 9. GitHub Pages용 index.html 업데이트
       - name: index.html 생성 (네비게이션 포함)
         run: |
           python - << 'EOF'
@@ -98,13 +140,14 @@ jobs:
           print("home.html 생성 완료")
           EOF
 
-      # 7. 변경사항 커밋 & 푸시
+      # 10. 변경사항 커밋 & 푸시
       - name: 결과물 커밋 및 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add realestate_dashboard.html home.html index.html || true
           git add realestate_dashboard.html home.html || true
+          git add data/indicators.json data/indicators_history.json || true
           # 변경사항 있을 때만 커밋
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
           git push
