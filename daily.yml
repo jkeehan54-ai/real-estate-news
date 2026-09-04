@@ -71,7 +71,7 @@ jobs:
 
 
       # 7. 뉴스브리핑 실행 (API 비용 절감을 위해 08시 정기 실행 시에만 1일 1회 실행)
-            - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
+      - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
         if: steps.kst.outputs.is_morning == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -103,14 +103,11 @@ jobs:
           python - << 'EOF'
           import os
           from datetime import datetime, timezone, timedelta
-
           KST = timezone(timedelta(hours=9))
           now = datetime.now(KST).strftime("%Y년 %m월 %d일 %H:%M KST")
-
           # 각 파일 존재 여부 확인
           has_dashboard = os.path.exists("realestate_dashboard.html")
           has_news = os.path.exists("index.html")
-
           html = f"""<!DOCTYPE html>
           <html lang="ko">
           <head>
@@ -143,12 +140,11 @@ jobs:
           </div>
           </body>
           </html>"""
-
           with open("home.html", "w", encoding="utf-8") as f:
               f.write(html)
           print("home.html 생성 완료")
           EOF
-
+          
       # 10. 변경사항 커밋 & 푸시
       - name: 결과물 커밋 및 푸시
         run: |
@@ -156,7 +152,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add realestate_dashboard.html home.html index.html || true
           git add realestate_dashboard.html home.html || true
-          git add data/indicators.json data/indicators_history.json || true
           # 변경사항 있을 때만 커밋
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
           git push
