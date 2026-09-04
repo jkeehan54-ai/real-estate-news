@@ -1,10 +1,10 @@
-name: Real Estate Dashboard Auto Build
+name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
 
 on:
   schedule:
-    # 매일 오전 8시 KST = UTC 23시 (전날)
-    - cron: '0 23 * * *'
-  workflow_dispatch:  # 수동 실행 버튼
+    # 매일 08:00 ~ 22:00 KST, 1시간 간격 (총 15회/일)
+    - cron: '0 23,0-13 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,26 +12,43 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # 1. 저장소 체크아웃
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Python 설치
-      - name: Python 3.11 설치
+      - name: Python 3.12 설치
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 3. 패키지 설치
       - name: 패키지 설치
         run: |
           pip install --upgrade pip
           pip install feedparser requests beautifulsoup4 lxml
 
-      # 4. 경기 지표 대시보드 실행 (매 실행마다 = 1시간 간격)
-         
+      - name: 현재 KST 시각 확인
+        id: kst
+        run: |
+          HOUR=$(TZ='Asia/Seoul' date +%H)
+          echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
+          if [ "$HOUR" = "08" ]; then
+            echo "is_morning=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_morning=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "현재 KST 시각: ${HOUR}시"
+
+      - name: 이전 지표 스냅샷 백업
+        run: |
+          mkdir -p data
+          if [ -f data/indicators.json ]; then
+            cp data/indicators.json data/indicators_prev.json
+            echo "이전 지표 백업 완료"
+          else
+            echo "이전 지표 없음 (최초 실행)"
+          fi
+
       - name: 부동산 경기 지표 대시보드 생성
         env:
           ECOS_API_KEY: ${{ secrets.BOK_ECOS_KEY }}
@@ -43,15 +60,29 @@ jobs:
           python realestate_dashboard.py
         continue-on-error: true
 
-      # 5. 뉴스브리핑 실행
-            - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
+      - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
         if: steps.kst.outputs.is_morning == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REB_API_KEY: ${{ secrets.REB_API_KEY }}
         run: |
+          echo "=== generate_news_modular.py 실행 ==="
+          python generate_news_modular.py
+        continue-on-error: true
 
-      # 6. GitHub Pages용 index.html 업데이트
+      - name: 이메일/슬랙 알림 발송
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "=== notify.py 실행 ==="
+          python notify.py
+        continue-on-error: true
+
       - name: index.html 생성 (네비게이션 포함)
         run: |
           python - << 'EOF'
@@ -61,7 +92,6 @@ jobs:
           KST = timezone(timedelta(hours=9))
           now = datetime.now(KST).strftime("%Y년 %m월 %d일 %H:%M KST")
 
-          # 각 파일 존재 여부 확인
           has_dashboard = os.path.exists("realestate_dashboard.html")
           has_news = os.path.exists("index.html")
 
@@ -103,16 +133,13 @@ jobs:
           print("home.html 생성 완료")
           EOF
 
-      # 7. 변경사항 커밋 & 푸시
       - name: 결과물 커밋 및 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add realestate_dashboard.html home.html index.html || true
-          git add realestate_dashboard.html home.html || true
-          # 변경사항 있을 때만 커밋
+          git add data/indicators.json data/indicators_history.json || true
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
