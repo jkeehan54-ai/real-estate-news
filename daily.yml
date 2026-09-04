@@ -56,11 +56,21 @@ jobs:
           fi
 
       # 6. 경기 지표 대시보드 실행 (매 실행마다 = 1시간 간격)
+            # 6. 경기 지표 대시보드 실행 (매 실행마다 = 1시간 간격)
       - name: 부동산 경기 지표 대시보드 생성
+        env:
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY }}
+          HOUSTAT_API_KEY: ${{ secrets.HOUSTAT_API_KEY }}
         run: |
           echo "=== realestate_dashboard.py 실행 ==="
           python realestate_dashboard.py
         continue-on-error: true
+
+
+
+
 
       # 7. 뉴스브리핑 실행 (API 비용 절감을 위해 08시 정기 실행 시에만 1일 1회 실행)
       - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
