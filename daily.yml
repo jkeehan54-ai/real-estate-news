@@ -70,13 +70,12 @@ jobs:
 
 
 
-
-
       # 7. 뉴스브리핑 실행 (API 비용 절감을 위해 08시 정기 실행 시에만 1일 1회 실행)
-      - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
+            - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
         if: steps.kst.outputs.is_morning == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
         run: |
           echo "=== generate_news_modular.py 실행 ==="
           python generate_news_modular.py
