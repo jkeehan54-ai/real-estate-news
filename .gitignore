@@ -13,3 +13,8 @@ reb_market.json
 
 # 로컬 전용 - API 키 포함, 절대 커밋 금지
 run_dashboard.bat
+
+index.html
+realestate_dashboard.html
+home.html
+data/
