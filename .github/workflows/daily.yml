@@ -100,8 +100,7 @@ jobs:
           <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <meta http-equiv="refresh" content="0; url=realestate_dashboard.html">
-          <title>부동산 정보 센터</title>
+                    <title>부동산 정보 센터</title>
           <style>
             body {{ font-family: 'Malgun Gothic', sans-serif; background: #0f1923; color: #cfd8dc;
                    display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
