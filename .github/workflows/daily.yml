@@ -133,12 +133,15 @@ jobs:
           print("home.html 생성 완료")
           EOF
 
-      - name: 결과물 커밋 및 푸시
+            - name: 결과물 커밋 및 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f realestate_dashboard.html home.html index.html
-          git add -f data/indicators.json data/indicators_history.json
+          [ -f realestate_dashboard.html ] && git add -f realestate_dashboard.html
+          [ -f home.html ] && git add -f home.html
+          [ -f index.html ] && git add -f index.html
+          [ -f data/indicators.json ] && git add -f data/indicators.json
+          [ -f data/indicators_history.json ] && git add -f data/indicators_history.json
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
           git push
         env:
