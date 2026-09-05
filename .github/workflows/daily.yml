@@ -27,12 +27,12 @@ jobs:
           pip install --upgrade pip
           pip install feedparser requests beautifulsoup4 lxml
 
-      - name: 현재 KST 시각 확인
+            - name: 현재 KST 시각 확인
         id: kst
         run: |
           HOUR=$(TZ='Asia/Seoul' date +%H)
           echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
-          if [ "$HOUR" = "08" ]; then
+          if [ "$HOUR" -ge 7 ] && [ "$HOUR" -le 9 ]; then
             echo "is_morning=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_morning=false" >> "$GITHUB_OUTPUT"
