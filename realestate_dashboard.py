@@ -16,6 +16,34 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 import feedparser, requests, re, os, json
 from datetime import datetime, timezone, timedelta
 
+import feedparser, requests, re, os, json
+from datetime import datetime, timezone, timedelta
+
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 공통 재시도 세션 — 모든 SESSION.get() 호출에 자동 적용
+# (연결 타임아웃/일시적 서버 오류 시 최대 2회 재시도, 간격 2초→4초)
+# ══════════════════════════════════════════════════════════════════════════════
+def _make_retrying_session():
+    s = requests.Session()
+    retry = Retry(
+        total=2,
+        connect=2,
+        read=2,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
+
+SESSION = _make_retrying_session()
+
 # KB 공식 API 호출 시 verify=False를 쓰기 때문에 매번 뜨는 InsecureRequestWarning을
 # 콘솔에서 숨긴다 (기능에는 영향 없음, 순수 로그 정리용)
 try:
@@ -23,6 +51,9 @@ try:
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except Exception:
     pass
+
+# KB 공식 API 호출 시 verify=False를 쓰기 때문에 매번 뜨는 InsecureRequestWarning을
+# 콘솔에서 숨긴다 (기능에는 영향 없음, 순수 로그 정리용)
 
 KST = timezone(timedelta(hours=9))
 
@@ -48,7 +79,7 @@ KB_API_HEADERS = {
 def kb_api_get(url, params, timeout=10):
     """KB 데이터 API 공통 호출. 실패 시 None."""
     try:
-        res = requests.get(url, headers=KB_API_HEADERS, params=params,
+        res = SESSION.get(url, headers=KB_API_HEADERS, params=params,
                             timeout=timeout, verify=False)
         body = res.json().get("dataBody", {})
         if str(body.get("resultCode")) != "11000":
@@ -229,7 +260,7 @@ def fetch_ecos_csi():
             #   그래서 넉넉히(60개, 약 5년치) 요청해 반드시 전체를 다 받은 뒤
             #   마지막 행(rows[-1])을 최신값으로 쓴다.
             url = f"{ECOS_BASE}/StatisticSearch/{ECOS_API_KEY}/json/kr/1/60/511Y002/M/{start}/{end}/{item_path}"
-            res = requests.get(url, timeout=10)
+            res = SESSION.get(url, timeout=10)
             data = res.json()
             rows = data.get("StatisticSearch", {}).get("row")
             if not rows: return None, None
@@ -280,7 +311,7 @@ def fetch_rone_index(statbl_id, cycle="WK"):
                 return resp_json
             return None
 
-        r1 = requests.get(RONE_BASE, params={**base_params, "pIndex": 1}, timeout=15)
+        r1 = SESSION.get(RONE_BASE, params={**base_params, "pIndex": 1}, timeout=15)
         d1 = unwrap(r1.json())
         if not isinstance(d1, list) or len(d1) < 1:
             print(f"  [R-ONE 진단] STATBL_ID={statbl_id} 1페이지 응답 형식 이상: "
@@ -296,7 +327,7 @@ def fetch_rone_index(statbl_id, cycle="WK"):
         if last_page == 1:
             rows = d1[1].get("row", []) if len(d1) > 1 else []
         else:
-            r2 = requests.get(RONE_BASE, params={**base_params, "pIndex": last_page}, timeout=15)
+            r2 = SESSION.get(RONE_BASE, params={**base_params, "pIndex": last_page}, timeout=15)
             d2 = unwrap(r2.json())
             if not isinstance(d2, list) or len(d2) < 2:
                 print(f"  [R-ONE 진단] STATBL_ID={statbl_id} 마지막페이지({last_page}) "
@@ -360,7 +391,7 @@ def fetch_houstat_khai():
                 return resp_json
             return None
 
-        r1 = requests.get(HOUSTAT_BASE, params={**base_params, "pIndex": 1}, timeout=15)
+        r1 = SESSION.get(HOUSTAT_BASE, params={**base_params, "pIndex": 1}, timeout=15)
         d1 = unwrap(r1.json())
         if not isinstance(d1, list) or len(d1) < 1:
             print(f"  [K-HAI/HOUSTAT 진단] 1페이지 응답 형식 이상: {str(r1.json())[:200]}")
@@ -374,7 +405,7 @@ def fetch_houstat_khai():
         if last_page == 1:
             rows = d1[1].get("row", []) if len(d1) > 1 else []
         else:
-            r2 = requests.get(HOUSTAT_BASE, params={**base_params, "pIndex": last_page}, timeout=15)
+            r2 = SESSION.get(HOUSTAT_BASE, params={**base_params, "pIndex": last_page}, timeout=15)
             d2 = unwrap(r2.json())
             if not isinstance(d2, list) or len(d2) < 2:
                 print(f"  [K-HAI/HOUSTAT 진단] 마지막페이지({last_page}) 응답 형식 이상: {str(r2.json())[:200]}")
@@ -442,7 +473,7 @@ def fetch_kosis_permit():
             for i in range(1, n_objl + 1):
                 params[f"objL{i}"] = "ALL"
 
-            res = requests.get(url, params=params, timeout=15)
+            res = SESSION.get(url, params=params, timeout=15)
             data = res.json()
             if not isinstance(data, list) or not data:
                 continue
@@ -503,7 +534,7 @@ def fetch_krihs_sentiment(jisu="167"):
             "sDate": start.strftime("%Y-%m"),
             "eDate": end.strftime("%Y-%m"),
         }
-        res = requests.get(KREMAP_URL, params=params, headers=HEADERS, timeout=15)
+        res = SESSION.get(KREMAP_URL, params=params, headers=HEADERS, timeout=15)
         html = res.text
 
         # data:[{ quarter : "202511", 전국지수 : '109.5', ... }, ...] 형태 추출
@@ -516,7 +547,7 @@ def fetch_krihs_sentiment(jisu="167"):
                   f"응답길이={len(html)} / 'quarter' 포함여부={'quarter' in html} / "
                   f"'전국지수' 포함여부={'전국지수' in html}")
             # 혹시 파라미터 없이 요청하면 다를 수 있으니 한 번 더 시도
-            res2 = requests.get(KREMAP_URL, params={"jisu": jisu}, headers=HEADERS, timeout=15)
+            res2 = SESSION.get(KREMAP_URL, params={"jisu": jisu}, headers=HEADERS, timeout=15)
             rows = pattern.findall(res2.text)
             if not rows:
                 print(f"  [K-REMAP 진단] 파라미터 없이 재시도해도 실패 "
@@ -742,7 +773,7 @@ def fetch_rss_all():
     items = []
     for url in RSS_FEEDS:
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=8)
+            resp = SESSION.get(url, headers=HEADERS, timeout=8)
             feed = feedparser.parse(resp.content)
             for e in feed.entries:
                 t = (e.get("title","") or "").strip()
@@ -761,7 +792,7 @@ def fetch_gn_titles(query, n=15):
     """
     try:
         url  = f"https://news.google.com/rss/search?q={requests.utils.quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
-        resp = requests.get(url, headers=HEADERS, timeout=10)
+        resp = SESSION.get(url, headers=HEADERS, timeout=10)
         feed = feedparser.parse(resp.content)
         items = []
         for e in feed.entries[:n]:
@@ -786,7 +817,7 @@ def fetch_article_text(url, timeout=6, max_chars=2000):
     """
     if not url: return ""
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+        resp = SESSION.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         html = resp.text
         html = re.sub(r'<script[^>]*>.*?</script>', ' ', html, flags=re.S | re.I)
         html = re.sub(r'<style[^>]*>.*?</style>',  ' ', html, flags=re.S | re.I)
@@ -1959,7 +1990,7 @@ def get_busan(rss):
     ]
     for url in busan_rss_urls:
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=8)
+            resp = SESSION.get(url, headers=HEADERS, timeout=8)
             feed = feedparser.parse(resp.content)
             for e in feed.entries:
                 t = (e.get("title","") or "").strip()
