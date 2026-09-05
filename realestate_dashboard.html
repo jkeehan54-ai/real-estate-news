@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>부동산 경기 지표 대시보드 2026년 09월 05일</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic',sans-serif;background:#0f1923;color:#e8f0f5;min-height:100vh;font-size:16px}
+.hdr{background:linear-gradient(135deg,#1a2942,#0d1f35);padding:20px 28px;border-bottom:2px solid #2a4a70}
+.hdr h1{font-size:22px;font-weight:700;color:#ffffff}
+.hdr h1 em{font-size:13px;font-weight:400;color:#6fd3ff;margin-left:8px;font-style:normal}
+.upd{font-size:13px;color:#9fb4c7;margin-top:4px}
+.vbar{background:#132030;border-left:5px solid #2e7d32;padding:14px 28px;display:flex;align-items:center;gap:16px}
+.vlabel{font-size:13px;color:#9fb4c7;letter-spacing:1px}
+.vval{font-size:30px;font-weight:700;color:#2e7d32}
+.vsub{font-size:14px;color:#b0c4d4;margin-top:2px}
+.kbbar{background:#0d1f35;padding:12px 28px;display:flex;gap:18px;flex-wrap:wrap;border-bottom:1px solid #2a4a70}
+.kbi{display:flex;flex-direction:column;align-items:center;min-width:70px}
+.kbr{font-size:12px;color:#9fb4c7}
+.kbv{font-size:18px;font-weight:700;margin-top:2px}
+.sec{padding:18px 28px}
+.stitle{font-size:13px;font-weight:700;color:#6fd3ff;letter-spacing:1.5px;text-transform:uppercase;
+         margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #2a4a70}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tcard{background:#132030;border:1px solid #2a4a70;border-radius:8px;padding:10px 12px}
+.ttitle{font-size:12px;color:#9fb4c7;letter-spacing:0.5px;margin-bottom:4px}
+.tval{font-size:20px;font-weight:700;margin-bottom:2px}
+.tspark{margin:2px 0}
+.spark{display:block}
+.spark-empty{font-size:12px;color:#607d8b;padding:14px 0}
+.tsub{font-size:11px;color:#8fa3b5;margin-top:2px}
+.card{background:#132030;border:1px solid #2a4a70;border-radius:8px;padding:12px}
+.ctitle{font-size:12px;color:#9fb4c7;letter-spacing:0.5px;margin-bottom:5px}
+.cval{margin-bottom:3px}
+.val{font-size:28px;font-weight:700}
+.unit{font-size:13px;color:#9fb4c7}
+.val.na{font-size:16px;color:#607d8b}
+.sub{font-size:13px;color:#b0c4d4;margin-bottom:2px}
+.note{font-size:12px;color:#8fa3b5;font-style:italic}
+.cnews{margin-top:5px}
+.nref{font-size:12px;color:#8fa3b5;margin-top:2px;line-height:1.5}
+.nref a{color:#6fd3ff;text-decoration:none}
+.nref a:hover{text-decoration:underline}
+.nd{color:#607d8b}
+.stbl{width:100%;border-collapse:collapse}
+.stbl tr{border-bottom:1px solid #1e3a5f}
+.stbl td{padding:8px 6px;vertical-align:middle}
+.sn{color:#c5d6e3;width:210px;font-size:14px}
+.sd{color:#9fb4c7;font-size:14px}
+.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;color:#fff}
+.cat{display:inline-block;padding:1px 5px;border-radius:3px;font-size:11px;color:#fff;margin-left:5px;vertical-align:middle}
+.bsbox{background:#0a1e30;border:1px solid #2a4a70;border-left:3px solid #6fd3ff;border-radius:8px;padding:12px}
+.bstitle{font-size:13px;color:#6fd3ff;font-weight:700;margin-bottom:8px}
+.refbox{background:#0d1a26;border:1px solid #1e3a5f;border-radius:6px;padding:12px;
+         font-size:13px;color:#9fb4c7;line-height:2}
+.refbox b{color:#c5d6e3}
+footer{text-align:center;padding:16px;font-size:12px;color:#607d8b}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>부동산 경기 지표 대시보드 <em>선행 8개 · 동행 3개 · 후행 2개 자동 수집</em></h1>
+  <div class="upd">업데이트: 2026-09-05 12:33 KST</div>
+</div>
+<div class="vbar">
+  <div><div class="vlabel">종합 경기 판단</div>
+  <div class="vval">보합 / 혼조</div>
+  <div class="vsub">수집된 13개 지표 기반 자동 분석</div></div>
+</div>
+<div class="kbbar"><div class="kbi"><span class="kbr">전국</span><span class="kbv" style="color:#c62828">▲ +0.10%</span></div><div class="kbi"><span class="kbr">서울</span><span class="kbv" style="color:#c62828">▲ +0.23%</span></div><div class="kbi"><span class="kbr">수도권</span><span class="kbv" style="color:#455a64">—</span></div><div class="kbi"><span class="kbr">부산</span><span class="kbv" style="color:#1565c0">▼ -0.03%</span></div><div class="kbi"><span class="kbr">상승 연속</span><span class="kbv" style="color:#c62828">3주</span></div><div class="kbi"><span class="kbr">기준일</span><span class="kbv" style="color:#78909c;font-size:12px">2026.08.31</span></div></div>
+
+<div class="sec">
+  <div class="stitle">지표 추이 — 자동 수집 데이터 누적 (1시간 간격)</div>
+  <div class="tgrid">
+    <div class="tcard"><div class="ttitle">종합판단 지수</div><div class="tval" style="color:#2e7d32">+0</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">KB 전국 매매가</div><div class="tval" style="color:#c62828">+0.10%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">KB 서울 매매가</div><div class="tval" style="color:#c62828">+0.23%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">KB 부산 매매가</div><div class="tval" style="color:#1565c0">-0.03%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">경매 낙찰률</div><div class="tval" style="color:#ef6c00">34.3%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">전세가율(전국)</div><div class="tval" style="color:#4fc3f7">68.8%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">주택가격전망(CSI)</div><div class="tval" style="color:#c62828">125.0</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">매매수급지수</div><div class="tval" style="color:#1565c0">99.6</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">소비심리(매매)</div><div class="tval" style="color:#2e7d32">112.6</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">전국 미분양</div><div class="tval" style="color:#ef6c00">68,000호</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">거래량(전년비)</div><div class="tval" style="color:#c62828">+35.0%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">착공량(전년비)</div><div class="tval" style="color:#c62828">+5.5%</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+    <div class="tcard"><div class="ttitle">KB 매수우위지수</div><div class="tval" style="color:#ef6c00">45.8</div><div class="tspark"><div class="spark-empty">데이터 축적 중</div></div><div class="tsub">누적 1개 시점</div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="stitle">선행지표 — 시장 3~12개월 전망</div>
+  <div class="grid">
+    <div class="card"><div class="ctitle">① 경매 낙찰률</div><div class="cval"><span class="val" style="color:#ef6c00">34.3</span><span class="unit"> %</span></div><div class="sub">낙찰가율 82.8% | 3,991건</div><div class="note">32.4%(2023 저점)~42%(2021 고점)</div><div class="cnews"><div class="nref"><a href="https://www.courtauction.go.kr" target="_blank">📰 법원경매정보 (공식 사이트, 2026.08 기준)</a> <span class="nd">2026.08</span></div></div></div>
+    <div class="card"><div class="ctitle">② 주택 인허가</div><div class="cval"><span class="val" style="color:#c62828">전년비 11.8%</span><span class="unit"> </span></div><div class="sub">—호 | 전년비 11.8% | —</div><div class="note">인허가→착공→준공 6~24개월 시차</div><div class="cnews"><div class="nref"><a href="https://news.google.com/rss/articles/CBMiZ0FVX3lxTE9uV1g5S2J6ZVhOYVZPYlFoUWFyd0twWm1MWXVTZFZqdEpQby1LV0o5QjhwdkFpVWsxZ0FaZHQ1VVJUTjZaNFdVeUt3cDh3dEU0dGpEYVJ2dnVMcVAxX2g5N092Tzd6X3M?oc=5" target="_blank">📰 ’26년 4월 주택통계, 전년동기 대비 인허가 11.8%↓·착공 21.3%↑·준공 45.9</a> <span class="nd">Thu, 04 Ju</span></div></div></div>
+    <div class="card"><div class="ctitle">③ 전세가율</div><div class="cval"><span class="val" style="color:#2e7d32">68.8(전국)</span><span class="unit"> %</span></div><div class="sub">전국 68.8% | 서울 50.4% | 부산 68.7%</div><div class="note">적정 60~70% | 70↑과열 | 60↓침체</div><div class="cnews"><div class="nref"><a href="https://data.kbland.kr" target="_blank">📰 KB부동산 데이터허브 (공식 API)</a> <span class="nd"></span></div></div></div>
+    <div class="card"><div class="ctitle">④ 주택가격전망지수(CSI)</div><div class="cval"><span class="val" style="color:#c62828">125.0</span><span class="unit"> </span></div><div class="sub">소비자심리지수 104.5</div><div class="note">100↑낙관 · 한국은행 장기평균 기준</div><div class="cnews"><div class="nref"><a href="https://ecos.bok.or.kr" target="_blank">📰 한국은행 ECOS (공식 API, 2026.08 기준)</a> <span class="nd">2026.08</span></div></div></div>
+    <div class="card"><div class="ctitle">⑤ KB 매매가격전망지수</div><div class="cval"><span class="val" style="color:#2e7d32">107.2</span><span class="unit"> </span></div><div class="sub">전세가격전망 120.5</div><div class="note">100↑상승우위 | 0~200 범위 (KB국민은행)</div><div class="cnews"><div class="nref"><a href="https://data.kbland.kr" target="_blank">📰 KB부동산 데이터허브 (공식 API)</a> <span class="nd"></span></div></div></div>
+    <div class="card"><div class="ctitle">⑥ 매매수급지수</div><div class="cval"><span class="val" style="color:#2e7d32">99.6</span><span class="unit"> </span></div><div class="sub">전세수급지수 105.7</div><div class="note">100↑수요우위 | 0~200 범위 (한국부동산원)</div><div class="cnews"><div class="nref"><a href="https://www.reb.or.kr/r-one" target="_blank">📰 한국부동산원 R-ONE (공식 API, 2026-08-31 기준)</a> <span class="nd">2026-08-31</span></div></div></div>
+    <div class="card"><div class="ctitle">⑦ 부동산소비심리지수</div><div class="cval"><span class="val" style="color:#2e7d32">112.6</span><span class="unit"> </span></div><div class="sub">전세심리 —</div><div class="note">115↑낙관 | 95↓위축 (국토연구원)</div><div class="cnews"><div class="nref"><a href="https://kremap.krihs.re.kr/grid/grid?jisu=167" target="_blank">📰 K-REMAP 국토연구원 (공식 데이터, 2026.07 기준)</a> <span class="nd">2026.07</span></div></div></div>
+    <div class="card"><div class="ctitle">⑧ 주택구입부담(K-HAI)</div><div class="cval"><span class="val" style="color:#c62828">61.5</span><span class="unit"> </span></div><div class="sub">전분기비 —p</div><div class="note">지수↑부담 증가 | 100↓부담 낮음 (주택금융공사)</div><div class="cnews"><div class="nref"><a href="https://houstat.hf.go.kr/research/portal/theme/indexStatKHAIPage.do" target="_blank">📰 주택금융공사 HOUSTAT (202601)</a> <span class="nd">202601</span></div></div></div>
+    <div class="card"><div class="ctitle">⑨ KB 매수우위지수</div><div class="cval"><span class="val" style="color:#1565c0">45.8</span><span class="unit"> </span></div><div class="sub">매도자많음 61.9% | 매수자많음 7.7%</div><div class="note">100↑매도자 우위 | 100↓매수자 우위 (KB부동산)</div><div class="cnews"><div class="nref"><a href="https://data.kbland.kr" target="_blank">📰 KB부동산 데이터허브 (공식 API)</a> <span class="nd">2026.08.31</span></div></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="stitle">동행지표 — 현재 시장 상황</div>
+  <div class="grid">
+    <div class="card"><div class="ctitle">KB 전국 매매가</div><div class="cval"><span class="val" style="color:#c62828">+0.10</span><span class="unit"> %</span></div><div class="sub">3주 연속 상승</div><div class="note">주간 변동률 (KB국민은행)</div><div class="cnews"><div class="nref"><a href="https://data.kbland.kr" target="_blank">📰 KB부동산 데이터허브 (공식 API)</a> <span class="nd">2026.08.31</span></div></div></div>
+    <div class="card"><div class="ctitle">KB 서울 매매가</div><div class="cval"><span class="val" style="color:#c62828">+0.23</span><span class="unit"> %</span></div><div class="sub">수도권 —%</div><div class="note">주간 변동률 (KB국민은행)</div><div class="cnews"></div></div>
+    <div class="card"><div class="ctitle">KB 전국 전세가</div><div class="cval"><span class="val" style="color:#c62828">+0.09</span><span class="unit"> %</span></div><div class="sub">서울 전세 —%</div><div class="note">주간 전세 변동률 (KB국민은행)</div><div class="cnews"></div></div>
+    <div class="card"><div class="ctitle">주택 매매 거래량</div><div class="cval"><span class="val" style="color:#c62828">전년비 35.0%</span><span class="unit"> </span></div><div class="sub">전년비 35.0% | —</div><div class="note">국토교통부 실거래 신고 기준</div><div class="cnews"><div class="nref"><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE44TWVkaTR2ZzlVRmNhTldyWW5HU1FLTFo4NFRLOHlUb0sxcmxIZzR4ZERkR2phR1ViUWp3MUhEZGlDam1KRDZ5WHJfWGdEcnJzMmNIS3JGVG95OWNrbEhZeDVic1NVOGwz?oc=5" target="_blank">📰 11월 전국 아파트 거래량 전년 대비 35% 증가…주택 월세 비중 63% - 한겨레</a> <span class="nd">Wed, 31 De</span></div></div></div>
+    <div class="card"><div class="ctitle">착공량</div><div class="cval"><span class="val" style="color:#c62828">30,000</span><span class="unit"> 호</span></div><div class="sub">전년비 5.5% | 9월</div><div class="note">착공 후 12~24개월 후 공급</div><div class="cnews"><div class="nref"><a href="https://news.google.com/rss/articles/CBMidkFVX3lxTE8tUkZ1UVVNdm4zeEVlY00wVGllTHpoSjM4d2VYeDh0WVZCZE5yWVNlUkREVnNLWTI4cDdwb1k0eklxWVV6RDNmY2RoT3Vzck9rUXE2b3FuX01RT1JKNnJ3VEsxVld3aFdZYWpSRDRoM2R3aTUwWlHSAWZBVV95cUxOUGo5OFdlaWx3RXAyVkZvc1F6V0otOUc3S3lsZU9oTzdqZU1JSmQtb2N3RWxrS2ZVSU9ZREE4R191ZnZMc2d3dkdTcjlZZ3RFU0NIWUVTbUxqX3NTeGpYZUwwb1BfdXc?oc=5" target="_blank">📰 1~5월 비아파트 착공 전년 동기 대비 5.5% 감소… 전월세 가격 상승에 주거비 부담 커</a> <span class="nd">Fri, 17 Ju</span></div></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="stitle">후행지표 — 시장 결과 확인</div>
+  <div class="grid">
+    <div class="card"><div class="ctitle">전국 미분양</div><div class="cval"><span class="val" style="color:#1565c0">68,000</span><span class="unit"> 호</span></div><div class="sub">준공후(악성) 30,000호 | 2026.09</div><div class="note">3만호↓호황 | 6.2만호↑위험 (국토교통부)</div><div class="cnews"><div class="nref"><a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE5mNUdkckx3MTE5c2d1V19TVWp1MXoyVlRiWXpqZ2YtLXh0MlIxWEx0eHA4OFlXWXV3VlJ4SDdyaGdITk8yVG9WV3EtTDUtNEZzb1hJMWVlOEhNZw?oc=5" target="_blank">📰 전국 미분양 6.8만가구…수도권은 1년반만에 최대 - 한국경제</a> <span class="nd">Mon, 31 Au</span></div></div></div>
+    <div class="card"><div class="ctitle">준공량</div><div class="cval"><span class="val" style="color:#c62828">전년비 49.0%</span><span class="unit"> </span></div><div class="sub">전년비 49.0% | 5월</div><div class="note">준공 증가→공급 확대→가격 하락 압력</div><div class="cnews"><div class="nref"><a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE1GVjZNTXYtblZsV041RGZtcV9KWHMzdjl2TzloZjlnWkljUkJHUHVjenNTcngwazdCVkl5bkFselJhMGlvMGo5bjlreFFsaHdqMzRsc0VNTEZFTVdyREI5M3lxQXk0WEVLM0NnVExR0gFyQVVfeXFMT1R0a01WMzVNWi1wbGRNbksyVGtUTmtEY3l6ZElLSWhLdURVRHJZVzJyYnE5NXRoRlNCSGV2elI5UnVPNHdBaWd6S1RxUUlBMkZyRFNLcGRXa1piSFRveFZwLUM4VkQ4YTQzekd2LUZYaGFn?oc=5" target="_blank">📰 7월까지 서울 아파트 입주물량 49% 급감…착공·분양은 기지개 - 딜라이트닷넷</a> <span class="nd">Mon, 31 Au</span></div></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="stitle">부산 지역 지표</div>
+  <div class="bsbox">
+    <div class="bstitle">🌊 부산 부동산 동향</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+      <div class="card"><div class="ctitle">부산 아파트 매매</div><div class="cval"><span class="val" style="color:#1565c0">-0.03</span><span class="unit"> %</span></div><div class="sub">주간 변동률</div><div class="note">KB부동산 기준</div><div class="cnews"><div class="nref"><a href="https://data.kbland.kr" target="_blank">📰 KB부동산 데이터허브 (공식 API)</a> <span class="nd">2026.08.31</span></div></div></div>
+      <div class="card"><div class="ctitle">부산 전세가</div><div class="cval"><span class="val" style="color:#c62828">+0.04</span><span class="unit"> %</span></div><div class="sub">주간 전세 변동률</div><div class="note">KB부동산 기준</div><div class="cnews"></div></div>
+      <div class="card"><div class="ctitle">부산 미분양</div><div class="cval"><span class="val" style="color:#546e7a">—</span><span class="unit"> 호</span></div><div class="sub">부산 지역 미분양</div><div class="note">국토교통부 기준</div><div class="cnews"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="stitle">지표별 신호 분석</div>
+  <table class="stbl"><tbody><tr><td class="sn">KB 서울 매매가<span class="cat" style="background:#2e7d32">동행</span></td><td><span class="badge" style="background:#c62828">▲ 상승</span></td><td class="sd">주간 +0.23%</td></tr><tr><td class="sn">KB 부산 매매가<span class="cat" style="background:#2e7d32">동행</span></td><td><span class="badge" style="background:#0d47a1">▼ 하락</span></td><td class="sd">주간 -0.03%</td></tr><tr><td class="sn">전세가율<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#2e7d32">✔ 적정</span></td><td class="sd">68.8% (적정 60~70%)</td></tr><tr><td class="sn">경매낙찰률<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">34.3% (정상)</td></tr><tr><td class="sn">주택가격전망(CSI)<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#c62828">▲ 상승</span></td><td class="sd">125.0 (낙관)</td></tr><tr><td class="sn">KB 매매전망지수<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">107.2 (균형)</td></tr><tr><td class="sn">매매수급지수<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">99.6 (균형)</td></tr><tr><td class="sn">부동산소비심리(매매)<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">112.6 (보합)</td></tr><tr><td class="sn">주택구입부담(K-HAI)<span class="cat" style="background:#1565c0">선행</span></td><td><span class="badge" style="background:#c62828">▲ 상승</span></td><td class="sd">61.5 (부담 낮음)</td></tr><tr><td class="sn">주택 거래량<span class="cat" style="background:#2e7d32">동행</span></td><td><span class="badge" style="background:#c62828">▲ 상승</span></td><td class="sd">전년비 +35.0% (회복)</td></tr><tr><td class="sn">착공량<span class="cat" style="background:#2e7d32">동행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">전년비 5.5%</td></tr><tr><td class="sn">전국 미분양<span class="cat" style="background:#6a1b9a">후행</span></td><td><span class="badge" style="background:#1a237e">▼ 침체</span></td><td class="sd">68,000호 (위험 6.2만↑)</td></tr><tr><td class="sn">준공량<span class="cat" style="background:#6a1b9a">후행</span></td><td><span class="badge" style="background:#e65100">→ 보합</span></td><td class="sd">전년비 +49.0% (공급 확대)</td></tr></tbody></table>
+</div>
+
+<div class="sec">
+  <div class="stitle">지표 해석 기준값</div>
+  <div class="refbox">
+    <b>[선행] 경매 낙찰률:</b> 42%(2021 고점)~32.4%(2023 저점) · 낙찰가율 100%↑ 과열<br>
+    <b>[선행] 주택 인허가:</b> 증가→6~18개월 후 공급 확대 · 감소→공급 부족<br>
+    <b>[선행] 전세가율:</b> 60~70% 적정 · 70%↑ 매매가 상승 압력 · 60%↓ 침체 (KB부동산)<br>
+    <b>[선행] 주택가격전망지수(CSI):</b> 100↑ 낙관 · 장기평균(2003~2019) 기준 (한국은행)<br>
+    <b>[선행] KB 가격전망지수:</b> 0~200 범위 · 100↑ 상승우위 (KB국민은행)<br>
+    <b>[선행] 수급지수:</b> 0~200 범위 · 100↑ 수요>공급 (한국부동산원)<br>
+    <b>[선행] 소비심리지수:</b> 115↑ 낙관 · 95↓ 위축 (국토연구원)<br>
+    <b>[선행] 주택구입부담(K-HAI):</b> 100 기준 · 높을수록 부담 큼 (주택금융공사)<br>
+    <b>[동행] 거래량·착공량:</b> 전년비 20%↑ 회복 · -10%↓ 위축<br>
+    <b>[후행] 전국 미분양:</b> 3만호↓ 호황 · 6.2만호↑ 위험 (국토교통부)<br>
+    <b>[후행] 준공량:</b> 증가→공급 확대 / 감소→공급 부족 압력<br>
+    <b>데이터:</b> RSS 12개 피드 + Google News RSS 제목 파싱 (무료·실시간)
+  </div>
+</div>
+
+<footer>부동산 경기 지표 대시보드 · 2026-09-05 12:33 KST · 투자 결정 참고 자료</footer>
+</body></html>
