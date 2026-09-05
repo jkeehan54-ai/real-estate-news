@@ -48,7 +48,8 @@ jobs:
           else
             echo "이전 지표 없음 (최초 실행)"
           fi
-
+               
+      
       - name: 부동산 경기 지표 대시보드 생성
         env:
           ECOS_API_KEY: ${{ secrets.BOK_ECOS_KEY }}
