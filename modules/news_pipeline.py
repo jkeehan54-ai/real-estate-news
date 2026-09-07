@@ -1,6 +1,5 @@
 # news_pipeline.py
-
-from datetime import datetime
+from datetime import timedelta  # 파일 상단 import 부분에 추가
 
 from modules.news_config import (
     KST,
@@ -126,10 +125,25 @@ def get_clean_news():
     # =========================================================
     # 기사 필터링
     # =========================================================
-
-    for pub_dt, title, link, src in all_entries:
+for pub_dt, title, link, src in all_entries:
 
         total += 1
+
+        # -----------------------------------------------------
+        # ⓪ 24시간 이내 기사만 (날짜 정보 없는 기사는 제외)
+        # -----------------------------------------------------
+
+        if pub_dt is None or (now_kst - pub_dt) > timedelta(hours=24):
+            continue
+
+        # -----------------------------------------------------
+        # ① 부동산 여부 1차 필터
+        # -----------------------------------------------------
+
+        if not is_estate_related(title):
+            nonre += 1
+            continue
+    
 
         # -----------------------------------------------------
         # ① 부동산 여부 1차 필터
