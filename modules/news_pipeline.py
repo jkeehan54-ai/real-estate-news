@@ -172,14 +172,12 @@ for pub_dt, title, link, src in all_entries:
             continue
 
         # -----------------------------------------------------
-        # ④ 시장동향 2차 필터
+        # ④ 2차 필터 (모든 카테고리 공통 적용)
         # -----------------------------------------------------
 
-        if cat == "시장동향":
-
-            if not is_market_valid(title):
-                nonre += 1
-                continue
+        if not is_market_valid(title):
+            nonre += 1
+            continue
 
         # -----------------------------------------------------
         # ⑤ 매체별 제한
