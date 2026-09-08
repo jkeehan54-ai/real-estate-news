@@ -189,7 +189,7 @@ def _parse_datetime(
         return value
 
     if not value:
-        return now_kst
+        return None
 
     text = str(
         value
@@ -291,48 +291,37 @@ def _parse_datetime(
         except ValueError:
             continue
 
-    return now_kst
+    return  None
 
 
 # ============================================================
 # DATE FROM TAG
 # ============================================================
 
-def _find_date(
-    tag,
-    now_kst: datetime | None = None,
-) -> datetime | None:
+def _find_date(tag, now_kst=None):
 
     if tag is None:
-        return now_kst
+        return None
 
-    # --------------------------------------------------------
-    # time 태그
-    # --------------------------------------------------------
-
-    time_tag = tag.find(
-        "time"
-    )
+    time_tag = tag.find("time")
 
     if time_tag:
-
         value = (
-            time_tag.get(
-                "datetime"
-            )
-            or time_tag.get_text(
-                " ",
-                strip=True,
-            )
+            time_tag.get("datetime")
+            or time_tag.get_text(" ", strip=True)
         )
-
-        dt = _parse_datetime(
-            value,
-            now_kst,
-        )
-
+        dt = _parse_datetime(value, now_kst)
         if dt:
             return dt
+
+    for attr in ("data-date", "data-datetime", "data-published", "data-publish"):
+        value = tag.get(attr)
+        if value:
+            dt = _parse_datetime(value, now_kst)
+            if dt:
+                return dt
+
+    return None
 
     # --------------------------------------------------------
     # data attributes

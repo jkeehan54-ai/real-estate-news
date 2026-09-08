@@ -375,6 +375,10 @@ def build_news_item(
         item.get("summary")
     )
 
+    pub_str = safe(
+        item.get("pub_str")
+    )
+
     html = []
 
     html.append(
@@ -407,13 +411,14 @@ def build_news_item(
     )
 
     # --------------------------------------------------------
-    # 매체명
+    # 매체명 + 발행시각
     # --------------------------------------------------------
 
     html.append(
         f"<div class='news-meta'>"
         f"<span class='source'>{source}</span>"
-        f"</div>"
+        + (f" <span class='pub-time'>· {pub_str}</span>" if pub_str else "")
+        + f"</div>"
     )
 
     if summary:
@@ -431,7 +436,6 @@ def build_news_item(
     return "\n".join(
         html
     )
-
 
 ###############################################################################
 # BRN 카드
