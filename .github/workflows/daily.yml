@@ -32,7 +32,7 @@ jobs:
         run: |
           HOUR=$(TZ='Asia/Seoul' date +%H)
           echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
-          if [ "$HOUR" -ge 7 ] && [ "$HOUR" -le 9 ]; then
+          if [ "$HOUR" -ge 7 ] && [ "$HOUR" -le 10 ]; then
             echo "is_morning=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_morning=false" >> "$GITHUB_OUTPUT"
