@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
 
@@ -92,25 +92,14 @@ def _parse_datetime(
             continue
 
         try:
-
             dt = datetime(
-                value.tm_year,
-                value.tm_mon,
-                value.tm_mday,
-                value.tm_hour,
-                value.tm_min,
-                value.tm_sec,
+                value.tm_year, value.tm_mon, value.tm_mday,
+                value.tm_hour, value.tm_min, value.tm_sec,
+                tzinfo=timezone.utc,
             )
-
-            if dt.tzinfo is None:
-
-                if now_kst is not None:
-                    dt = dt.replace(
-                        tzinfo=now_kst.tzinfo
-                    )
-
+            if now_kst is not None:
+                dt = dt.astimezone(now_kst.tzinfo)
             return dt
-
         except Exception:
             continue
 

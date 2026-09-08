@@ -486,7 +486,7 @@ def is_duplicate(
             old_normalized,
         ).ratio()
 
-        if similarity >= 0.72:
+        if similarity >= 0.60:
 
             return True
 
@@ -516,7 +516,7 @@ def is_duplicate(
                 / len(union)
             )
 
-            if jaccard >= 0.55:
+            if jaccard >= 0.45:
 
                 return True
 
