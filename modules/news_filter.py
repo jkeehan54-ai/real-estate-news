@@ -516,7 +516,7 @@ def is_duplicate(
                 / len(union)
             )
 
-            if jaccard >= 0.45:
+            if jaccard >= 0.35:
 
                 return True
 
