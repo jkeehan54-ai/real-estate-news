@@ -64,16 +64,50 @@ def _parse_datetime(
     RSS entry의 발행일을 datetime으로 변환한다.
 
     우선순위:
-        published_parsed
-        updated_parsed
-        created_parsed
-        published
-        updated
-        created
+        원문 문자열 (published/updated/created) - 시간대 정보(+0900 등) 포함
+        구조화 시간 (published_parsed 등) - 매체별로 UTC 변환이 부정확한 경우가 있어 최후 수단으로만 사용
     """
 
     # --------------------------------------------------------
-    # feedparser 구조화 시간
+    # 1. 원문 문자열 (시간대 정보 포함 - 가장 신뢰할 수 있음)
+    # --------------------------------------------------------
+
+    for field_name in (
+        "published",
+        "updated",
+        "created",
+    ):
+
+        value = getattr(entry, field_name, None)
+
+        if not value:
+            continue
+
+        value = str(value).strip()
+
+        # RFC 822 / RFC 2822 (예: "Tue, 08 Sep 2026 16:41:00 +0900")
+        try:
+            dt = parsedate_to_datetime(value)
+            if dt.tzinfo is not None:
+                if now_kst is not None:
+                    return dt.astimezone(now_kst.tzinfo)
+                return dt
+        except Exception:
+            pass
+
+        # ISO 8601
+        try:
+            normalized = value.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(normalized)
+            if dt.tzinfo is not None:
+                if now_kst is not None:
+                    return dt.astimezone(now_kst.tzinfo)
+                return dt
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # 2. 구조화 시간 (최후 수단 - UTC로 간주하고 변환)
     # --------------------------------------------------------
 
     for field_name in (
@@ -82,11 +116,7 @@ def _parse_datetime(
         "created_parsed",
     ):
 
-        value = getattr(
-            entry,
-            field_name,
-            None,
-        )
+        value = getattr(entry, field_name, None)
 
         if value is None:
             continue
@@ -102,78 +132,6 @@ def _parse_datetime(
             return dt
         except Exception:
             continue
-
-    # --------------------------------------------------------
-    # 문자열 날짜
-    # --------------------------------------------------------
-
-    for field_name in (
-        "published",
-        "updated",
-        "created",
-    ):
-
-        value = getattr(
-            entry,
-            field_name,
-            None,
-        )
-
-        if not value:
-            continue
-
-        value = str(
-            value
-        ).strip()
-
-        # ----------------------------------------------------
-        # RFC 822 / RFC 2822
-        # ----------------------------------------------------
-
-        try:
-
-            dt = parsedate_to_datetime(
-                value
-            )
-
-            if dt.tzinfo is None:
-
-                if now_kst is not None:
-                    dt = dt.replace(
-                        tzinfo=now_kst.tzinfo
-                    )
-
-            return dt
-
-        except Exception:
-            pass
-
-        # ----------------------------------------------------
-        # ISO 8601
-        # ----------------------------------------------------
-
-        try:
-
-            normalized = value.replace(
-                "Z",
-                "+00:00",
-            )
-
-            dt = datetime.fromisoformat(
-                normalized
-            )
-
-            if dt.tzinfo is None:
-
-                if now_kst is not None:
-                    dt = dt.replace(
-                        tzinfo=now_kst.tzinfo
-                    )
-
-            return dt
-
-        except Exception:
-            pass
 
     return None
 
