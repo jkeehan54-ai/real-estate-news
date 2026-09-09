@@ -63,34 +63,30 @@ def _parse_datetime(
     """
     RSS entry의 발행일을 datetime으로 변환한다.
 
-    우선순위:
-        원문 문자열 (published/updated/created) - 시간대 정보(+0900 등) 포함
-        구조화 시간 (published_parsed 등) - 매체별로 UTC 변환이 부정확한 경우가 있어 최후 수단으로만 사용
+    한국 언론사 RSS는 발행일 문자열에 시간대(+0900) 정보를
+    아예 안 쓰는 경우가 흔하다. 이 경우 그 숫자를 이미 KST로
+    간주한다(UTC로 오인해 변환하지 않는다).
     """
 
-    # --------------------------------------------------------
-    # 1. 원문 문자열 (시간대 정보 포함 - 가장 신뢰할 수 있음)
-    # --------------------------------------------------------
-
-    for field_name in (
-        "published",
-        "updated",
-        "created",
-    ):
+    for field_name in ("published", "updated", "created"):
 
         value = getattr(entry, field_name, None)
-
         if not value:
             continue
 
         value = str(value).strip()
 
-        # RFC 822 / RFC 2822 (예: "Tue, 08 Sep 2026 16:41:00 +0900")
+        # RFC 822 / RFC 2822
         try:
             dt = parsedate_to_datetime(value)
             if dt.tzinfo is not None:
                 if now_kst is not None:
                     return dt.astimezone(now_kst.tzinfo)
+                return dt
+            else:
+                # 시간대 정보 없음 → 이미 KST로 적힌 값으로 간주
+                if now_kst is not None:
+                    return dt.replace(tzinfo=now_kst.tzinfo)
                 return dt
         except Exception:
             pass
@@ -103,21 +99,17 @@ def _parse_datetime(
                 if now_kst is not None:
                     return dt.astimezone(now_kst.tzinfo)
                 return dt
+            else:
+                if now_kst is not None:
+                    return dt.replace(tzinfo=now_kst.tzinfo)
+                return dt
         except Exception:
             pass
 
-    # --------------------------------------------------------
-    # 2. 구조화 시간 (최후 수단 - UTC로 간주하고 변환)
-    # --------------------------------------------------------
-
-    for field_name in (
-        "published_parsed",
-        "updated_parsed",
-        "created_parsed",
-    ):
+    # 문자열 필드가 아예 없을 때만 구조화 필드를 최후 수단으로 사용
+    for field_name in ("published_parsed", "updated_parsed", "created_parsed"):
 
         value = getattr(entry, field_name, None)
-
         if value is None:
             continue
 
