@@ -87,7 +87,7 @@ def is_estate_related(title: str) -> bool:
         t,
     ):
         # 실제 주택정책·공급정책 자체를 설명하는 경우만 허용
-    if not re.search(
+        if not re.search(
             r"주택공급|공급대책|부동산정책|주택정책|"
             r"부동산규제|대출규제|청약제도|정비사업정책|"
             r"세제지원|세제개편|종부세|취득세|양도세|재산세|보유세|"
