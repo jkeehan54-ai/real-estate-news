@@ -95,8 +95,6 @@ def get_clean_news():
 
         if not is_market_valid(title):
             nonre += 1
-            if any(k in title for k in ["종부세", "취득세", "양도세", "재산세", "보유세", "세금", "세제"]):
-                print(f"  [진단/세제필터걸림] {title}")
             continue
 
         if src in SOURCE_LIMITS:
