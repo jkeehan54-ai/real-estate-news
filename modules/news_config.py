@@ -89,6 +89,10 @@ RE_ESTATE_STRONG = re.compile(
 
 # 약한 키워드: 다른 맥락(재난·기부·노사·정치 등)에서도 흔히 쓰이는 단어.
 # 아래 나오는 시장 문맥 단어와 함께 있을 때만 부동산 기사로 인정한다.
+RE_ESTATE_WEAK = re.compile(
+    r'주택|매매|임대|LH|SH|HUG'
+)
+
 # 약한 키워드를 뒷받침하는 시장 문맥 단어 (부동산에 특화된 단어만)
 RE_ESTATE_CONTEXT = re.compile(
     r'집값|시세|거래량|공급량|공급대책|규제완화|규제|'
