@@ -61,7 +61,7 @@ jobs:
         continue-on-error: true
 
       - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
-        
+        if: steps.kst.outputs.is_morning == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REB_API_KEY: ${{ secrets.REB_API_KEY }}
