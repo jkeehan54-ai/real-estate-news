@@ -4,7 +4,9 @@ import re
 from difflib import SequenceMatcher
 
 from modules.news_config import (
-    RE_ESTATE,
+    RE_ESTATE_STRONG,
+    RE_ESTATE_WEAK,
+    RE_ESTATE_CONTEXT,
     RE_EXCLUDE,
     RE_MARKET_REQUIRED,
     STOPWORDS,
@@ -141,9 +143,17 @@ def is_estate_related(title: str) -> bool:
 
     # ---------------------------------------------------------
     # 8. 최종 부동산 핵심어 확인
+    #    강한 키워드 → 바로 통과
+    #    약한 키워드만 있으면 → 시장 문맥 단어가 함께 있어야 통과
     # ---------------------------------------------------------
 
-    return bool(RE_ESTATE.search(t))
+    if RE_ESTATE_STRONG.search(t):
+        return True
+
+    if RE_ESTATE_WEAK.search(t) and RE_ESTATE_CONTEXT.search(t):
+        return True
+
+    return False
     
 
 
