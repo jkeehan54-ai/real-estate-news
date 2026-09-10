@@ -515,6 +515,7 @@ def is_duplicate(
             new_keywords
             | old_keywords
         )
+        jaccard = 0.0
 
         if union:
 
@@ -552,7 +553,11 @@ def is_duplicate(
             )
 
             if len(common_entities) >= 2:
+                return True
 
+            # 기관명이 겹치면 1개만 겹쳐도 중복 의심 + 키워드 절반 이상 겹칠 때만 확정
+            common_org = common_entities & set(ORG_ENTITIES)
+            if common_org and jaccard >= 0.30:
                 return True
 
     return False
