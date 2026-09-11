@@ -37,7 +37,7 @@ def is_estate_related(title: str) -> bool:
     t = normalize(title)
 
     # "전세계/전 세계"는 부동산 "전세"와 무관하므로 먼저 제거해서 오인식 방지
-        t = t.replace("전세계", "").replace("전 세계", "").replace("전세기", "")
+    t = t.replace('전세계', '').replace('전 세계', '').replace('전세기', '')
 
     # ---------------------------------------------------------
     # 1. 기존 비부동산 제외어
