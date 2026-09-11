@@ -12,6 +12,7 @@ from modules.news_config import (
     STOPWORDS,
     LOC_ENTITIES,
     ORG_ENTITIES,
+    TOPIC_TERMS,
 )
 
 
@@ -438,6 +439,53 @@ def extract_entities(title: str) -> set:
 
     return entities
 
+# ══════════════════════════════════════════════════════════════════════════════
+# 통계 용어 + 숫자 구간 추출 (근본적 중복 판정용)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def extract_topics(title: str) -> set:
+    """
+    제목에서 부동산 통계 개념어(TOPIC_TERMS)를 추출한다.
+    """
+
+    if not title:
+        return set()
+
+    text = normalize(title)
+
+    return {
+        term
+        for term in TOPIC_TERMS
+        if term in text
+    }
+
+
+def extract_number_buckets(title: str) -> set:
+    """
+    제목에 나오는 퍼센트/소수 숫자를 10 단위 구간으로 묶어서 반환한다.
+    "59.5%"와 "50대"가 둘 다 50구간으로 묶여, 표기가 달라도 같은 값으로 인식된다.
+    """
+
+    if not title:
+        return set()
+
+    text = str(title)
+
+    buckets = set()
+
+    for match in re.finditer(r'(\d+)(?:[.,](\d+))?\s*(?:%|퍼센트|대|포인트)', text):
+
+        try:
+            value = int(match.group(1))
+        except Exception:
+            continue
+
+        bucket = (value // 10) * 10
+        buckets.add(bucket)
+
+    return buckets
+
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 중복 제거
@@ -566,8 +614,23 @@ def is_duplicate(
             if common_org and jaccard >= 0.30:
                 return True
 
-    return False
+        # ------------------------------------------------------
+        # 4단계
+        # 통계 개념어 + 숫자 구간 (표현이 완전히 달라도 같은 통계 보도를 잡는다)
+        # ------------------------------------------------------
 
+        new_topics = extract_topics(new_title)
+        old_topics = extract_topics(old_title)
+
+        if new_topics and old_topics and (new_topics & old_topics):
+
+            new_buckets = extract_number_buckets(new_title)
+            old_buckets = extract_number_buckets(old_title)
+
+            if new_buckets and old_buckets and (new_buckets & old_buckets):
+                return True
+
+    return False
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 카테고리 분류
