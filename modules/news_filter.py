@@ -417,7 +417,11 @@ def has_specific_term_match(a: str, b: str) -> bool:
     """
 
     return any(
-        term in a and term in b
+    a_nospace = a.replace(" ", "")
+    b_nospace = b.replace(" ", "")
+
+    return any(
+        term in a_nospace and term in b_nospace
         for term in SPECIFIC_TERMS
     )
 
