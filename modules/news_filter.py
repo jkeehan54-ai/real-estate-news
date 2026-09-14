@@ -354,6 +354,18 @@ def normalize(title: str) -> str:
 # 키워드 추출
 # ══════════════════════════════════════════════════════════════════════════════
 
+def synonym_normalize(text: str) -> str:
+    """
+    중복 판별 전 동의어/표기 차이를 하나로 통일한다.
+    (예: "세금 질의" vs "세법 문의", "7달" vs "7개월")
+    """
+
+    text = re.sub(r"질의", "문의", text)
+    text = re.sub(r"(\d+)달(?!러)", r"\1개월", text)
+
+    return text
+
+
 def keywords(title: str) -> set:
     """
     정규화된 제목에서 중복 판별용 핵심 키워드를 추출한다.
@@ -365,6 +377,10 @@ def keywords(title: str) -> set:
 
     if not normalized:
         return set()
+
+    normalized = synonym_normalize(
+        normalized
+    )
 
     return {
         word
