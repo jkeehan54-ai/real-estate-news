@@ -640,7 +640,7 @@ def is_duplicate(
                 if stem_union else 0.0
             )
 
-            if stem_jaccard >= 0.30:
+            if stem_jaccard >= 0.25:
                 return True
 
 
