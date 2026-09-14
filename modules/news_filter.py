@@ -416,7 +416,6 @@ def has_specific_term_match(a: str, b: str) -> bool:
     우연히 겹치기 쉬워 제외 — "기본형건축비" 같은 구체적 용어만 사용)
     """
 
-    return any(
     a_nospace = a.replace(" ", "")
     b_nospace = b.replace(" ", "")
 
