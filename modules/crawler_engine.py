@@ -385,7 +385,7 @@ class CrawlerEngine:
         except Exception as exc:
 
             raise CrawlerError(
-                f"페이지 요청 실패: {url}",
+                f"페이지 요청 실패: {url} ({type(exc).__name__}: {exc})",
                 cause=exc,
             ) from exc
 
