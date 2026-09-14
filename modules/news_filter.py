@@ -374,6 +374,19 @@ def keywords(title: str) -> set:
     }
 
 
+def stem_keywords(title: str, n: int = 2) -> set:
+    """
+    핵심 키워드를 앞 n글자로 축약한 어간 집합.
+    조사/접미사 차이(예: 종부세/종부세액, 1주택/1주택자)를 흡수한다.
+    """
+
+    return {
+        word[:n]
+        for word in keywords(title)
+        if len(word) >= n
+    }
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 엔티티 추출
 # ══════════════════════════════════════════════════════════════════════════════
@@ -529,6 +542,10 @@ def is_duplicate(
         new_title
     )
 
+    new_stems = stem_keywords(
+        new_title
+    )
+
     for old_title in seen:
 
         if not old_title:
@@ -586,6 +603,30 @@ def is_duplicate(
             if jaccard >= 0.35:
 
                 return True
+
+        # ------------------------------------------------------
+        # 2-1단계
+        # 어간(앞 2글자) 기준 키워드 Jaccard
+        # 조사/접미사 차이로 2단계에서 놓치는 동일 사안 기사를 잡는다.
+        # ------------------------------------------------------
+
+        old_stems = stem_keywords(
+            old_title
+        )
+
+        if new_stems and old_stems:
+
+            stem_union = new_stems | old_stems
+            stem_intersection = new_stems & old_stems
+
+            stem_jaccard = (
+                len(stem_intersection) / len(stem_union)
+                if stem_union else 0.0
+            )
+
+            if stem_jaccard >= 0.30:
+                return True
+
 
         # ------------------------------------------------------
         # 3단계
