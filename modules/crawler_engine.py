@@ -512,6 +512,9 @@ def _parse_busan(
             now_kst,
         )
 
+        if pub_dt is None:
+            pub_dt = now_kst
+
         result.append(
             _article(
                 pub_dt,
@@ -681,6 +684,9 @@ def _parse_kookje(
             now_kst,
         )
 
+        if pub_dt is None:
+            pub_dt = now_kst
+
         result.append(
             _article(
                 pub_dt,
@@ -822,6 +828,9 @@ def _parse_naver_land(
             tag.parent,
             now_kst,
         )
+
+        if pub_dt is None:
+            pub_dt = now_kst
 
         result.append(
             _article(
