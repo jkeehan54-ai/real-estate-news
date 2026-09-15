@@ -419,26 +419,29 @@ def stem_keywords(title: str, n: int = 2) -> set:
     }
 
 
-SPECIFIC_TERMS = {
-    "기본형건축비",
-}
+SPECIFIC_TERM_GROUPS = [
+    {"기본형건축비"},
+    {"분양가상한제", "분상제"},
+]
 
 
 def has_specific_term_match(a: str, b: str) -> bool:
     """
-    두 제목에 특정 정책·제도 고유 용어가 동시에 등장하면
-    다른 신호 없이도 중복으로 판정한다.
-    ("재건축"/"시공"/"구역" 같은 흔한 조합은 서로 다른 사업 기사에도
-    우연히 겹치기 쉬워 제외 — "기본형건축비" 같은 구체적 용어만 사용)
+    두 제목에 특정 정책·제도 고유 용어(약칭 포함)가 동시에
+    등장하면 다른 신호 없이도 중복으로 판정한다.
     """
 
     a_nospace = a.replace(" ", "")
     b_nospace = b.replace(" ", "")
 
-    return any(
-        term in a_nospace and term in b_nospace
-        for term in SPECIFIC_TERMS
-    )
+    for group in SPECIFIC_TERM_GROUPS:
+        if (
+            any(term in a_nospace for term in group)
+            and any(term in b_nospace for term in group)
+        ):
+            return True
+
+    return False
 
 
 def has_price_rise_match(a: str, b: str) -> bool:
