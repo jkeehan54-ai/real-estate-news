@@ -366,6 +366,21 @@ def synonym_normalize(text: str) -> str:
     return text
 
 
+DEDUP_BOILERPLATE = {
+    "재건축",
+    "재개발",
+    "시공",
+    "시공권",
+    "시공자",
+    "확보",
+    "선정",
+    "나선다",
+    "나섰다",
+    "정비사업",
+    "추진",
+}
+
+
 def keywords(title: str) -> set:
     """
     정규화된 제목에서 중복 판별용 핵심 키워드를 추출한다.
@@ -386,6 +401,7 @@ def keywords(title: str) -> set:
         word
         for word in normalized.split()
         if word not in STOPWORDS
+        and word not in DEDUP_BOILERPLATE
         and len(word) >= 2
     }
 
@@ -423,6 +439,24 @@ def has_specific_term_match(a: str, b: str) -> bool:
         term in a_nospace and term in b_nospace
         for term in SPECIFIC_TERMS
     )
+
+
+def has_price_rise_match(a: str, b: str) -> bool:
+    """
+    "분양가"(분양가격)와 상승 표현이 두 제목 모두에 나타나면
+    같은 기본형건축비/분양가 인상 이슈로 보고 중복 판정한다.
+    """
+
+    price_terms = ("분양가", "분양가격")
+    rise_terms = ("오르", "상승", "인상", "뛴다")
+
+    def has_price_and_rise(text: str) -> bool:
+        return (
+            any(p in text for p in price_terms)
+            and any(r in text for r in rise_terms)
+        )
+
+    return has_price_and_rise(a) and has_price_and_rise(b)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -602,6 +636,12 @@ def is_duplicate(
         # ------------------------------------------------------
 
         if has_specific_term_match(
+            new_normalized,
+            old_normalized,
+        ):
+            return True
+
+        if has_price_rise_match(
             new_normalized,
             old_normalized,
         ):
