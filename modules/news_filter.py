@@ -462,6 +462,25 @@ def has_price_rise_match(a: str, b: str) -> bool:
     return has_price_and_rise(a) and has_price_and_rise(b)
 
 
+def has_busan_gap_match(a: str, b: str) -> bool:
+    """
+    "부산"+"집값/아파트값"+"격차/양극화" 조합이 두 제목 모두에
+    나타나면 같은 부산 집값 격차ㆍ양극화 이슈로 보고 중복 판정한다.
+    """
+
+    price_terms = ("집값", "아파트값")
+    gap_terms = ("격차", "양극화")
+
+    def has_busan_price_gap(text: str) -> bool:
+        return (
+            "부산" in text
+            and any(p in text for p in price_terms)
+            and any(g in text for g in gap_terms)
+        )
+
+    return has_busan_price_gap(a) and has_busan_price_gap(b)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 엔티티 추출
 # ══════════════════════════════════════════════════════════════════════════════
@@ -650,6 +669,12 @@ def is_duplicate(
         ):
             return True
 
+        if has_busan_gap_match(
+            new_normalized,
+            old_normalized,
+        ):
+            return True
+
         # ------------------------------------------------------
         # 1단계
         # 문자열 유사도
@@ -716,7 +741,7 @@ def is_duplicate(
                 if stem_union else 0.0
             )
 
-            if stem_jaccard >= 0.25:
+            if stem_jaccard >= 0.20:
                 return True
 
 
