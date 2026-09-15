@@ -427,6 +427,8 @@ _engine = CrawlerEngine()
 # ============================================================
 
 BUSAN_URLS = [
+    "https://www.busan.com/economy/realestate",
+
 
     "https://www.busan.com/",
 
