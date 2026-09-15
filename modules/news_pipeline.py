@@ -93,7 +93,7 @@ def get_clean_news():
         if cat not in results:
             continue
 
-        if not is_market_valid(title):
+        if cat == "시장동향" and not is_market_valid(title):
             nonre += 1
             continue
 
