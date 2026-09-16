@@ -23,6 +23,8 @@ SOURCES = {
     "OhmyNews": "https://www.ohmynews.com/",
     "ppss.kr": "https://ppss.kr/",
     "경남도민일보": "https://www.idomin.com/",
+    "아주경제": "https://www.ajunews.com/investment/realestate",
+    "매일경제2": "https://www.mk.co.kr/",
     "네이트": "https://news.nate.com/",
     "뉴스후플러스": "https://www.newswhoplus.com/",
     "신아일보": "https://www.shinailbo.co.kr/",
