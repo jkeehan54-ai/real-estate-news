@@ -2,8 +2,8 @@ name: 부동산 경기 대시보드 + 뉴스브리핑 자동 생성
 
 on:
   schedule:
-    # 매일 08:00 ~ 22:00 KST, 1시간 간격 (총 15회/일)
-    - cron: '0 23,0-13 * * *'
+    # 매일 08:00 ~ 22:00 KST, 5분 간격으로 확인 (시간당 1회만 실제 실행)
+    - cron: '*/5 23,0-13 * * *'
   workflow_dispatch:
 
 jobs:
@@ -39,7 +39,21 @@ jobs:
           fi
           echo "현재 KST 시각: ${HOUR}시"
 
+      - name: 실행 여부 확인 (5분 간격 재시도, 시간당 1회만 실행)
+        id: check
+        run: |
+          MARKER="data/last_run_hour.txt"
+          CURRENT="$(TZ='Asia/Seoul' date '+%Y-%m-%d-%H')"
+          if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$CURRENT" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "이번 시간(${CURRENT})은 이미 실행됨 - 건너뜀"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "이번 시간(${CURRENT}) 첫 실행 시도"
+          fi
+
       - name: 이전 지표 스냅샷 백업
+        if: steps.check.outputs.should_run == 'true'
         run: |
           mkdir -p data
           if [ -f data/indicators.json ]; then
@@ -50,6 +64,7 @@ jobs:
           fi
 
       - name: 부동산 경기 지표 대시보드 생성
+        if: steps.check.outputs.should_run == 'true'
         env:
           ECOS_API_KEY: ${{ secrets.BOK_ECOS_KEY }}
           KOSIS_API_KEY: ${{ secrets.DATA_PORTAL_KEY }}
@@ -61,6 +76,7 @@ jobs:
         continue-on-error: true
 
       - name: 부동산 뉴스브리핑 생성 (08시 1일 1회)
+        if: steps.check.outputs.should_run == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REB_API_KEY: ${{ secrets.REB_API_KEY }}
@@ -70,6 +86,7 @@ jobs:
         continue-on-error: true
 
       - name: 이메일/슬랙 알림 발송
+        if: steps.check.outputs.should_run == 'true'
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -83,6 +100,7 @@ jobs:
         continue-on-error: true
 
       - name: index.html 생성 (네비게이션 포함)
+        if: steps.check.outputs.should_run == 'true'
         run: |
           python - << 'EOF'
           import os
@@ -132,15 +150,20 @@ jobs:
           EOF
 
       - name: 결과물 커밋 및 푸시
+        if: steps.check.outputs.should_run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p data
+          TZ='Asia/Seoul' date '+%Y-%m-%d-%H' > data/last_run_hour.txt
           [ -f realestate_dashboard.html ] && git add -f realestate_dashboard.html
           [ -f home.html ] && git add -f home.html
           [ -f index.html ] && git add -f index.html
           [ -f data/indicators.json ] && git add -f data/indicators.json
           [ -f data/indicators_history.json ] && git add -f data/indicators_history.json
+          git add -f data/last_run_hour.txt
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
+          git pull --rebase --autostash
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
