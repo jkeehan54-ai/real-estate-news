@@ -17,6 +17,25 @@ from html import escape
 
 from .news_config import SOURCES
 
+FIXED_SOURCE_LIST = [
+    "조선일보",
+    "동아일보",
+    "한겨레",
+    "매일경제",
+    "매일경제2",
+    "한국경제",
+    "서울경제",
+    "연합뉴스",
+    "아주경제",
+    "아시아경제",
+    "경남도민일보",
+    "부산일보",
+    "국제신문",
+    "주택경제신문",
+    "건설타임즈",
+    "네이버부동산",
+]
+
 from .templates import (
     html_header,
     html_footer,
@@ -212,44 +231,17 @@ def get_source_url(source):
 def build_source_links(data):
 
     """
-    전체 뉴스 데이터에서 실제 사용된 언론사를 추출하여
-    클릭 가능한 언론사 바로가기를 생성한다.
+    설정된 고정 언론사 목록(FIXED_SOURCE_LIST)을 기준으로
+    클릭 가능한 언론사 바로가기를 항상 동일하게 생성한다.
 
-    news_pipeline.py의 현재 구조:
-
-        {
-            "title": ...,
-            "link": ...,
-            "src": ...,
-            "pub_str": ...
-        }
-
-    기존 구조의 source도 동시에 지원한다.
+    그날 기사가 없는 언론사도 계속 표시된다. (Google 뉴스로
+    가끔 섞여 들어오는 매체는 그날그날 달라지므로 고정 목록에서
+    제외한다.)
     """
 
-    sources = set()
-
-    for category, items in data.items():
-
-        if category == "BRN":
-            continue
-
-        if not isinstance(
-            items,
-            list,
-        ):
-            continue
-
-        for item in items:
-
-            source = get_source(
-                item
-            )
-
-            if source:
-                sources.add(
-                    source
-                )
+    sources = set(
+        FIXED_SOURCE_LIST
+    )
 
     if not sources:
         return ""
@@ -1310,7 +1302,3 @@ if __name__ == "__main__":
     print(
         test_html
     )
-
-
-
-
