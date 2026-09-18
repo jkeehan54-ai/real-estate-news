@@ -511,6 +511,62 @@ def fetch_kosis_permit():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# KOSIS(국가통계포털) Open API - 미분양주택현황 (국토교통부 통계누리 원천)
+# ══════════════════════════════════════════════════════════════════════════════
+# 시군구별 미분양현황(월별): orgId=116, tblId=DT_MLTM_2082
+# (국토교통 통계누리 hRsId=32&hFormId=2086과 동일 원천, KOSIS로 월별 수록)
+KOSIS_UNSOLD_TBL = "DT_MLTM_2082"
+
+def fetch_kosis_unsold():
+    """
+    KOSIS: 전국 미분양주택 현황(월별)의 최신 값을 가져온다.
+    시군구별로 수록된 표에서 '전국' 합계 행만 골라 가장 최근 PRD_DE를 채택한다.
+    """
+    if not KOSIS_API_KEY:
+        return None
+    url = f"{KOSIS_BASE}/Param/statisticsParameterData.do"
+    try:
+        params = {
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "format": "json", "jsonVD": "Y",
+            "prdSe": "M", "newEstPrdCnt": "6",
+            "orgId": "116", "tblId": KOSIS_UNSOLD_TBL,
+            "itmId": "ALL", "objL1": "ALL",
+        }
+        res = SESSION.get(url, params=params, timeout=15)
+        data = res.json()
+        if not isinstance(data, list) or not data:
+            return None
+
+        # 지역 분류(C1_NM 등)가 '전국' 또는 '계'인 행만 채택
+        def is_nation(nm):
+            n = _norm_nm(nm)
+            return n in ("전국", "계", "합계")
+
+        candidates = [
+            row for row in data
+            if is_nation(row.get("C1_NM")) or is_nation(row.get("C1_OBJ_NM"))
+        ]
+        if not candidates:
+            candidates = data
+
+        candidates = [c for c in candidates if safe_int(c.get("DT")) is not None]
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda r: r.get("PRD_DE", ""))
+        last = candidates[-1]
+        val = safe_int(last.get("DT"))
+        if val is None:
+            return None
+        prd = last.get("PRD_DE", "")
+        return {"수치": val, "기준": prd}
+    except Exception as e:
+        print(f"  [KOSIS 미분양 API 오류] {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # K-REMAP(국토연구원) 부동산시장소비심리지수 — 페이지 소스에 데이터 직접 내장
 # ══════════════════════════════════════════════════════════════════════════════
 # ★ 별도 API 호출이 아니라, 페이지 HTML(자바스크립트) 안에 데이터가 그대로
@@ -1788,11 +1844,26 @@ def get_unsold(rss):
     print("[후행1] 전국 미분양")
     r = {"전국": None, "악성": None, "전년비": None, "기준월": None, "원문": []}
 
+    # ★ 1순위: KOSIS 공식 API (국토교통 통계누리 원천)
+    kosis = fetch_kosis_unsold()
+    if kosis and kosis.get("수치") is not None:
+        r["전국"] = f"{kosis['수치']:,}"
+        prd = kosis.get("기준", "")
+        r["기준월"] = f"{prd[:4]}.{prd[4:6]}" if len(prd) == 6 else prd
+        r["원문"].append({"title": f"KOSIS 국가통계포털 (공식 API, {r['기준월']} 기준)",
+                          "link": "https://kosis.kr", "date": r["기준월"] or ""})
+    api_filled = bool(r["전국"])
+    if api_filled:
+        print(f"  ✔ (KOSIS API) 전국 미분양 {r['전국']}호 | 기준: {disp(r['기준월'])}")
+
     RE_악성1 = re.compile(r'(?:준공후|악성)\s*미분양\s*([\d,]+)\s*(?:가구|호)?')
     RE_악성2 = re.compile(r'(?:준공후|악성)\s*미분양\s*(\d+(?:\.\d+)?)\s*만')
     RE_YOY   = re.compile(r'전년\s*(?:동기|동월)?\s*(?:대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
     RE_MON   = re.compile(r'(\d{4})년\s*(\d{1,2})월')
 
+    # ★ KOSIS API는 "전국" 수치만 주고 "악성(준공후) 미분양"·"전년비"는
+    #   제공하지 않으므로, 전국 수치가 이미 API로 채워졌어도 이 두 값을
+    #   찾기 위한 뉴스 검색은 그대로 진행한다.
     all_items = combine(rss,
         "전국 미분양 주택 국토교통부 만가구",
         "미분양 5만 6만 7만 8만 가구",
