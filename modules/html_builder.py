@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import re
+
 from collections import defaultdict
 from datetime import datetime
 from html import escape
@@ -101,6 +103,38 @@ def colored_pct(value, suffix="%"):
         f'<span style="color:{color};">'
         f"{arrow}{display}{suffix}"
         f"</span>"
+    )
+
+
+def colorize_summary_percentages(text):
+
+    """
+    문장 속 등락률(예: "0.09%", "-0.05%")에 KB부동산 스타일 색상을 입힌다.
+    """
+
+    def repl(m):
+
+        num_str = m.group(1)
+
+        if num_str is None:
+            return m.group(0)
+
+        try:
+            v = float(num_str)
+        except ValueError:
+            return m.group(0)
+
+        if v > 0:
+            return f'<span style="color:#d32f2f;">▲{num_str}%</span>'
+        elif v < 0:
+            return f'<span style="color:#1565c0;">▼{num_str.lstrip("-")}%</span>'
+        else:
+            return f'<span style="color:#757575;">{num_str}%</span>'
+
+    return re.sub(
+        r"(?:매수우위|매도우위) -?\d+\.?\d*%|(-?\d+\.?\d*)%",
+        repl,
+        text,
     )
 
 ###############################################################################
@@ -506,7 +540,7 @@ def build_brn(brn):
     if summary:
 
         html.append(
-            f"<p>{summary}</p>"
+            f"<p>{colorize_summary_percentages(summary)}</p>"
         )
 
     ###################################################################
