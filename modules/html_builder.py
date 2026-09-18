@@ -71,6 +71,38 @@ def safe(value):
 
     return escape(str(value))
 
+
+def colored_pct(value, suffix="%"):
+
+    """
+    증감률 값을 KB부동산 스타일로 색칠한 HTML을 만든다.
+    양수는 빨강(▲), 음수는 파랑(▼), 0은 회색으로 표시한다.
+    """
+
+    if value is None:
+        return ""
+
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return safe(value)
+
+    if v > 0:
+        color, arrow = "#d32f2f", "▲"
+        display = safe(value)
+    elif v < 0:
+        color, arrow = "#1565c0", "▼"
+        display = safe(str(value)).lstrip("-")
+    else:
+        color, arrow = "#757575", ""
+        display = safe(value)
+
+    return (
+        f'<span style="color:{color};">'
+        f"{arrow}{display}{suffix}"
+        f"</span>"
+    )
+
 ###############################################################################
 # 기사 제목 표시용 정리
 ###############################################################################
@@ -518,6 +550,12 @@ def build_brn(brn):
             "</tr>"
         )
 
+        pct_keys = {
+            "nation",
+            "seoul",
+            "busan",
+        }
+
         for key in (
             "nation",
             "seoul",
@@ -530,10 +568,16 @@ def build_brn(brn):
 
             if key in dashboard:
 
+                value_html = (
+                    colored_pct(dashboard[key])
+                    if key in pct_keys
+                    else safe(dashboard[key])
+                )
+
                 html.append(
                     f"<tr>"
                     f"<td>{labels[key]}</td>"
-                    f"<td>{safe(dashboard[key])}</td>"
+                    f"<td>{value_html}</td>"
                     f"</tr>"
                 )
 
@@ -557,7 +601,7 @@ def build_brn(brn):
                 html.append(
                     f"<tr>"
                     f"<td>{name}</td>"
-                    f"<td>{safe(regions[name])}%</td>"
+                    f"<td>{colored_pct(regions[name])}</td>"
                     f"</tr>"
                 )
 
