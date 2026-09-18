@@ -78,6 +78,11 @@ class BRNEngine:
             "",
         )
 
+        regions = values.get(
+            "KB_REGIONS",
+            {},
+        )
+
         # ----------------------------------------------------
         # KB 실패
         # ----------------------------------------------------
@@ -116,6 +121,7 @@ class BRNEngine:
                 seller,
                 weeks,
                 trend,
+                regions,
             )
 
             signals = self.make_signals(
@@ -151,6 +157,7 @@ class BRNEngine:
                 "weeks": weeks,
                 "trend": trend,
                 "kb_ok": kb_ok,
+                "regions": regions,
             },
 
             "signals": signals,
@@ -171,6 +178,7 @@ class BRNEngine:
         seller,
         weeks,
         trend,
+        regions=None,
     ):
 
         trend_word = (
@@ -179,7 +187,7 @@ class BRNEngine:
             else "변동"
         )
 
-        return (
+        base = (
             f"전국 아파트 매매가격은 "
             f"{nation}% "
             f"{trend_word}했습니다. "
@@ -190,6 +198,32 @@ class BRNEngine:
             f"매수우위 {buyer}%, "
             f"매도우위 {seller}%입니다."
         )
+
+        region_order = [
+            "수도권", "5개광역시", "기타지방",
+            "경기", "인천", "대전", "대구",
+            "울산", "세종", "강원", "충북",
+            "충남", "경북", "경남", "전북",
+            "광주", "제주",
+        ]
+
+        if regions:
+
+            parts = [
+                f"{name} {regions[name]}%"
+                for name in region_order
+                if name in regions
+            ]
+
+            if parts:
+
+                base += (
+                    " 지역별로는 "
+                    + ", ".join(parts)
+                    + "입니다."
+                )
+
+        return base
 
     # ========================================================
     # SIGNALS

@@ -537,6 +537,30 @@ def build_brn(brn):
                     f"</tr>"
                 )
 
+        region_order = [
+            "수도권", "5개광역시", "기타지방",
+            "경기", "인천", "대전", "대구",
+            "울산", "세종", "강원", "충북",
+            "충남", "경북", "경남", "전북",
+            "광주", "제주",
+        ]
+
+        regions = dashboard.get(
+            "regions",
+            {},
+        )
+
+        for name in region_order:
+
+            if name in regions:
+
+                html.append(
+                    f"<tr>"
+                    f"<td>{name}</td>"
+                    f"<td>{safe(regions[name])}%</td>"
+                    f"</tr>"
+                )
+
         html.append(
             "</table>"
         )

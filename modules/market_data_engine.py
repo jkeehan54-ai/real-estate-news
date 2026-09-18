@@ -251,6 +251,12 @@ class MarketDataEngine:
                 "KB_MARKET":
                     data,
 
+                "KB_REGIONS":
+                    data.get(
+                        "regions",
+                        {},
+                    ),
+
             }
         )
 
@@ -403,6 +409,11 @@ class MarketDataEngine:
 
             self.values.setdefault(
                 "KB_MARKET",
+                {},
+            )
+
+            self.values.setdefault(
+                "KB_REGIONS",
                 {},
             )
 
@@ -626,10 +637,3 @@ if __name__ == "__main__":
     engine.build()
 
     engine.summary()
-
-
-
-
-
-
-

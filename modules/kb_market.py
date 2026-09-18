@@ -275,6 +275,26 @@ def get_market_data():
             0.0,
         )
 
+        regions = {}
+
+        for x in all_market:
+
+            name = x.get(
+                "지역명"
+            )
+
+            value = x.get(
+                "변동률"
+            )
+
+            if name is None or value is None:
+                continue
+
+            try:
+                regions[name] = float(value)
+            except (TypeError, ValueError):
+                continue
+
         result = {
             "ok": True,
 
@@ -311,6 +331,8 @@ def get_market_data():
             "seoul_change": seoul,
 
             "busan_change": busan,
+
+            "regions": regions,
         }
 
         print(
@@ -353,4 +375,6 @@ def get_market_data():
             "seoul_change": 0.0,
 
             "busan_change": 0.0,
+
+            "regions": {},
         }
