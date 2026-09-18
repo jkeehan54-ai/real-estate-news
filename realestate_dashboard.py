@@ -567,6 +567,130 @@ def fetch_kosis_unsold():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# KOSIS(국가통계포털) Open API - 준공후 미분양현황 (국토교통부 통계누리 원천)
+# ══════════════════════════════════════════════════════════════════════════════
+# 미분양현황_종합: orgId=116, tblId=DT_MLTM_2086
+# (부문별 분류 안에 '준공후미분양' 항목이 포함된 표)
+KOSIS_UNSOLD_COMPLETED_TBL = "DT_MLTM_2086"
+
+def fetch_kosis_unsold_completed():
+    """
+    KOSIS: 전국 준공후 미분양주택 현황의 최신 값을 가져온다.
+    '부문별미분양현황' 표에서 지역이 '전국'이면서 부문이 '준공후'를
+    포함하는 행만 골라 가장 최근 시점을 채택한다.
+    """
+    if not KOSIS_API_KEY:
+        return None
+    url = f"{KOSIS_BASE}/Param/statisticsParameterData.do"
+    try:
+        params = {
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "format": "json", "jsonVD": "Y",
+            "prdSe": "M", "newEstPrdCnt": "6",
+            "orgId": "116", "tblId": KOSIS_UNSOLD_COMPLETED_TBL,
+            "itmId": "ALL", "objL1": "ALL", "objL2": "ALL",
+        }
+        res = SESSION.get(url, params=params, timeout=15)
+        data = res.json()
+        if not isinstance(data, list) or not data:
+            return None
+
+        def is_nation(nm):
+            n = _norm_nm(nm)
+            return n in ("전국", "계", "합계")
+
+        def is_completed_section(row):
+            for key in ("C1_NM", "C2_NM", "C1_OBJ_NM", "C2_OBJ_NM", "ITM_NM"):
+                n = _norm_nm(row.get(key))
+                if n and "준공후" in n:
+                    return True
+            return False
+
+        candidates = [
+            row for row in data
+            if is_completed_section(row)
+            and (
+                is_nation(row.get("C1_NM"))
+                or is_nation(row.get("C1_OBJ_NM"))
+                or is_nation(row.get("C2_NM"))
+                or is_nation(row.get("C2_OBJ_NM"))
+            )
+        ]
+        if not candidates:
+            # 지역 분류를 못 찾으면 '준공후' 항목만이라도 채택 시도
+            candidates = [row for row in data if is_completed_section(row)]
+        if not candidates:
+            return None
+
+        candidates = [c for c in candidates if safe_int(c.get("DT")) is not None]
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda r: r.get("PRD_DE", ""))
+        last = candidates[-1]
+        val = safe_int(last.get("DT"))
+        if val is None:
+            return None
+        prd = last.get("PRD_DE", "")
+        return {"수치": val, "기준": prd}
+    except Exception as e:
+        print(f"  [KOSIS 준공후미분양 API 오류] {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# KOSIS(국가통계포털) Open API - 주택건설 준공실적(월계) (국토교통부 통계누리 원천)
+# ══════════════════════════════════════════════════════════════════════════════
+KOSIS_COMPLETION_TBL = "DT_MLTM_5372"
+
+def fetch_kosis_completion():
+    """
+    KOSIS: 전국 주택건설 준공실적(월별)의 최신 값을 가져온다.
+    """
+    if not KOSIS_API_KEY:
+        return None
+    url = f"{KOSIS_BASE}/Param/statisticsParameterData.do"
+    try:
+        params = {
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "format": "json", "jsonVD": "Y",
+            "prdSe": "M", "newEstPrdCnt": "6",
+            "orgId": "116", "tblId": KOSIS_COMPLETION_TBL,
+            "itmId": "ALL", "objL1": "ALL",
+        }
+        res = SESSION.get(url, params=params, timeout=15)
+        data = res.json()
+        if not isinstance(data, list) or not data:
+            return None
+
+        def is_nation(nm):
+            n = _norm_nm(nm)
+            return n in ("전국", "계", "합계", "총계")
+
+        candidates = [
+            row for row in data
+            if is_nation(row.get("C1_NM")) or is_nation(row.get("C1_OBJ_NM"))
+        ]
+        if not candidates:
+            candidates = data
+
+        candidates = [c for c in candidates if safe_int(c.get("DT")) is not None]
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda r: r.get("PRD_DE", ""))
+        last = candidates[-1]
+        val = safe_int(last.get("DT"))
+        if val is None:
+            return None
+        prd = last.get("PRD_DE", "")
+        return {"수치": val, "기준": prd}
+    except Exception as e:
+        print(f"  [KOSIS 준공실적 API 오류] {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # K-REMAP(국토연구원) 부동산시장소비심리지수 — 페이지 소스에 데이터 직접 내장
 # ══════════════════════════════════════════════════════════════════════════════
 # ★ 별도 API 호출이 아니라, 페이지 HTML(자바스크립트) 안에 데이터가 그대로
@@ -1856,6 +1980,11 @@ def get_unsold(rss):
     if api_filled:
         print(f"  ✔ (KOSIS API) 전국 미분양 {r['전국']}호 | 기준: {disp(r['기준월'])}")
 
+    kosis_completed = fetch_kosis_unsold_completed()
+    if kosis_completed and kosis_completed.get("수치") is not None:
+        r["악성"] = f"{kosis_completed['수치']:,}"
+        print(f"  ✔ (KOSIS API) 준공후 미분양 {r['악성']}호")
+
     RE_악성1 = re.compile(r'(?:준공후|악성)\s*미분양\s*([\d,]+)\s*(?:가구|호)?')
     RE_악성2 = re.compile(r'(?:준공후|악성)\s*미분양\s*(\d+(?:\.\d+)?)\s*만')
     RE_YOY   = re.compile(r'전년\s*(?:동기|동월)?\s*(?:대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
@@ -1948,6 +2077,17 @@ def get_unsold(rss):
 def get_completion(rss):
     print("[후행2] 준공량")
     r = {"수치": None, "전년비": None, "기준월": None, "원문": []}
+
+    # ★ 1순위: KOSIS 공식 API (국토교통 통계누리 원천)
+    kosis = fetch_kosis_completion()
+    if kosis and kosis.get("수치") is not None:
+        r["수치"] = f"{kosis['수치']:,}"
+        prd = kosis.get("기준", "")
+        r["기준월"] = f"{prd[:4]}.{prd[4:6]}" if len(prd) == 6 else prd
+        r["원문"].append({"title": f"KOSIS 국가통계포털 (공식 API, {r['기준월']} 기준)",
+                          "link": "https://kosis.kr", "date": r["기준월"] or ""})
+    if r["수치"]:
+        print(f"  ✔ (KOSIS API) 준공량 {r['수치']}호 | 기준: {disp(r['기준월'])}")
 
     RE_YOY  = re.compile(r'전년\s*(?:동기|동월)?\s*(?:대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
     RE_YOY3 = re.compile(r'([-+]?\d+\.?\d*)\s*%\s*(?:감소|급감|증가|급증)')
