@@ -513,14 +513,16 @@ def fetch_kosis_permit():
 # ══════════════════════════════════════════════════════════════════════════════
 # KOSIS(국가통계포털) Open API - 미분양주택현황 (국토교통부 통계누리 원천)
 # ══════════════════════════════════════════════════════════════════════════════
-# 시군구별 미분양현황(월별): orgId=116, tblId=DT_MLTM_2082
-# (국토교통 통계누리 hRsId=32&hFormId=2086과 동일 원천, KOSIS로 월별 수록)
-KOSIS_UNSOLD_TBL = "DT_MLTM_2082"
+# 규모별 미분양현황(월별): orgId=116, tblId=DT_MLTM_2080
+# ('전국' 시도가 직접 존재 + 부문(총합)/규모(총합) 조합으로 전국 총계를
+#  바로 얻을 수 있음을 KOSIS 공식 OPENAPI URL생성기로 확인 완료)
+KOSIS_UNSOLD_TBL = "DT_MLTM_2080"
+KOSIS_UNSOLD_ITM = "13103792722T1"
 
 def fetch_kosis_unsold():
     """
     KOSIS: 전국 미분양주택 현황(월별)의 최신 값을 가져온다.
-    시군구별로 수록된 표에서 '전국' 합계 행만 골라 가장 최근 PRD_DE를 채택한다.
+    '전국' + 부문(총합) + 규모(총합) 조합 행을 채택한다.
     """
     if not KOSIS_API_KEY:
         return None
@@ -531,24 +533,25 @@ def fetch_kosis_unsold():
             "format": "json", "jsonVD": "Y",
             "prdSe": "M", "newEstPrdCnt": "6",
             "orgId": "116", "tblId": KOSIS_UNSOLD_TBL,
-            "itmId": "ALL", "objL1": "ALL",
+            "itmId": KOSIS_UNSOLD_ITM,
+            "objL1": "ALL", "objL2": "ALL", "objL3": "ALL",
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
         if not isinstance(data, list) or not data:
             return None
 
-        # 지역 분류(C1_NM 등)가 '전국' 또는 '계'인 행만 채택
-        def is_nation(nm):
-            n = _norm_nm(nm)
-            return n in ("전국", "계", "합계")
+        def nm(row, key):
+            return _norm_nm(row.get(key))
 
         candidates = [
             row for row in data
-            if is_nation(row.get("C1_NM")) or is_nation(row.get("C1_OBJ_NM"))
+            if nm(row, "C1_NM") == "전국"
+            and nm(row, "C2_NM") == "총합"
+            and nm(row, "C3_NM") == "총합"
         ]
         if not candidates:
-            candidates = data
+            return None
 
         candidates = [c for c in candidates if safe_int(c.get("DT")) is not None]
         if not candidates:
@@ -567,17 +570,28 @@ def fetch_kosis_unsold():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# KOSIS(국가통계포털) Open API - 준공후 미분양현황 (국토교통부 통계누리 원천)
+# KOSIS(국가통계포털) Open API - 공사완료후 미분양현황 (국토교통부 통계누리 원천)
 # ══════════════════════════════════════════════════════════════════════════════
-# 미분양현황_종합: orgId=116, tblId=DT_MLTM_2086
-# (부문별 분류 안에 '준공후미분양' 항목이 포함된 표)
-KOSIS_UNSOLD_COMPLETED_TBL = "DT_MLTM_2086"
+# 공사완료후 미분양현황(월별): orgId=116, tblId=DT_MLTM_5328
+# (KOSIS 공식 OPENAPI URL생성기로 확인한 정확한 파라미터 사용.
+#  '전국' + 시군구(합계) + 부문(계) + 규모(계) 조합이 전국 총계)
+KOSIS_UNSOLD_COMPLETED_TBL = "DT_MLTM_5328"
+KOSIS_UNSOLD_COMPLETED_ITM = "13103871088T1"
+KOSIS_UNSOLD_COMPLETED_OBJL1 = (
+    "13102871088A.0001 13102871088A.0002 13102871088A.0004 13102871088A.0003 "
+    "13102871088A.0005 13102871088A.0006 13102871088A.0007 13102871088A.0008 "
+    "13102871088A.0009 13102871088A.0010"
+)
+KOSIS_UNSOLD_COMPLETED_OBJL2 = (
+    "13102871088B.0001 13102871088B.0002 13102871088B.0003 13102871088B.0004 "
+    "13102871088B.0005 13102871088B.0006 13102871088B.0007 13102871088B.0008 "
+    "13102871088B.0009 13102871088B.0010"
+)
 
 def fetch_kosis_unsold_completed():
     """
-    KOSIS: 전국 준공후 미분양주택 현황의 최신 값을 가져온다.
-    '부문별미분양현황' 표에서 지역이 '전국'이면서 부문이 '준공후'를
-    포함하는 행만 골라 가장 최근 시점을 채택한다.
+    KOSIS: 전국 공사완료후 미분양주택 현황(월별)의 최신 값을 가져온다.
+    '전국' + 시군구(합계) + 부문(계) + 규모(계) 조합 행을 채택한다.
     """
     if not KOSIS_API_KEY:
         return None
@@ -588,37 +602,26 @@ def fetch_kosis_unsold_completed():
             "format": "json", "jsonVD": "Y",
             "prdSe": "M", "newEstPrdCnt": "6",
             "orgId": "116", "tblId": KOSIS_UNSOLD_COMPLETED_TBL,
-            "itmId": "ALL", "objL1": "ALL", "objL2": "ALL",
+            "itmId": KOSIS_UNSOLD_COMPLETED_ITM,
+            "objL1": KOSIS_UNSOLD_COMPLETED_OBJL1,
+            "objL2": KOSIS_UNSOLD_COMPLETED_OBJL2,
+            "objL3": "ALL", "objL4": "ALL",
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
         if not isinstance(data, list) or not data:
             return None
 
-        def is_nation(nm):
-            n = _norm_nm(nm)
-            return n in ("전국", "계", "합계")
-
-        def is_completed_section(row):
-            for key in ("C1_NM", "C2_NM", "C1_OBJ_NM", "C2_OBJ_NM", "ITM_NM"):
-                n = _norm_nm(row.get(key))
-                if n and "준공후" in n:
-                    return True
-            return False
+        def nm(row, key):
+            return _norm_nm(row.get(key))
 
         candidates = [
             row for row in data
-            if is_completed_section(row)
-            and (
-                is_nation(row.get("C1_NM"))
-                or is_nation(row.get("C1_OBJ_NM"))
-                or is_nation(row.get("C2_NM"))
-                or is_nation(row.get("C2_OBJ_NM"))
-            )
+            if nm(row, "C1_NM") == "전국"
+            and nm(row, "C2_NM") == "합계"
+            and nm(row, "C3_NM") == "계"
+            and nm(row, "C4_NM") == "계"
         ]
-        if not candidates:
-            # 지역 분류를 못 찾으면 '준공후' 항목만이라도 채택 시도
-            candidates = [row for row in data if is_completed_section(row)]
         if not candidates:
             return None
 
@@ -636,6 +639,7 @@ def fetch_kosis_unsold_completed():
     except Exception as e:
         print(f"  [KOSIS 준공후미분양 API 오류] {e}")
         return None
+
 
 
 # ══════════════════════════════════════════════════════════════════════════════
