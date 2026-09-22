@@ -433,6 +433,12 @@ def fetch_houstat_khai():
 # KOSIS(국가통계포털) Open API - 주택건설 인허가실적
 # ══════════════════════════════════════════════════════════════════════════════
 KOSIS_API_KEY = os.environ.get("KOSIS_API_KEY", "")
+if KOSIS_API_KEY:
+    print(f"  [진단] KOSIS_API_KEY 길이={len(KOSIS_API_KEY)} "
+          f"앞4자={KOSIS_API_KEY[:4]!r} 뒤4자={KOSIS_API_KEY[-4:]!r} "
+          f"(정상 키 길이는 44, 앞4자 'ZDg1', 뒤4자 'ZDU=' 이어야 함)")
+else:
+    print("  [진단] KOSIS_API_KEY 환경변수가 비어있습니다.")
 KOSIS_BASE = "https://kosis.kr/openapi"
 
 # 실제 진단으로 확인된 표: 국토교통부(orgId=116) '부문별 주택건설 인허가실적(월별 누계)'
