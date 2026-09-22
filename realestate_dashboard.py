@@ -475,6 +475,9 @@ def fetch_kosis_permit():
 
             res = SESSION.get(url, params=params, timeout=15)
             data = res.json()
+            if isinstance(data, dict):
+                print(f"  [KOSIS 인허가 오류 응답] tblId={tbl_id}: {data}")
+                continue
             if not isinstance(data, list) or not data:
                 continue
 
@@ -538,6 +541,9 @@ def fetch_kosis_unsold():
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
+        if isinstance(data, dict):
+            print(f"  [KOSIS 오류 응답] {data}")
+            return None
         if not isinstance(data, list) or not data:
             return None
 
@@ -609,6 +615,9 @@ def fetch_kosis_unsold_completed():
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
+        if isinstance(data, dict):
+            print(f"  [KOSIS 오류 응답] {data}")
+            return None
         if not isinstance(data, list) or not data:
             return None
 
@@ -664,6 +673,9 @@ def fetch_kosis_completion():
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
+        if isinstance(data, dict):
+            print(f"  [KOSIS 오류 응답] {data}")
+            return None
         if not isinstance(data, list) or not data:
             return None
 
