@@ -432,7 +432,7 @@ def fetch_houstat_khai():
 # ══════════════════════════════════════════════════════════════════════════════
 # KOSIS(국가통계포털) Open API - 주택건설 인허가실적
 # ══════════════════════════════════════════════════════════════════════════════
-KOSIS_API_KEY = os.environ.get("KOSIS_API_KEY", "")
+KOSIS_API_KEY = os.environ.get("KOSIS_API_KEY", "").strip()
 if KOSIS_API_KEY:
     print(f"  [진단] KOSIS_API_KEY 길이={len(KOSIS_API_KEY)} "
           f"앞4자={KOSIS_API_KEY[:4]!r} 뒤4자={KOSIS_API_KEY[-4:]!r} "
