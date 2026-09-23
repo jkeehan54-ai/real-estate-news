@@ -660,11 +660,15 @@ def fetch_kosis_unsold_completed():
 # ══════════════════════════════════════════════════════════════════════════════
 # KOSIS(국가통계포털) Open API - 주택건설 준공실적(월계) (국토교통부 통계누리 원천)
 # ══════════════════════════════════════════════════════════════════════════════
+# KOSIS 공식 OPENAPI URL생성기로 확인한 정확한 파라미터/분류 조합:
+# 전국(C3_NM) + 총계(C1_NM) + 총계(C2_NM) = 전국 준공실적 총계
 KOSIS_COMPLETION_TBL = "DT_MLTM_5372"
+KOSIS_COMPLETION_ITM = "13103766972T1"
 
 def fetch_kosis_completion():
     """
     KOSIS: 전국 주택건설 준공실적(월별)의 최신 값을 가져온다.
+    '총계' + '총계' + '전국'(시도) 조합 행을 채택한다.
     """
     if not KOSIS_API_KEY:
         return None
@@ -675,7 +679,8 @@ def fetch_kosis_completion():
             "format": "json", "jsonVD": "Y",
             "prdSe": "M", "newEstPrdCnt": "6",
             "orgId": "116", "tblId": KOSIS_COMPLETION_TBL,
-            "itmId": "ALL", "objL1": "ALL",
+            "itmId": KOSIS_COMPLETION_ITM,
+            "objL1": "ALL", "objL2": "ALL", "objL3": "ALL",
         }
         res = SESSION.get(url, params=params, timeout=15)
         data = res.json()
@@ -685,16 +690,17 @@ def fetch_kosis_completion():
         if not isinstance(data, list) or not data:
             return None
 
-        def is_nation(nm):
-            n = _norm_nm(nm)
-            return n in ("전국", "계", "합계", "총계")
+        def nm(row, key):
+            return _norm_nm(row.get(key))
 
         candidates = [
             row for row in data
-            if is_nation(row.get("C1_NM")) or is_nation(row.get("C1_OBJ_NM"))
+            if nm(row, "C3_NM") == "전국"
+            and nm(row, "C1_NM") == "총계"
+            and nm(row, "C2_NM") == "총계"
         ]
         if not candidates:
-            candidates = data
+            return None
 
         candidates = [c for c in candidates if safe_int(c.get("DT")) is not None]
         if not candidates:
