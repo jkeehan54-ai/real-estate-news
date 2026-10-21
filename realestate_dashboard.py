@@ -2836,7 +2836,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
         disp(trade.get("거래량")) if trade.get("거래량") else f"전년비 {disp(trade.get('전년비'))}%",
         "건" if trade.get("거래량") else "",
         f"전년비 {disp(trade.get('전년비'))}% | {disp(trade.get('기준월'))}",
-        rcolor(trade.get("전년비")),"국토교통부 실거래 신고 기준",trade.get("원문",[]))}
+        rcolor(trade.get("전년비")),"한국부동산원 R-ONE 주택 매매 거래 기준",trade.get("원문",[]))}
     {card("착공량",
         disp(cstart.get("수치")) if cstart.get("수치") else f"전년비 {disp(cstart.get('전년비'))}%",
         "호" if cstart.get("수치") else "",
