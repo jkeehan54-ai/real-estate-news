@@ -1911,9 +1911,60 @@ def get_trade_vol(rss):
 # 실제 제목: "비아파트 착공 3만가구, 전년比 7.7% 감소"
 #           "1~5월 비아파트 착공 전년 동기 대비 5.5% 감소"
 # ══════════════════════════════════════════════════════════════════════════════
+def fetch_kosis_construction_start():
+    """KOSIS DT_MLTM_5386 주택건설 착공실적(월계) - 전국/총계/총계, 전년동월비 계산"""
+    if not KOSIS_API_KEY:
+        return None
+    url = f"{KOSIS_BASE}/Param/statisticsParameterData.do"
+    try:
+        res = requests.get(url, params={
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "itmId": "13103766971T1 ",
+            "objL1": "ALL", "objL2": "ALL", "objL3": "ALL",
+            "format": "json", "jsonVD": "Y", "prdSe": "M", "newEstPrdCnt": "14",
+            "orgId": "116", "tblId": "DT_MLTM_5386",
+        }, timeout=20)
+        data = res.json()
+        if not isinstance(data, list):
+            return None
+        vals = {}
+        for x in data:
+            if x.get("C3_NM") == "전국" and x.get("C1_NM") == "총계" and x.get("C2_NM") == "총계":
+                try:
+                    vals[x.get("PRD_DE", "")] = float(str(x.get("DT", "")).replace(",", ""))
+                except ValueError:
+                    pass
+        if not vals:
+            return None
+        latest = max(vals)
+        cur = vals[latest]
+        prev = vals.get(str(int(latest[:4]) - 1) + latest[4:])
+        yoy = round((cur / prev - 1) * 100, 1) if prev else None
+        return {"수치": int(cur), "기준": latest, "전년비": yoy}
+    except Exception as e:
+        print(f"  [KOSIS 착공] 실패: {type(e).__name__}: {e}")
+        return None
+
+
 def get_construction_start(rss):
     print("[동행2] 착공량")
     r = {"수치": None, "전년비": None, "기준월": None, "원문": []}
+
+    # KOSIS 공식 API 1순위 (DT_MLTM_5386 주택건설 착공실적)
+    _ks = fetch_kosis_construction_start()
+    if _ks and _ks.get("수치") is not None:
+        _v = _ks.get("수치")
+        _p = _ks.get("기준", "")
+        _y = _ks.get("전년비")
+        r["수치"] = f"{_v:,}"
+        r["기준월"] = f"{_p[:4]}.{_p[4:6]}" if len(_p) == 6 else _p
+        if _y is not None: r["전년비"] = f"{_y}"
+        _m = r["기준월"]
+        r["원문"].append({"title": f"KOSIS 국가통계포털 (공식 API, {_m} 기준)", "link": "https://kosis.kr", "date": _m or ""})
+        print(f"  ✔ (KOSIS API) 착공 {_v:,}호 | 기준 {_m} | 전년비 {_y}")
+        if r["전년비"]:
+            return r
+
 
     RE_YOY  = re.compile(r'전년\s*(?:동기|동월)?\s*(?:대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
     RE_YOY2 = re.compile(r'([-+]?\d+\.?\d*)\s*%\s*(?:감소|증가)')
