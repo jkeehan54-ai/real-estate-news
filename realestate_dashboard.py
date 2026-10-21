@@ -1851,6 +1851,41 @@ def get_buyer_index():
     return r
 
 
+def fetch_rone_housing_trade():
+    """R-ONE A_2024_00552 (월) 행정구역별 주택매매거래현황 - 전국 동(호)수, 전년동월비 계산"""
+    if not RONE_API_KEY:
+        return None
+    import datetime as _dt
+    def _val(ym):
+        try:
+            res = SESSION.get(RONE_BASE, params={"KEY": RONE_API_KEY, "STATBL_ID": "A_2024_00552",
+                "DTACYCLE_CD": "MM", "Type": "json", "pIndex": 1, "pSize": 1000,
+                "WRTTIME_IDTFR_ID": ym}, timeout=20)
+            rows = res.json()["SttsApiTblData"][1]["row"]
+        except Exception:
+            return None
+        for x in rows:
+            if x.get("CLS_NM") == "전국" and x.get("ITM_NM") == "동(호)수":
+                try:
+                    return int(float(x.get("DTA_VAL")))
+                except (TypeError, ValueError):
+                    return None
+        return None
+    t = _dt.date.today()
+    y, m = t.year, t.month
+    for _ in range(5):
+        ym = f"{y}{m:02d}"
+        cur = _val(ym)
+        if cur is not None:
+            prev = _val(f"{y-1}{m:02d}")
+            yoy = round((cur / prev - 1) * 100, 1) if prev else None
+            return {"수치": cur, "기준": ym, "전년비": yoy}
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+    return None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 동행1: 주택 매매 거래량
 # 실제 제목: "11월 주택 매매거래량 11.9% 감소", "거래량 60% 급감"
@@ -1858,6 +1893,22 @@ def get_buyer_index():
 def get_trade_vol(rss):
     print("[동행1] 주택 매매 거래량")
     r = {"거래량": None, "전년비": None, "기준월": None, "원문": []}
+
+    # R-ONE 공식 API 1순위 (A_2024_00552 월 행정구역별 주택매매거래현황)
+    _rt = fetch_rone_housing_trade()
+    if _rt and _rt.get("수치") is not None:
+        _v = _rt.get("수치")
+        _p = _rt.get("기준", "")
+        _y = _rt.get("전년비")
+        r["거래량"] = f"{_v:,}"
+        r["기준월"] = f"{_p[:4]}.{_p[4:6]}" if len(_p) == 6 else _p
+        if _y is not None: r["전년비"] = f"{_y}"
+        _m = r["기준월"]
+        r["원문"].append({"title": f"한국부동산원 R-ONE (공식 API, {_m} 기준)", "link": "https://www.reb.or.kr/r-one", "date": _m or ""})
+        print(f"  ✔ (R-ONE API) 주택 매매 거래량 {_v:,}건 | 기준 {_m} | 전년비 {_y}")
+        if r["전년비"]:
+            return r
+
 
     # 제목에서 전년비 % 추출
     RE_YOY  = re.compile(r'전년\s*(?:동기|동월)?\s*(?:대비|보다|比)?\s*([-+]?\d+\.?\d*)\s*%')
