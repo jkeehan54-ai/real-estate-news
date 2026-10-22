@@ -6,6 +6,10 @@ on:
     - cron: '*/5 23,0-13 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: daily-build
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -163,7 +167,7 @@ jobs:
           [ -f data/indicators_history.json ] && git add -f data/indicators_history.json
           git add -f data/last_run_hour.txt
           git diff --staged --quiet || git commit -m "🤖 자동 업데이트: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')"
-          git pull --rebase --autostash
+          git pull --rebase --autostash -X theirs
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
