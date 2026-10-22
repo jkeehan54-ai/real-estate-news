@@ -307,6 +307,30 @@ def _decode_content(
 # FETCH RSS
 # ============================================================
 
+def _get_with_retry(url, timeout=None, attempts=3, delay=2):
+    """일시적 오류(타임아웃, 연결 오류, 5xx, 429)만 재시도. 그 밖의 4xx는 즉시 실패."""
+    import time as _time
+    import requests as _requests
+    if timeout is None:
+        timeout = RSS_TIMEOUT + 5
+    last_exc = None
+    for i in range(attempts):
+        try:
+            resp = _SESSION.get(url, timeout=timeout)
+            resp.raise_for_status()
+            return resp
+        except _requests.exceptions.HTTPError as exc:
+            code = exc.response.status_code if exc.response is not None else 0
+            if 400 <= code < 500 and code != 429:
+                raise
+            last_exc = exc
+        except Exception as exc:
+            last_exc = exc
+        if i < attempts - 1:
+            _time.sleep(delay)
+    raise last_exc
+
+
 def fetch_rss(
     name: str,
     url: str,
@@ -373,10 +397,7 @@ def fetch_rss(
 
     try:
 
-        response = _SESSION.get(
-            url,
-            timeout=RSS_TIMEOUT,
-        )
+        response = _get_with_retry(url)
 
         response.raise_for_status()
 

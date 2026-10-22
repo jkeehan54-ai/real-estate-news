@@ -14,7 +14,7 @@ SOURCES = {
     "매일경제부동산": "https://www.mk.co.kr/news/realestate/",
     "헤럴드경제": "https://biz.heraldcorp.com/",
     "한국경제":    "https://www.hankyung.com/realestate",
-    "서울경제":    "https://www.sedaily.com/News/RealeState",
+    "서울경제":    "https://www.sedaily.com/",
     "연합뉴스":    "https://www.yna.co.kr/economy/real-estate/",
     "부산일보":    "https://www.busan.com/economy/",
     "국제신문":    "http://www.kookje.co.kr/news2011/asp/sub_main.htm?code=0220",
