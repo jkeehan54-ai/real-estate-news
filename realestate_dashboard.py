@@ -2302,6 +2302,38 @@ def get_completion(rss):
     return r
 
 
+def fetch_kosis_unsold_region(region):
+    """KOSIS DT_MLTM_2080 미분양주택현황(월별) - 지정 시도의 총합 최신 값"""
+    if not KOSIS_API_KEY:
+        return None
+    url = f"{KOSIS_BASE}/Param/statisticsParameterData.do"
+    try:
+        res = SESSION.get(url, params={
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "format": "json", "jsonVD": "Y",
+            "prdSe": "M", "newEstPrdCnt": "6",
+            "orgId": "116", "tblId": KOSIS_UNSOLD_TBL,
+            "itmId": KOSIS_UNSOLD_ITM,
+            "objL1": "ALL", "objL2": "ALL", "objL3": "ALL",
+        }, timeout=15)
+        data = res.json()
+        if not isinstance(data, list) or not data:
+            return None
+        rows = [x for x in data
+                if _norm_nm(x.get("C1_NM")) == region
+                and _norm_nm(x.get("C2_NM")) == "총합"
+                and _norm_nm(x.get("C3_NM")) == "총합"
+                and safe_int(x.get("DT")) is not None]
+        if not rows:
+            return None
+        rows.sort(key=lambda x: x.get("PRD_DE", ""))
+        last = rows[-1]
+        return {"수치": safe_int(last.get("DT")), "기준": last.get("PRD_DE", "")}
+    except Exception as e:
+        print(f"  [KOSIS 미분양({region}) API 오류] {e}")
+        return None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 부산 지역 지표
 # debug2 결과: 부산 제목에 퍼센트 없음
@@ -2320,6 +2352,14 @@ def get_busan(rss):
         r["원문"].append({"title": "KB부동산 데이터허브 (공식 API)",
                           "link": "https://data.kbland.kr", "date": api.get("기준일") or ""})
         print(f"  ✔ (KB API) 매매 {disp(r['아파트변동'])}% | 전세 {disp(r['전세변동'])}%")
+
+    # ★ 미분양 1순위: KOSIS 공식 API (DT_MLTM_2080 부산 총합)
+    _ku = fetch_kosis_unsold_region("부산")
+    if _ku and _ku.get("수치") is not None:
+        _kv = _ku.get("수치")
+        _kp = _ku.get("기준", "")
+        r["미분양"] = f"{_kv:,}"
+        print(f"  ✔ (KOSIS API) 부산 미분양 {_kv:,}호 | 기준 {_kp[:4]}.{_kp[4:6]}")
 
     # 부산일보, 국제신문 RSS 직접 수집 (부동산 섹션 포함)
     busan_rss_items = []
