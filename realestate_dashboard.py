@@ -2094,6 +2094,28 @@ def get_construction_start(rss):
 # 실제 제목: "'악성 미분양' 14년만에 3만가구 넘어"
 #           "지난달 '악성 미분양' 다시 늘어…전국 2만9천555가구"
 # ══════════════════════════════════════════════════════════════════════════════
+def fetch_kosis_unsold_yoy():
+    """전국 미분양 전년동월비(%)를 KOSIS DT_MLTM_2080에서 직접 계산한다."""
+    if not KOSIS_API_KEY:
+        return None
+    try:
+        res = SESSION.get(f"{KOSIS_BASE}/Param/statisticsParameterData.do", params={"method": "getList", "apiKey": KOSIS_API_KEY, "format": "json", "jsonVD": "Y", "prdSe": "M", "newEstPrdCnt": "14", "orgId": "116", "tblId": KOSIS_UNSOLD_TBL, "itmId": KOSIS_UNSOLD_ITM, "objL1": "ALL", "objL2": "ALL", "objL3": "ALL"}, timeout=15)
+        data = res.json()
+        if not isinstance(data, list):
+            return None
+        rows = {x.get("PRD_DE"): safe_int(x.get("DT")) for x in data if _norm_nm(x.get("C1_NM")) == "전국" and _norm_nm(x.get("C2_NM")) == "총합" and _norm_nm(x.get("C3_NM")) == "총합" and safe_int(x.get("DT")) is not None}
+        if not rows:
+            return None
+        last = max(rows)
+        prev = str(int(last[:4]) - 1) + last[4:]
+        if not rows.get(prev):
+            return None
+        return round((rows[last] / rows[prev] - 1) * 100, 1)
+    except Exception as e:
+        print(f"  [KOSIS 미분양 전년비 오류] {e}")
+        return None
+
+
 def get_unsold(rss):
     print("[후행1] 전국 미분양")
     r = {"전국": None, "악성": None, "전년비": None, "기준월": None, "원문": []}
@@ -2110,6 +2132,8 @@ def get_unsold(rss):
     if api_filled:
         print(f"  ✔ (KOSIS API) 전국 미분양 {r['전국']}호 | 기준: {disp(r['기준월'])}")
 
+    _yy = fetch_kosis_unsold_yoy()
+    if _yy is not None: r["전년비"] = f"{_yy:.1f}"
     kosis_completed = fetch_kosis_unsold_completed()
     if kosis_completed and kosis_completed.get("수치") is not None:
         r["악성"] = f"{kosis_completed['수치']:,}"
