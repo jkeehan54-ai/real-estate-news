@@ -134,6 +134,8 @@ def fetch_kb_api_weekly_price_change():
         result["기준일"] = f"{dte[:4]}.{dte[4:6]}.{dte[6:8]}"
     seo, _ = kb_latest_by_region(d_sale, ["서울"])
     result["서울"] = seo
+    met, _ = kb_latest_by_region(d_sale, ["수도권"])
+    result["수도권"] = met
     bus, _ = kb_latest_by_region(d_sale, ["부산", "부산광역시"])
     result["부산"] = bus
 
@@ -1066,6 +1068,7 @@ def get_kb_weekly(rss):
     if api.get("국전체") is not None: r["국전체"]   = f"{api['국전체']:.2f}"
     if api.get("서울") is not None:   r["서울"]     = f"{api['서울']:.2f}"
     if api.get("부산") is not None:   r["부산"]     = f"{api['부산']:.2f}"
+    if api.get("수도권") is not None: r["수도권"]   = f"{api['수도권']:.2f}"
     if api.get("전세전국") is not None: r["전세전국"] = f"{api['전세전국']:.2f}"
     if api.get("기준일") is not None: r["기준일"]   = api["기준일"]
     if r["국전체"] is not None or r["서울"] is not None:
