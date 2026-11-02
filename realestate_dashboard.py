@@ -370,6 +370,7 @@ def fetch_rone_supply_demand():
 # 주택금융공사 HOUSTAT Open API - K-HAI(주택구입부담지수)
 # ══════════════════════════════════════════════════════════════════════════════
 HOUSTAT_BASE = "https://houstat.hf.go.kr/research/openapi/SttsApiTblData.do"
+_KHAI_EXTRA = {}
 HOUSTAT_STATBL_KHAI = "T186503126543136"  # '지역별 K-HAI' 표 — '전국' 행 포함 확인됨
 HOUSTAT_API_KEY = os.environ.get("HOUSTAT_API_KEY", "")  # 없어도 호출 가능(키 없으면 sample 제한 가능성 있음)
 
@@ -427,6 +428,11 @@ def fetch_houstat_khai():
 
         nat.sort(key=lambda x: str(x.get("WRTTIME_IDTFR_ID", "")))
         last = nat[-1]
+        _lid = str(last.get("WRTTIME_IDTFR_ID", ""))
+        _pid = str(int(_lid[:4]) - 1) + _lid[4:] if len(_lid) == 6 and _lid[:4].isdigit() else ""
+        _pv = [safe_float(x.get("DTA_VAL")) for x in nat if str(x.get("WRTTIME_IDTFR_ID", "")) == _pid]
+        _cv = safe_float(last.get("DTA_VAL"))
+        _KHAI_EXTRA["yoy"] = round(_cv - _pv[0], 1) if _pv and _pv[0] is not None and _cv is not None else None
         return safe_float(last.get("DTA_VAL")), last.get("WRTTIME_IDTFR_ID")
     except Exception as e:
         print(f"  [K-HAI/HOUSTAT API 오류] {e}")
@@ -762,7 +768,10 @@ def fetch_krihs_sentiment(jisu="167"):
         v = safe_float(val, 50, 200)
         if v is None:
             return None
-        return {"지수": v, "기준월": f"{ym[:4]}.{ym[4:6]}"}
+        _py = str(int(ym[:4]) - 1) + ym[4:]
+        _pr = [safe_float(vv, 50, 200) for kk, vv in rows if kk == _py]
+        _yoy = round(v - _pr[0], 1) if _pr and _pr[0] is not None else None
+        return {"지수": v, "기준월": f"{ym[:4]}.{ym[4:6]}", "전년차": _yoy}
     except Exception as e:
         print(f"  [K-REMAP 오류] {e}")
         return None
@@ -1682,7 +1691,7 @@ def get_krihs(rss):
     #   같은 스케일). 전세심리 전용 jisu 코드를 찾으면 추가로 연결 가능하다.
     krem = fetch_krihs_sentiment("167")
     if krem and krem.get("지수") is not None:
-        r["매매심리"] = f"{krem['지수']}"
+        r["매매심리"] = f"{krem['지수']}"; r["전년차"] = (f"{krem['전년차']:+.1f}" if krem.get("전년차") is not None else None)
         r["원문"].append({"title": f"K-REMAP 국토연구원 (공식 데이터, {krem.get('기준월','')} 기준)",
                           "link": "https://kremap.krihs.re.kr/grid/grid?jisu=167",
                           "date": krem.get("기준월", "")})
@@ -1748,7 +1757,7 @@ def get_khai(rss):
     # ① API 우선
     api_val, api_period = fetch_houstat_khai()
     if api_val is not None:
-        r["지수"] = f"{api_val}"
+        r["지수"] = f"{api_val}"; r["전년비"] = (f"{_KHAI_EXTRA['yoy']:+.1f}" if _KHAI_EXTRA.get("yoy") is not None else None)
         r["원문"] = [{"title": f"주택금융공사 HOUSTAT ({api_period})",
                       "link": "https://houstat.hf.go.kr/research/portal/theme/indexStatKHAIPage.do",
                       "date": api_period}]
@@ -2877,7 +2886,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
         "#c62828" if safe_float(krihs.get("매매심리"),115,200) else "#1565c0" if safe_float(krihs.get("매매심리"),0,95) else "#2e7d32",
         "115↑낙관 | 95↓위축 (국토연구원)",krihs.get("원문",[]))}
     {card("⑧ 주택구입부담(K-HAI)",disp(khai.get("지수")),"",
-        f"전분기비 {disp(khai.get('전분기비'))}p",
+        f"전년비 {disp(khai.get('전년비'))}p",
         "#1565c0" if safe_float(khai.get("지수"),150,300) else "#c62828" if safe_float(khai.get("지수"),0,100) else "#2e7d32",
         "지수↑부담 증가 | 100↓부담 낮음 (주택금융공사)",khai.get("원문",[]))}
     {card("⑨ KB 매수우위지수",disp(buyer.get("지수")),"",
