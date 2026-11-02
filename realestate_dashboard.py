@@ -2358,7 +2358,7 @@ def get_busan(rss):
     if _ku and _ku.get("수치") is not None:
         _kv = _ku.get("수치")
         _kp = _ku.get("기준", "")
-        r["미분양"] = f"{_kv:,}"
+        r["미분양"] = f"{_kv:,}"; r["미분양기준"] = f"{_kp[:4]}.{_kp[4:6]}"
         print(f"  ✔ (KOSIS API) 부산 미분양 {_kv:,}호 | 기준 {_kp[:4]}.{_kp[4:6]}")
 
     # 부산일보, 국제신문 RSS 직접 수집 (부동산 섹션 포함)
@@ -2907,7 +2907,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
     <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
       {card("부산 아파트 매매",pct_str(busan_apt),"%","주간 변동률",rcolor(busan_apt),"KB부동산 기준",busan.get("원문",[])[:1])}
       {card("부산 전세가",pct_str(busan_jeon),"%","주간 전세 변동률",rcolor(busan_jeon),"KB부동산 기준",[])}
-      {card("부산 미분양",disp(busan.get("미분양")),"호","부산 지역 미분양","#ef6c00" if busan.get("미분양") else "#546e7a","국토교통부 기준",[])}
+      {card("부산 미분양",disp(busan.get("미분양")),"호","부산 지역 미분양","#ef6c00" if busan.get("미분양") else "#546e7a",("국토교통부 기준 | " + busan.get("미분양기준")) if busan.get("미분양기준") else "국토교통부 기준",[])}
     </div>
   </div>
 </div>
