@@ -1,7 +1,8 @@
 {
-  "timestamp": "2026-11-03 18:08",
-  "verdict": "보합 / 혼조",
-  "verdict_score": 0,
+  "timestamp": "2026-11-03 19:07",
+  "verdict": "완만한 하락",
+  "verdict_score": -1,
+  "verdict_index": -24.8,
   "kb_전국": 0.1,
   "kb_서울": 0.17,
   "kb_수도권": 0.18,
