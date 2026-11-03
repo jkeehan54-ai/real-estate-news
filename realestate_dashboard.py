@@ -2890,7 +2890,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
         "#c62828" if safe_float(supply.get("매매수급"),110,180) else "#1565c0" if safe_float(supply.get("매매수급"),0,90) else "#2e7d32",
         "100↑수요우위 | 0~200 범위 (한국부동산원)",supply.get("원문",[]))}
     {card("⑦ 부동산소비심리지수",disp(krihs.get("매매심리")),"",
-        f"전세심리 {disp(krihs.get('전세심리'))}",
+        "종합지수(전국)",
         "#c62828" if safe_float(krihs.get("매매심리"),115,200) else "#1565c0" if safe_float(krihs.get("매매심리"),0,95) else "#2e7d32",
         "115↑낙관 | 95↓위축 (국토연구원)",krihs.get("원문",[]))}
     {card("⑧ 주택구입부담(K-HAI)",disp(khai.get("지수")),"",
