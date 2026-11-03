@@ -129,6 +129,13 @@ def fetch_kb_api_weekly_price_change():
         "https://data-api.kbland.kr/bfmstat/weekMnthlyHuseTrnd/prcIndxInxrdcRt",
         {"월간주간구분코드": "02", "매물종별구분": "01", "매매전세코드": "01"})
     nat, dte = kb_latest_by_region(d_sale, ["전국"])
+    _xs = [i for i in (d_sale or {}).get("데이터리스트", []) if i.get("지역명") == "전국"]
+    _vs = [a for a in (_xs[0].get("dataList", []) if _xs else []) if a is not None]
+    _n = 0
+    for _a in reversed(_vs):
+        if round(_a, 2) > 0: _n += 1
+        else: break
+    result["연속주수"] = _n if _n else None
     result["국전체"] = nat
     if dte and len(dte) == 8:
         result["기준일"] = f"{dte[:4]}.{dte[4:6]}.{dte[6:8]}"
@@ -1072,6 +1079,7 @@ def get_kb_weekly(rss):
     if api.get("서울") is not None:   r["서울"]     = f"{api['서울']:.2f}"
     if api.get("부산") is not None:   r["부산"]     = f"{api['부산']:.2f}"
     if api.get("수도권") is not None: r["수도권"]   = f"{api['수도권']:.2f}"
+    if api.get("연속주수"): r["연속주수"] = f"{api['연속주수']}"
     if api.get("전세전국") is not None: r["전세전국"] = f"{api['전세전국']:.2f}"
     if api.get("기준일") is not None: r["기준일"]   = api["기준일"]
     if r["국전체"] is not None or r["서울"] is not None:
