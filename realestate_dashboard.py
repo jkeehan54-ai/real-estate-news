@@ -2489,8 +2489,35 @@ def get_busan(rss):
 # ══════════════════════════════════════════════════════════════════════════════
 # 종합 분석
 # ══════════════════════════════════════════════════════════════════════════════
+_VERDICT_INDEX = {}
+_BUSAN_BOOST = 1.5
+_BAD_DANGER = 25000
+_BAD_SAFE = 10000
+_CAT_WEIGHT = {"선행": 40, "동행": 35, "후행": 25}
+_SIG_SCORE = {"상승": 1.0, "과열": 0.5, "적정": 0.5, "보합": 0.0, "침체": -1.0, "하락": -1.0}
+_SIG_WEIGHT = {
+    "KB 매수우위지수": 8, "매매수급지수": 4, "전세수급지수": 3, "주택 인허가": 6,
+    "전세가율": 3, "경매낙찰률": 3, "경매낙찰가율": 3,
+    "주택가격전망(CSI)": 2, "KB 매매전망지수": 2, "부동산소비심리(매매)": 2, "주택구입부담(K-HAI)": 2,
+    "KB 전국 매매가": 6, "KB 서울 매매가": 3, "KB 부산 매매가": 3, "KB 전세 전국 변동": 8,
+    "주택 거래량": 10, "전국 미분양": 5 * _BUSAN_BOOST, "착공량": 3,
+    "준공량": 8, "준공후 미분양": 7 * _BUSAN_BOOST,
+}
+
+def _weighted_index(sigs):
+    parts = {}
+    for cat in _CAT_WEIGHT:
+        pairs = [(_SIG_WEIGHT.get(n, 0), _SIG_SCORE.get(d, 0.0)) for n, d, _x, c in sigs if c == cat and _SIG_WEIGHT.get(n, 0) > 0]
+        den = sum(w for w, _s in pairs)
+        if den > 0:
+            parts[cat] = sum(w * s for w, s in pairs) / den
+    if not parts:
+        return None
+    tw = sum(_CAT_WEIGHT[c] for c in parts)
+    return round(100.0 * sum(_CAT_WEIGHT[c] * v for c, v in parts.items()) / tw, 1)
+
 def analyze(kb, jeonse, auction, csi, kb_fc, supply, krihs, khai,
-            trade, cstart, unsold, compl, busan):
+            trade, cstart, unsold, compl, busan, permit=None, buyer=None):
     sigs = []
 
     def add(name, d, desc, cat):
@@ -2499,12 +2526,12 @@ def analyze(kb, jeonse, auction, csi, kb_fc, supply, krihs, khai,
     ref = safe_float(kb.get("서울") or kb.get("국전체"))
     if ref is not None:
         lbl = "KB 서울 매매가" if kb.get("서울") else "KB 전국 매매가"
-        d = "상승" if ref>0 else ("하락" if ref<0 else "보합")
+        d = "상승" if round(ref,2)>0 else ("하락" if round(ref,2)<0 else "보합")
         add(lbl, d, f"주간 {ref:+.2f}%", "동행")
 
     bus = safe_float(busan.get("아파트변동") or kb.get("부산"))
     if bus is not None:
-        d = "상승" if bus>0 else ("하락" if bus<0 else "보합")
+        d = "상승" if round(bus,2)>0 else ("하락" if round(bus,2)<0 else "보합")
         add("KB 부산 매매가", d, f"주간 {bus:+.2f}%", "동행")
 
     jr = safe_float(jeonse.get("전국") or jeonse.get("서울"))
@@ -2568,9 +2595,9 @@ def analyze(kb, jeonse, auction, csi, kb_fc, supply, krihs, khai,
 
     us = safe_int(str(unsold.get("전국") or "").replace(",",""))
     if us is not None:
-        if us>60000:   add("전국 미분양","침체",f"{us:,}호 (위험 6.2만↑)","후행")
-        elif us<30000: add("전국 미분양","상승",f"{us:,}호 (호황 3만↓)","후행")
-        else:          add("전국 미분양","보합",f"{us:,}호 (관찰)","후행")
+        if us>60000:   add("전국 미분양","침체",f"{us:,}호 (위험 6.2만↑)","동행")
+        elif us<30000: add("전국 미분양","상승",f"{us:,}호 (호황 3만↓)","동행")
+        else:          add("전국 미분양","보합",f"{us:,}호 (관찰)","동행")
 
     cr = safe_float(compl.get("전년비"))
     if cr is not None:
@@ -2578,16 +2605,45 @@ def analyze(kb, jeonse, auction, csi, kb_fc, supply, krihs, khai,
         elif cr<-20:  add("준공량","상승",f"전년비 {cr}% (공급 부족)","후행")
         else:         add("준공량","보합",f"전년비 {cr}%","후행")
 
-    n    = len(sigs)
-    up   = sum(1 for _,d,_,_ in sigs if d in ["상승","과열","적정"])
-    down = sum(1 for _,d,_,_ in sigs if d in ["침체","하락"])
+    by = safe_float((buyer or {}).get("지수"))
+    if by is not None:
+        if by>=110:  add("KB 매수우위지수","상승",f"{by} (매수자 우위)","선행")
+        elif by>=90: add("KB 매수우위지수","보합",f"{by} (균형)","선행")
+        else:        add("KB 매수우위지수","침체",f"{by} (매도자 우위)","선행")
 
-    if n==0:            verdict,vc = "데이터 수집 중",  "#546e7a"
-    elif up>=n*0.7:     verdict,vc = "상승 우세",      "#c62828"
-    elif up>=n*0.55:    verdict,vc = "완만한 상승",    "#ef6c00"
-    elif down>=n*0.7:   verdict,vc = "하락 우세",      "#1565c0"
-    elif down>=n*0.55:  verdict,vc = "완만한 하락",    "#42a5f5"
-    else:               verdict,vc = "보합 / 혼조",    "#2e7d32"
+    sj = safe_float(supply.get("전세수급"))
+    if sj is not None:
+        if sj>=110:  add("전세수급지수","상승",f"{sj} (수요우위)","선행")
+        elif sj>=90: add("전세수급지수","보합",f"{sj} (균형)","선행")
+        else:        add("전세수급지수","침체",f"{sj} (공급우위)","선행")
+
+    kn = safe_float(kb.get("국전체"))
+    if kn is not None and not any(s[0] == "KB 전국 매매가" for s in sigs):
+        d = "상승" if round(kn, 2)>0 else ("하락" if round(kn, 2)<0 else "보합")
+        add("KB 전국 매매가", d, f"주간 {kn:+.2f}%", "동행")
+
+    jw = safe_float(kb.get("전세전국"))
+    if jw is not None:
+        d = "상승" if round(jw, 2)>0 else ("하락" if round(jw, 2)<0 else "보합")
+        add("KB 전세 전국 변동", d, f"주간 {jw:+.2f}%", "동행")
+
+    bad = safe_int(str(unsold.get("악성") or "").replace(",",""))
+    if bad is not None:
+        rt = f" | 악성률 {bad/us*100:.1f}%" if us else ""
+        if bad>=_BAD_DANGER: add("준공후 미분양","침체",f"{bad:,}호{rt} (위험)","후행")
+        elif bad>=_BAD_SAFE: add("준공후 미분양","보합",f"{bad:,}호{rt} (관찰)","후행")
+        else:            add("준공후 미분양","상승",f"{bad:,}호{rt} (안정)","후행")
+
+    n   = len(sigs)
+    idx = _weighted_index(sigs)
+    _VERDICT_INDEX["value"] = idx
+
+    if n==0 or idx is None: verdict,vc = "데이터 수집 중",  "#546e7a"
+    elif idx>=50:   verdict,vc = "상승 우세",   "#c62828"
+    elif idx>=20:   verdict,vc = "완만한 상승", "#ef6c00"
+    elif idx<=-50:  verdict,vc = "하락 우세",   "#1565c0"
+    elif idx<=-20:  verdict,vc = "완만한 하락", "#42a5f5"
+    else:           verdict,vc = "보합 / 혼조", "#2e7d32"
 
     return sigs, verdict, vc
 
@@ -2622,6 +2678,7 @@ def build_indicator_summary(kb, permit, jeonse, auction, csi, kb_fc, supply, kri
         "timestamp":      datetime.now(KST).strftime("%Y-%m-%d %H:%M"),
         "verdict":        verdict,
         "verdict_score":  verdict_score,
+        "verdict_index":  _VERDICT_INDEX.get("value"),
         "kb_전국":         safe_float(kb.get("국전체")),
         "kb_서울":         safe_float(kb.get("서울")),
         "kb_수도권":       safe_float(kb.get("수도권")),
@@ -2733,7 +2790,7 @@ def build_html(kb, permit, jeonse, auction, csi, kb_fc, supply, krihs, khai,
     history = history or []
     buyer = buyer or {}
     sigs, verdict, vc = analyze(kb, jeonse, auction, csi, kb_fc, supply,
-                                  krihs, khai, trade, cstart, unsold, compl, busan)
+                                  krihs, khai, trade, cstart, unsold, compl, busan, permit=permit, buyer=buyer)
     now   = datetime.now(KST)
     today = now.strftime("%Y년 %m월 %d일")
     upd   = now.strftime("%Y-%m-%d %H:%M KST")
@@ -2843,7 +2900,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
 <div class="sec">
   <div class="stitle">지표 추이 — 자동 수집 데이터 누적 (1시간 간격)</div>
   <div class="tgrid">
-    {trend_card("종합판단 지수", "verdict_score", history, vc, "", "{:+.0f}")}
+    {trend_card("종합판단 지수", "verdict_index", history, vc, "", "{:+.1f}")}
     {trend_card("KB 전국 매매가", "kb_전국", history, rcolor(history[-1].get("kb_전국") if history else None), "%")}
     {trend_card("KB 서울 매매가", "kb_서울", history, rcolor(history[-1].get("kb_서울") if history else None), "%")}
     {trend_card("KB 부산 매매가", "kb_부산", history, rcolor(history[-1].get("kb_부산") if history else None), "%")}
@@ -2900,7 +2957,7 @@ footer{{text-align:center;padding:16px;font-size:12px;color:#607d8b}}
     {card("⑨ KB 매수우위지수",disp(buyer.get("지수")),"",
         f"매도자많음 {disp(buyer.get('매도자많음'))}% | 매수자많음 {disp(buyer.get('매수자많음'))}%",
         "#c62828" if safe_float(buyer.get("지수"),100,200) else "#1565c0" if safe_float(buyer.get("지수"),0,100) else "#2e7d32",
-        "100↑매도자 우위 | 100↓매수자 우위 (KB부동산)",buyer.get("원문",[]))}
+        "100↑매수자 우위 | 100↓매도자 우위 (KB부동산)",buyer.get("원문",[]))}
   </div>
 </div>
 
@@ -3010,7 +3067,7 @@ if __name__ == "__main__":
 
     print("\n[지표 스냅샷 저장 / 추이 데이터 갱신]")
     _sigs, _verdict, _vc = analyze(kb, jeonse, auction, csi, kb_fc, supply,
-                                    krihs, khai, trade, cstart, unsold, compl, busan)
+                                    krihs, khai, trade, cstart, unsold, compl, busan, permit=permit, buyer=buyer)
     summary = build_indicator_summary(kb, permit, jeonse, auction, csi, kb_fc, supply,
                                        krihs, khai, trade, cstart, unsold, compl, busan,
                                        _verdict, buyer=buyer)
