@@ -659,7 +659,22 @@ def fetch_kosis_unsold_completed():
         if val is None:
             return None
         prd = last.get("PRD_DE", "")
-        return {"수치": val, "기준": prd}
+        def _series(c1, c2):
+            return {x.get("PRD_DE", ""): safe_int(x.get("DT")) for x in data
+                    if nm(x, "C1_NM") == c1 and nm(x, "C2_NM") == c2
+                    and nm(x, "C3_NM") == "계" and nm(x, "C4_NM") == "계"
+                    and safe_int(x.get("DT")) is not None}
+
+        def _ago(s, p, k):
+            ks = sorted(s)
+            if p not in s or ks.index(p) - k < 0:
+                return None
+            return s[ks[ks.index(p) - k]]
+
+        _nat = _series("전국", "합계")
+        _bus = _series("부산", "계")
+        return {"수치": val, "기준": prd, "3개월전": _ago(_nat, prd, 3),
+                "부산": _bus.get(prd), "부산3개월전": _ago(_bus, prd, 3)}
     except Exception as e:
         print(f"  [KOSIS 준공후미분양 API 오류] {e}")
         return None
@@ -1251,12 +1266,63 @@ def get_auction(rss):
 # 선행3: 주택 인허가
 # 실제 제목: "1~4월 주택인허가 전년대비 24% 감소"
 # ══════════════════════════════════════════════════════════════════════════════
+def fetch_kosis_permit_yoy():
+    """전국 주택 인허가 '누계'의 전년 동기 대비 증감률(%)을 KOSIS 월별 누계표에서 직접 계산한다."""
+    if not KOSIS_API_KEY:
+        return None
+    try:
+        params = {
+            "method": "getList", "apiKey": KOSIS_API_KEY,
+            "format": "json", "jsonVD": "Y",
+            "prdSe": "M", "newEstPrdCnt": "14",
+            "orgId": KOSIS_PERMIT_ORG, "tblId": "DT_MLTM_1946",
+            "itmId": "ALL", "objL1": "ALL", "objL2": "ALL", "objL3": "ALL",
+        }
+        res = SESSION.get(f"{KOSIS_BASE}/Param/statisticsParameterData.do", params=params, timeout=20)
+        data = res.json()
+        if isinstance(data, dict):
+            print(f"  [KOSIS 인허가 전년비 오류 응답] {data}")
+            return None
+        if not isinstance(data, list) or not data:
+            return None
+
+        def is_total(nm):
+            return _norm_nm(nm) in ("총계", "합계", "합")
+
+        totals = [x for x in data if is_total(x.get("C1_NM"))]
+        if totals and "C2_NM" in totals[0]:
+            c2 = [x for x in totals if is_total(x.get("C2_NM"))]
+            if c2:
+                totals = c2
+        if totals and "C3_NM" in totals[0]:
+            c3 = [x for x in totals if x.get("C3_NM") == "전국"]
+            if c3:
+                totals = c3
+        rows = {x.get("PRD_DE", ""): safe_int(x.get("DT")) for x in totals
+                if safe_int(x.get("DT")) is not None}
+        if not rows:
+            return None
+        last = max(rows)
+        prev = str(int(last[:4]) - 1) + last[4:]
+        if not rows.get(prev):
+            return None
+        return round((rows[last] / rows[prev] - 1) * 100, 1)
+    except Exception as e:
+        print(f"  [KOSIS 인허가 전년비 오류] {e}")
+        return None
+
+
 def get_permit(rss):
     print("[선행3] 주택 인허가")
     r = {"수치": None, "전년비": None, "기준월": None, "원문": []}
 
     # ★ 1순위: KOSIS 공식 API ('월별 누계' 표는 그 해 1월부터의 누적치임을 표기)
     kosis = fetch_kosis_permit()
+    _py = fetch_kosis_permit_yoy()
+    if _py is not None:
+        r["전년비"] = f"{_py:.1f}"
+        r["전년비출처"] = "KOSIS"
+        print(f"  ✔ (KOSIS API) 인허가 전년동기 대비 {_py:+.1f}% (누계 기준)")
     if kosis and kosis.get("수치") is not None:
         r["수치"] = f"{kosis['수치']:,}"
         prd = kosis.get("기준", "")
@@ -2151,6 +2217,9 @@ def get_unsold(rss):
     kosis_completed = fetch_kosis_unsold_completed()
     if kosis_completed and kosis_completed.get("수치") is not None:
         r["악성"] = f"{kosis_completed['수치']:,}"
+        r["악성3개월전"] = kosis_completed.get("3개월전")
+        r["부산악성"] = kosis_completed.get("부산")
+        r["부산악성3개월전"] = kosis_completed.get("부산3개월전")
         print(f"  ✔ (KOSIS API) 준공후 미분양 {r['악성']}호")
 
     RE_악성1 = re.compile(r'(?:준공후|악성)\s*미분양\s*([\d,]+)\s*(?:가구|호)?')
@@ -2492,9 +2561,10 @@ def get_busan(rss):
 _VERDICT_INDEX = {}
 _BUSAN_BOOST = 1.5
 _BAD_DANGER = 25000
-_BAD_SAFE = 10000
+_BAD_SAFE = 10000       # 준공후 미분양 이 값 미만이면 '안정' 수준
+_BAD_TREND = 5          # 3개월 전 대비 이 % 이상 늘면 한 단계 악화, 줄면 한 단계 개선
 _CAT_WEIGHT = {"선행": 40, "동행": 35, "후행": 25}
-_SIG_SCORE = {"상승": 1.0, "과열": 0.5, "적정": 0.5, "보합": 0.0, "침체": -1.0, "하락": -1.0}
+_SIG_SCORE = {"상승": 1.0, "과열": 0.5, "적정": 0.5, "보합": 0.0, "주의": -0.5, "침체": -1.0, "하락": -1.0}
 _SIG_WEIGHT = {
     "KB 매수우위지수": 8, "매매수급지수": 4, "전세수급지수": 3, "주택 인허가": 6,
     "전세가율": 3, "경매낙찰률": 3, "경매낙찰가율": 3,
@@ -2627,12 +2697,27 @@ def analyze(kb, jeonse, auction, csi, kb_fc, supply, krihs, khai,
         d = "상승" if round(jw, 2)>0 else ("하락" if round(jw, 2)<0 else "보합")
         add("KB 전세 전국 변동", d, f"주간 {jw:+.2f}%", "동행")
 
+    _pm = permit or {}
+    pm = safe_float(_pm.get("전년비")) if _pm.get("전년비출처") == "KOSIS" else None
+    if pm is not None:
+        if pm>=10:    add("주택 인허가","상승",f"누계 전년비 +{pm}% (증가)","선행")
+        elif pm>=-10: add("주택 인허가","보합",f"누계 전년비 {pm}%","선행")
+        else:         add("주택 인허가","침체",f"누계 전년비 {pm}% (감소)","선행")
+
     bad = safe_int(str(unsold.get("악성") or "").replace(",",""))
     if bad is not None:
+        _lad = ["침체", "주의", "보합", "적정", "상승"]
+        _i = 0 if bad>=_BAD_DANGER else (2 if bad>=_BAD_SAFE else 4)
+        b3 = safe_int(unsold.get("악성3개월전"))
+        tr = (bad / b3 - 1) * 100 if b3 else None
+        if tr is not None:
+            if tr>=_BAD_TREND:    _i = max(0, _i - 1)
+            elif tr<=-_BAD_TREND: _i = min(4, _i + 1)
         rt = f" | 악성률 {bad/us*100:.1f}%" if us else ""
-        if bad>=_BAD_DANGER: add("준공후 미분양","침체",f"{bad:,}호{rt} (위험)","후행")
-        elif bad>=_BAD_SAFE: add("준공후 미분양","보합",f"{bad:,}호{rt} (관찰)","후행")
-        else:            add("준공후 미분양","상승",f"{bad:,}호{rt} (안정)","후행")
+        tt = f" | 3개월 {tr:+.1f}%" if tr is not None else ""
+        bb = safe_int(unsold.get("부산악성"))
+        bt = f" | 부산 {bb:,}호" if bb else ""
+        add("준공후 미분양", _lad[_i], f"{bad:,}호{rt}{tt}{bt}", "후행")
 
     n   = len(sigs)
     idx = _weighted_index(sigs)
@@ -2774,9 +2859,9 @@ def card(title, value, unit, sub, color, note="", news=None):
 
 def sig_row(name, direction, desc, category):
     cm = {"상승":"#c62828","과열":"#880e4f","보합":"#e65100",
-          "적정":"#2e7d32","침체":"#1a237e","하락":"#0d47a1"}
+          "적정":"#2e7d32","침체":"#1a237e","하락":"#0d47a1","주의":"#6d4c41"}
     bm = {"상승":"▲ 상승","과열":"⚠ 과열","보합":"→ 보합",
-          "적정":"✔ 적정","침체":"▼ 침체","하락":"▼ 하락"}
+          "적정":"✔ 적정","침체":"▼ 침체","하락":"▼ 하락","주의":"▼ 주의"}
     catc = {"선행":"#1565c0","동행":"#2e7d32","후행":"#6a1b9a"}
     c = cm.get(direction,"#555"); b = bm.get(direction, direction)
     cc = catc.get(category,"#546e7a")
