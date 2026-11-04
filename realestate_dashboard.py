@@ -153,6 +153,8 @@ def fetch_kb_api_weekly_price_change():
     result["전세전국"] = jeo
     jeo_bus, _ = kb_latest_by_region(d_jeonse, ["부산", "부산광역시"])
     result["전세부산"] = jeo_bus
+    jeo_seo, _ = kb_latest_by_region(d_jeonse, ["서울"])
+    result["전세서울"] = jeo_seo
     return result
 
 def fetch_kb_api_jeonse_ratio():
@@ -1096,6 +1098,7 @@ def get_kb_weekly(rss):
     if api.get("수도권") is not None: r["수도권"]   = f"{api['수도권']:.2f}"
     if api.get("연속주수"): r["연속주수"] = f"{api['연속주수']}"
     if api.get("전세전국") is not None: r["전세전국"] = f"{api['전세전국']:.2f}"
+    if api.get("전세서울") is not None: r["전세서울"] = f"{api['전세서울']:.2f}"
     if api.get("기준일") is not None: r["기준일"]   = api["기준일"]
     if r["국전체"] is not None or r["서울"] is not None:
         ref = safe_float(r.get("국전체") or r.get("서울"))
