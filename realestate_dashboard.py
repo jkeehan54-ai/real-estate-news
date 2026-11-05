@@ -1695,6 +1695,27 @@ def get_supply_demand(rss):
                           "link": "https://www.reb.or.kr/r-one", "date": d})
         print(f"  ✔ (R-ONE API) 매매 {disp(r['매매수급'])} | 전세 {disp(r['전세수급'])} | {d} 기준")
 
+    # R-ONE 실패 시 뉴스 폴백 대신 history의 직전 정상 값을 유지한다
+    if not (r["매매수급"] and r["전세수급"]):
+        _hs = [h for h in load_json(HISTORY_FILE, []) if isinstance(h, dict)]
+        _held = []
+        for _k, _keys in (("매매수급", ("매매수급지수",)), ("전세수급", ("전세수급지수", "전세수급"))):
+            if r[_k] is None:
+                for _h in reversed(_hs):
+                    _v = None
+                    for _x in _keys:
+                        _v = safe_float(_h.get(_x), 85, 135)
+                        if _v is not None: break
+                    if _v is not None:
+                        r[_k] = f"{_v:.1f}"
+                        _held.append(_k)
+                        break
+        if _held:
+            r["원문"].append({"title": "R-ONE 수집 실패 - 직전 정상 값 유지 (" + ", ".join(_held) + ")",
+                              "link": "https://www.reb.or.kr/r-one", "date": ""})
+            print(f"  ↺ 직전 정상 값 유지: 매매 {disp(r['매매수급'])} | 전세 {disp(r['전세수급'])}")
+            return r
+
     RE_T = re.compile(r'매매' + PJ + r'수급' + PJ + r'(?:지수)?' + PJ + r'(\d{2,3}\.?\d*)')
     RE_J = re.compile(r'전세' + PJ + r'수급' + PJ + r'(?:지수)?' + PJ + r'(\d{2,3}\.?\d*)')
 
