@@ -3158,6 +3158,17 @@ if __name__ == "__main__":
     print("\n[선행지표]")
     kb     = get_kb_weekly(rss)
     auction= get_auction(rss)
+    if not auction.get("낙찰률"):
+        _prev = [h for h in load_json(HISTORY_FILE, [])
+                 if isinstance(h, dict) and safe_float(h.get("경매낙찰률"), 20, 60) is not None]
+        if _prev:
+            _h = _prev[-1]
+            auction["낙찰률"] = f"{_h['경매낙찰률']}"
+            if safe_float(_h.get("경매낙찰가율"), 70, 110) is not None:
+                auction["낙찰가율"] = f"{_h['경매낙찰가율']}"
+            auction["원문"] = [{"title": "법원경매 수집 실패 - 직전 정상 값 유지",
+                               "link": "https://www.courtauction.go.kr", "date": ""}]
+            print(f"  ↺ 직전 정상 값 유지: 낙찰률 {auction['낙찰률']}% | 낙찰가율 {disp(auction.get('낙찰가율'))}%")
     permit = get_permit(rss)
     jeonse = get_jeonse_ratio(rss)
     csi    = get_csi(rss)
