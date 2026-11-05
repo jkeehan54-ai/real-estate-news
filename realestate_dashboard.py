@@ -1199,6 +1199,9 @@ def get_kb_weekly(rss):
 # ══════════════════════════════════════════════════════════════════════════════
 # 선행2: 경매 낙찰률
 # ══════════════════════════════════════════════════════════════════════════════
+_AUCTION_PARTIAL = ("초고가", "고가 아파트", "고가아파트", "강남", "서초", "송파", "용산")
+
+
 def get_auction(rss):
     print("[선행2] 경매 낙찰률")
     r = {"낙찰률": None, "낙찰가율": None, "건수": None, "원문": []}
@@ -1229,11 +1232,12 @@ def get_auction(rss):
         for title, summary, link, date in items:
             text = f"{title} {summary}"
             if "낙찰" not in text: continue
+            if any(w in text for w in _AUCTION_PARTIAL): continue
 
             m_r  = RE_R.search(text)
             m_pr = RE_PR.search(text) or RE_PR2.search(text)
 
-            rate  = safe_float(m_r.group(1)  if m_r  else None, 10, 80)
+            rate  = safe_float(m_r.group(1)  if m_r  else None, 20, 60)
             prate = safe_float(m_pr.group(1) if m_pr else None, 70, 130)
 
             if rate is not None and r["낙찰률"] is None: r["낙찰률"] = f"{rate}"
