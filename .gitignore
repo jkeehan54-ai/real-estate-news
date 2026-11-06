@@ -19,3 +19,9 @@ realestate_dashboard.html
 home.html
 data/
 files.zip
+
+land_master.py
+news_collector_local_v2.py
+news_filter_dedup_only.patch
+preview_dashboard_with_charts.html
+real_estate_news_50.json
