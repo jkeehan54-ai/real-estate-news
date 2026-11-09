@@ -470,6 +470,72 @@ def _is_busan_article(
     )
 
 
+_PAGE_DT_CACHE = {}
+_PAGE_DT_BUDGET = [25]
+
+
+def _page_pub_dt(link, now_kst=None):
+    """
+    기사 본문 페이지에서 입력일을 읽는다.
+    읽지 못하면 None을 돌려준다 (현재 시각으로 대체하지 않는다).
+    한 번 실행에 최대 25건까지만 요청한다.
+    """
+    import re as _re
+    from datetime import datetime as _dt
+
+    if link in _PAGE_DT_CACHE:
+        return _PAGE_DT_CACHE[link]
+    if _PAGE_DT_BUDGET[0] <= 0:
+        return None
+    _PAGE_DT_BUDGET[0] -= 1
+
+    result = None
+    try:
+        soup = _engine.get(link)
+
+        # 1) 메타 태그
+        for attrs in (
+            {"property": "article:published_time"},
+            {"property": "og:article:published_time"},
+            {"name": "pubdate"},
+            {"itemprop": "datePublished"},
+        ):
+            m = soup.find("meta", attrs=attrs)
+            if m and m.get("content"):
+                try:
+                    dt = _dt.fromisoformat(m["content"].strip().replace("Z", "+00:00"))
+                    if dt.tzinfo is not None and now_kst is not None:
+                        dt = dt.astimezone(now_kst.tzinfo)
+                    elif now_kst is not None:
+                        dt = dt.replace(tzinfo=now_kst.tzinfo)
+                    result = dt
+                    break
+                except Exception:
+                    pass
+
+        # 2) 본문 텍스트의 "입력 : 2026-11-03 18:35:14" 형태
+        if result is None:
+            text = soup.get_text(" ", strip=True)
+            m = _re.search(
+                r"(?:입력|등록|기사입력|작성)\s*:?\s*(\d{4})[-./](\d{1,2})[-./](\d{1,2})"
+                r"(?:\s+(\d{1,2}):(\d{2}))?",
+                text,
+            )
+            if m:
+                y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                hh = int(m.group(4)) if m.group(4) else 0
+                mm = int(m.group(5)) if m.group(5) else 0
+                dt = _dt(y, mo, d, hh, mm)
+                if now_kst is not None:
+                    dt = dt.replace(tzinfo=now_kst.tzinfo)
+                result = dt
+    except Exception:
+        result = None
+
+    _PAGE_DT_CACHE[link] = result
+    return result
+
+
 def _parse_busan(
     soup: BeautifulSoup,
     now_kst: datetime | None = None,
@@ -532,8 +598,8 @@ def _parse_busan(
             now_kst,
         )
 
-        if pub_dt is None:
-            pub_dt = now_kst
+        if pub_dt is None or pub_dt is now_kst:
+            pub_dt = _page_pub_dt(link, now_kst)
 
         result.append(
             _article(
