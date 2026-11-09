@@ -471,7 +471,7 @@ def _is_busan_article(
 
 
 _PAGE_DT_CACHE = {}
-_PAGE_DT_BUDGET = [25]
+_PAGE_DT_BUDGET = [45]
 
 
 def _page_pub_dt(link, now_kst=None):
@@ -770,8 +770,8 @@ def _parse_kookje(
             now_kst,
         )
 
-        if pub_dt is None:
-            pub_dt = now_kst
+        if pub_dt is None or pub_dt is now_kst:
+            pub_dt = _page_pub_dt(link, now_kst)
 
         result.append(
             _article(
@@ -915,8 +915,8 @@ def _parse_naver_land(
             now_kst,
         )
 
-        if pub_dt is None:
-            pub_dt = now_kst
+        if pub_dt is None or pub_dt is now_kst:
+            pub_dt = _page_pub_dt(link, now_kst)
 
         result.append(
             _article(
