@@ -475,10 +475,15 @@ def has_fake_subscription_match(a: str, b: str) -> bool:
     a_ns = a.replace(" ", "")
     b_ns = b.replace(" ", "")
 
-    return (
-        any(t in a_ns for t in FAKE_SUBSCRIPTION_TERMS)
-        and any(t in b_ns for t in FAKE_SUBSCRIPTION_TERMS)
-    )
+    def _hit(ns):
+        if any(t in ns for t in FAKE_SUBSCRIPTION_TERMS):
+            return True
+        return (
+            ("퇴사" in ns or "위장" in ns)
+            and ("청약" in ns or "당첨" in ns)
+        )
+
+    return _hit(a_ns) and _hit(b_ns)
 
 
 # 두 제목에 (그룹1 중 하나) + (그룹2 중 하나)가 모두 있으면 같은 이슈로 본다.
