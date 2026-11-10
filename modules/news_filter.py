@@ -462,6 +462,25 @@ def has_price_rise_match(a: str, b: str) -> bool:
     return has_price_and_rise(a) and has_price_and_rise(b)
 
 
+FAKE_SUBSCRIPTION_TERMS = (
+    "부정청약", "위장미혼", "위장퇴사", "청약꼼수",
+)
+
+
+def has_fake_subscription_match(a: str, b: str) -> bool:
+    """
+    부정청약 계열 용어(위장미혼·위장퇴사 등)가 두 제목에 모두 있으면
+    같은 단속 이슈로 보고 중복 판정한다.
+    """
+    a_ns = a.replace(" ", "")
+    b_ns = b.replace(" ", "")
+
+    return (
+        any(t in a_ns for t in FAKE_SUBSCRIPTION_TERMS)
+        and any(t in b_ns for t in FAKE_SUBSCRIPTION_TERMS)
+    )
+
+
 def has_busan_gap_match(a: str, b: str) -> bool:
     """
     "부산"+"집값/아파트값"+"격차/양극화" 조합이 두 제목 모두에
@@ -664,6 +683,12 @@ def is_duplicate(
             return True
 
         if has_price_rise_match(
+            new_normalized,
+            old_normalized,
+        ):
+            return True
+
+        if has_fake_subscription_match(
             new_normalized,
             old_normalized,
         ):
