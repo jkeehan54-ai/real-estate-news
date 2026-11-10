@@ -481,6 +481,30 @@ def has_fake_subscription_match(a: str, b: str) -> bool:
     )
 
 
+# 두 제목에 (그룹1 중 하나) + (그룹2 중 하나)가 모두 있으면 같은 이슈로 본다.
+# 새 중복 사례가 생기면 여기에 한 줄씩 추가한다.
+SPECIFIC_COMBO_RULES = [
+    (("금감원", "금융감독원"), ("신탁",)),
+]
+
+
+def has_combo_match(a: str, b: str) -> bool:
+    """
+    SPECIFIC_COMBO_RULES의 조합이 두 제목 모두에 나타나면 중복 판정한다.
+    """
+    a_ns = a.replace(" ", "")
+    b_ns = b.replace(" ", "")
+
+    for g1, g2 in SPECIFIC_COMBO_RULES:
+        if (
+            any(t in a_ns for t in g1) and any(t in a_ns for t in g2)
+            and any(t in b_ns for t in g1) and any(t in b_ns for t in g2)
+        ):
+            return True
+
+    return False
+
+
 def has_busan_gap_match(a: str, b: str) -> bool:
     """
     "부산"+"집값/아파트값"+"격차/양극화" 조합이 두 제목 모두에
@@ -689,6 +713,12 @@ def is_duplicate(
             return True
 
         if has_fake_subscription_match(
+            new_normalized,
+            old_normalized,
+        ):
+            return True
+
+        if has_combo_match(
             new_normalized,
             old_normalized,
         ):
