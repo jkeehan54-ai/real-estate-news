@@ -490,6 +490,7 @@ def has_fake_subscription_match(a: str, b: str) -> bool:
 # 새 중복 사례가 생기면 여기에 한 줄씩 추가한다.
 SPECIFIC_COMBO_RULES = [
     (("금감원", "금융감독원"), ("신탁",)),
+    (("부동산산업의날",), ("제11회", "11회")),
 ]
 
 
