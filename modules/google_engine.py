@@ -24,7 +24,7 @@ def fetch_google(now_kst):
     items = []
     for q in GOOGLE_QUERIES:
         try:
-            url  = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl=ko&gl=KR&ceid=KR:ko"
+            url  = f"https://news.google.com/rss/search?q={quote_plus(q + " when:2d")}&hl=ko&gl=KR&ceid=KR:ko"
             resp = requests.get(url, headers=HEADERS, timeout=10)
             feed = feedparser.parse(resp.content)
             cnt  = 0
