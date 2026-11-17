@@ -27,6 +27,46 @@ from modules.news_filter import (
 )
 
 
+_LINK_CACHE = {}
+_LINK_BUDGET = [60]
+_LINK_FAIL = [0]
+
+
+def _resolve_link(link):
+    """
+    구글뉴스 중간 주소(news.google.com/rss/articles/...)를 언론사 원문 주소로 바꾼다.
+    브리핑에 실리는 기사에만 쓰고, 한 번 실행에 최대 60건까지 시도한다.
+    연속 8번 실패하면 더 이상 요청하지 않는다.
+    실패하거나 패키지가 없으면 원래 주소를 그대로 돌려준다.
+    """
+    if "news.google.com/rss/articles" not in link:
+        return link
+    if link in _LINK_CACHE:
+        return _LINK_CACHE[link]
+    if _LINK_BUDGET[0] <= 0:
+        return link
+    _LINK_BUDGET[0] -= 1
+
+    resolved = link
+    try:
+        from googlenewsdecoder import gnewsdecoder
+
+        result = gnewsdecoder(link, interval=1)
+        if result.get("status") and result.get("decoded_url"):
+            resolved = result["decoded_url"]
+            _LINK_FAIL[0] = 0
+        else:
+            _LINK_FAIL[0] += 1
+    except Exception:
+        _LINK_FAIL[0] += 1
+
+    if _LINK_FAIL[0] >= 8:
+        _LINK_BUDGET[0] = 0
+
+    _LINK_CACHE[link] = resolved
+    return resolved
+
+
 def get_clean_news():
 
     cats = [
@@ -110,7 +150,7 @@ def get_clean_news():
 
         results[cat].append({
             "title": normalize(title),
-            "link": link,
+            "link": _resolve_link(link),
             "src": src,
             "pub_str": pub_str,
         })
