@@ -29,7 +29,7 @@ jobs:
       - name: 패키지 설치
         run: |
           pip install --upgrade pip
-          pip install feedparser requests beautifulsoup4 lxml
+          pip install feedparser requests beautifulsoup4 lxml googlenewsdecoder
 
       - name: 현재 KST 시각 확인
         id: kst
