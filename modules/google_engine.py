@@ -44,6 +44,9 @@ def fetch_google(now_kst):
                 if "kookje.co.kr" in link: src = "국제신문"
                 if "land.naver.com" in link or "fin.land.naver.com" in link:
                     src = "네이버부동산"
+                # 외국어 번역 매체(Vietnam.vn 등)는 국내 부동산 기사가 아니므로 제외한다.
+                if "vietnam" in src.lower():
+                    continue
                 items.append((pub_dt, title, link, src))
                 cnt += 1
             print(f"  OK [Google/{q}] {cnt}건")
